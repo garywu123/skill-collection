@@ -1,0 +1,2 @@
+# Machine-local skill deployment config (contains personal directory paths)
+scripts/deploy-paths.json

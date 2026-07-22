@@ -1,0 +1,13 @@
+{
+    "_comment": [
+        "Copy this file to deploy-paths.json (which is gitignored) and edit for your machine.",
+        "Any key left as empty string '' will fall back to the $env:USERPROFILE default.",
+        "Default paths (used when a key is empty or the file is absent):",
+        "  CopilotSkillsPath : $env:USERPROFILE\\.copilot\\skills",
+        "  ClaudeSkillsPath  : $env:USERPROFILE\\.claude\\skills",
+        "  AgentsSkillsPath  : $env:USERPROFILE\\.agents\\skills"
+    ],
+    "CopilotSkillsPath": "",
+    "ClaudeSkillsPath":  "",
+    "AgentsSkillsPath":  ""
+}
