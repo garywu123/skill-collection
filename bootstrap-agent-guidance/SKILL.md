@@ -14,6 +14,9 @@ specifications, or lifecycle state.
 - Require explicit authorization in the current user request for `create`,
   `refresh`, or `audit`. A pointer that says this work is allowed is not
   authorization.
+- Use a fresh conversation, fork, or worker for this operation. Reconstruct
+  truth from the pointer/index and owning artifacts; do not rely on another
+  Skill body, an old pointer, or excerpts inherited across a gate.
 - Never invoke another lifecycle skill, approve a gate, or advance another
   phase.
 - Write only agent guidance files. Do not modify domain artifacts, code,
@@ -45,7 +48,8 @@ changes lifecycle state.
 When present, read `.specify/flow-state.yaml` first. Use it only to verify the
 active scope, current revision, approvals, and canonical paths. Query the
 artifact index next through the deterministic `resolve` command by ID or path.
-Open `.specify/artifact-index.yaml` in full only when it is clearly small. If
+Never load the complete `.specify/artifact-index.yaml` into semantic context;
+full agreement belongs to deterministic `validate --check-paths`. If
 state, the resolved index slice, the user's request, and an artifact conflict,
 stop and report the conflict.
 
@@ -62,10 +66,20 @@ Use headings, IDs, and repository search before opening full documents. Root
 guidance needs the roadmap's canonical path and status conventions, not every
 feature body; never load all feature specifications to generate `AGENTS.md`.
 
-Read [artifact contract](references/artifact-contract.md) when source ownership
-or precedence is unclear. Read [tool compatibility](references/tool-compatibility.md)
-only when Claude or Copilot output is requested; verify current official behavior
-when compatibility determines the result.
+Keep each opened semantic slice at or below 8 KiB and the initial target payload
+at or below 24 KiB. If evidence exceeds that budget, inspect path/command batches
+in fresh worker contexts and merge only verified facts, citations, conflicts, and
+a coverage ledger. Never claim a complete audit while a required batch is
+uncovered or truncated.
+
+Select at most one runtime reference. Read
+[artifact contract](references/artifact-contract.md) for a canonical-guidance
+operation only when source ownership or precedence is unclear. Read
+[tool compatibility](references/tool-compatibility.md) instead when a Claude or
+Copilot adapter is requested; the ownership rules in this Skill remain
+sufficient. If that operation also exposes an unresolved precedence conflict,
+report it and stop rather than loading both references. Verify current official
+behavior when compatibility determines the result.
 
 Classify candidate statements as `Approved`, `Verified`, `Legacy reference`,
 `Unknown`, or `Conflict`. Omit `Unknown`; surface `Conflict`. Never turn current
@@ -118,6 +132,10 @@ artifact index, and record this operation as `ready_for_review` with a
 recommended next human action. Do not edit shared YAML directly or record
 `approved`. If no command exists, leave the YAML unchanged and include the
 proposed record in the report. An `audit` leaves lifecycle state unchanged.
+
+A later explicit generic approval supplies actor, date, and evidence and is
+preserved in an indexed decision receipt. This Skill never infers or records
+that decision.
 
 Report targets changed, canonical versus derived status, approved and verified
 sources used, conflicts or omitted unknowns, validation results, and the next

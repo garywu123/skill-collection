@@ -2,6 +2,9 @@
 
 **Work item**: {{FEATURE_ID}}
 **Review status**: {{REVIEW_STATUS}}
+**Reviewed by**: {{INDEPENDENT_REVIEWER}}
+**Reviewed on**: {{REVIEW_DATE}}
+**Independence**: non-implementer
 **Human decision**: {{PENDING_OR_DECISION}}
 **Decided by**: {{PENDING_OR_DECIDER}}
 **Decision date**: {{PENDING_OR_DECISION_DATE}}
@@ -19,7 +22,7 @@
 
 | Gate | Applicability | Result | Evidence / reason |
 |---|---|---|---|
-| Tests | required | {{TEST_RESULT}} | {{TEST_EVIDENCE}} |
+| Tests / deterministic verification | required | {{TEST_RESULT}} | {{TEST_EVIDENCE}} |
 | Coverage policy | {{COVERAGE_APPLICABILITY}} | {{COVERAGE_RESULT}} | {{COVERAGE_EVIDENCE_OR_REASON}} |
 | CI | {{CI_APPLICABILITY}} | {{CI_RESULT}} | {{CI_EVIDENCE_OR_REASON}} |
 | Code review | {{CODE_REVIEW_APPLICABILITY}} | {{CODE_REVIEW_RESULT}} | {{CODE_REVIEW_EVIDENCE_OR_REASON}} |

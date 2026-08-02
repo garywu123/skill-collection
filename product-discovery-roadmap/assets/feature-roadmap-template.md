@@ -2,11 +2,17 @@
 
 **Source Requirements**: [Relative link to approved product requirements]
 **Status**: Draft | Ready for Review | Approved
+**Artifact bundle**: single
 **Last Updated**: YYYY-MM-DD
 **Approved By**: Not approved | [Name or role]
 **Approval Evidence**: Not approved | [Explicit user statement or review reference]
 **Profile sizing**: full | lite
-**Sizing evidence**: [Feature, deployable, datastore, team, and constraint counts]
+**Feature count**: [positive integer]
+**Deployable count**: [positive integer]
+**Datastore count**: [non-negative integer]
+**Owning team count**: [positive integer]
+**Regulatory/audit/contractual constraint**: yes | no | unknown
+**Sizing evidence**: [Stable source anchor(s) only]
 
 ## Delivery Strategy
 

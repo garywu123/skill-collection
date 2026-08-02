@@ -13,8 +13,9 @@ evidence over long autonomous chains.
 
 These guides are training, review, and evaluation examples. Do not load either
 whole guide into a normal coding turn. Runtime context should contain only the
-active Skill, the workflow pointer, a small index result, and the targeted
-artifact/code/evidence slices.
+active Skill, at most one operation reference and only the selected output
+variant's minimal template set, the workflow pointer, a small index result, and
+bounded targeted artifact/code/evidence slices.
 
 ## Operating model
 
@@ -28,6 +29,13 @@ Human selects one operation
 ```
 
 - A workflow arrow means prerequisite order, never automatic invocation.
+- Run each lifecycle operation in a fresh conversation, fork, or worker context;
+  reconstruct current truth from pointer/index and canonical artifacts instead
+  of carrying earlier Skills and excerpts forward. `guided-tdd-pairing` may keep
+  one interactive implementation loop, but that context must stop before a
+  lifecycle review or gate. A fresh worker is only a memory/coverage boundary
+  inside the already authorized operation; it cannot select another Skill,
+  stage, gate, or work item.
 - All eight Skills disable implicit invocation and require explicit
   `$skill-name` authorization. Pointer state and a recommended command do not
   grant permission.
@@ -40,18 +48,38 @@ Human selects one operation
 - `.specify/flow-state.yaml` stores only the active work item, gate, canonical
   paths, small ID/evidence lists, blockers, and human-required next commands.
 - `.specify/artifact-index.yaml` is generated from paths, hashes, and stable IDs.
-  Use `flow-state resolve` rather than opening a large index in model context;
-  it returns compact anchors with a 20-result/24-KiB cap and should be narrowed
-  by ID/path when truncated. Run full index verification only as an explicit
-  validation operation.
+  Its generated `.specify/artifact-index.sha256` sidecar makes manual index edits
+  fail closed.
+  Use `flow-state resolve`; never open the complete index in semantic model
+  context. Full agreement belongs to deterministic `validate --check-paths`.
+  `resolve` returns up to 12 occurrences per matched artifact, with a 20-artifact/
+  16-KiB output cap, and should be narrowed by ID/path when truncated. Run full
+  repository/index agreement only as an explicit validation operation.
+- Generic approvals and dedicated feature/release decisions require actor,
+  date, and evidence and create content-hashed `.specify/decisions/*.yaml`
+  receipts. Dedicated receipts additionally bind reviewed and resulting
+  artifact hashes; release results chain to authorization and the external
+  execution receipt. The index keeps those decisions discoverable after the
+  bounded pointer changes work item.
+- Canonical discovery, PRD, roadmap, architecture, and product-UI roots declare
+  `single` or `split`; every split root lists a complete member Path/SHA-256
+  bundle, and candidate recording or approval rejects stale members.
 - PRD, roadmap, architecture, UI, verification, and acceptance meaning remains
   in the owning artifacts. Never copy their summaries into the pointer.
 - Roadmap owns durable product outcomes, horizons, dependencies, and release
   boundaries. It does not duplicate mutable delivery status; pointer plus
   verification/acceptance/release artifacts provide that history.
+- Full/Lite confirmation reads structured feature/deployable/datastore/team and
+  constraint fields; Lite thresholds and the roadmap's unique F-ID count are
+  checked by the state script rather than inferred from prose.
 - A pointer is a single-writer worktree/session cursor. Parallel features use
   separate worktrees/cursors or an external tracker; a portfolio view is
   generated from durable evidence, not copied into the roadmap.
+- Keep an opened semantic/code/evidence slice at or below 8 KiB and the initial
+  target payload for one operation at or below 24 KiB. Larger exhaustive reviews
+  use stable-ID/path batches in fresh workers and retain only citations, findings,
+  and a coverage ledger; truncation or an uncovered batch prevents a complete or
+  passing claim.
 
 For parallel Full delivery, do not merge feature-branch pointer files. Keep one
 integration owner for project canonical state, keep each worktree cursor local,
@@ -67,7 +95,7 @@ requires that external tracker/adapter.
 |---|---|---|
 | [`flow-state`](flow-state/SKILL.md) | Initialize/query/validate pointer and generated index; record deterministic transitions | Candidate state or an explicitly human-decided state; never another Skill |
 | [`product-discovery-roadmap`](product-discovery-roadmap/SKILL.md) | `discover`, staged PRD/roadmap drafting and approval, `amend` | One reviewed/approved product artifact operation |
-| [`architecture-baseline`](architecture-baseline/SKILL.md) | `full`, `lite`, `recover`, `amend`, `approve` | Reviewed or explicitly approved baseline/ADR |
+| [`architecture-baseline`](architecture-baseline/SKILL.md) | `full`, `lite`, `recover`, `resolve-spike`, `amend`, `approve` | Reviewed/approved baseline, ADR, or bounded spike result |
 | [`bootstrap-agent-guidance`](bootstrap-agent-guidance/SKILL.md) | `create`, `refresh`, `audit` for concise `AGENTS.md` and requested thin adapters | `ready_for_review`; audit is read-only |
 | [`ui-wireframe-spec`](ui-wireframe-spec/SKILL.md) | `product` UI structure or one `feature` wireframe | `ready_for_review`; never planning or code |
 | [`spec-sync`](spec-sync/SKILL.md) | `pre-implement`, `post-implement`, `change-request` for one feature or explicitly typed implementation item | Feature `ready_for_acceptance`; other kinds `ready_for_review`; blocked; or a proposed route |
@@ -87,7 +115,12 @@ the independent gate.
 
 ```text
 Discovery -> PRD -> Roadmap -> confirm Full/Lite
-  -> Architecture -> Agent guidance -> [Product UI]
+                     |              |
+                     |              +-> Architecture
+                     +-----------------> Agent guidance
+                     +-----------------> [Product UI]
+
+approved applicable sources
   -> for one work item:
        Spec Kit specify/clarify -> [Feature UI] -> plan/tasks/analyze
        -> spec-sync pre -> implementation -> deterministic/risk checks
@@ -95,6 +128,12 @@ Discovery -> PRD -> Roadmap -> confirm Full/Lite
   -> delivery-gates readiness -> human authorizes reviewed release
   -> separately authorized release tooling -> human records terminal result
 ```
+
+This is a partial order, not one mandatory chain. Agent guidance requires the
+approved PRD and roadmap and includes architecture only when architecture is
+approved; Product UI likewise starts from approved product/roadmap truth. The
+recommended low-rework order is architecture before guidance, but neither
+guidance nor Product UI is authority for the other.
 
 Brackets are conditional, not optional guesses. `UI Surface: none` skips UI
 artifacts with a reason; applicable safety, validation, acceptance, and release
@@ -107,9 +146,10 @@ Follow-ups remain outside the current feature unless explicitly routed:
 - implementation debt -> `doc/tech-debt/TD-###-short-title.md` with impact,
   owner, repayment trigger, and repayment evidence;
 - future product idea -> roadmap `Candidate` via a human-authorized product amendment;
-- cross-feature technical debt -> architecture deferred decision or proposed ADR;
-- uncertain technical question -> time-boxed `spike` evidence owned by the
-  affected feature plan or architecture decision; never production output.
+- cross-feature technical debt -> independent debt/trigger evidence, then a
+  human-authorized architecture amendment before baseline/ADR changes;
+- uncertain cross-feature technical question -> approved `SPK-###`, then a
+  time-boxed `spike_result`; any architecture consequence still uses a CR/amendment.
 
 ## Repository structure
 

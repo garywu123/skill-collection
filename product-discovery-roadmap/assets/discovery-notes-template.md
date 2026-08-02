@@ -1,6 +1,7 @@
 # [Product Name]: Discovery Notes
 
 **Status**: In Progress | Ready for Review | Approved for PRD
+**Artifact bundle**: single
 **Started**: YYYY-MM-DD
 **Last Updated**: YYYY-MM-DD
 

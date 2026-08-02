@@ -1,11 +1,12 @@
 # Pre-Implementation Review: {{WORK_ID}} {{WORK_NAME}}
 
 **Work item**: {{WORK_ID}}
+**Work kind**: {{WORK_KIND}}
 **Review result**: {{REVIEW_RESULT}}
 **Reviewed revision**: {{REVIEWED_REVISION}}
 **Reviewed by**: {{REVIEWER}}
 **Reviewed on**: {{REVIEW_DATE}}
-**Scope**: Vertical feature readiness only
+**Scope**: Vertical work-item readiness only
 
 ## Inputs
 
@@ -27,6 +28,12 @@
 | Plan and accepted constraints | {{PLAN_RESULT}} | {{PLAN_EVIDENCE}} | {{PLAN_NOTES}} |
 | UI scenarios and approved UI | {{UI_RESULT}} | {{UI_EVIDENCE}} | {{UI_NOTES}} |
 | Tasks, scenarios, and prerequisites | {{TASK_RESULT}} | {{TASK_EVIDENCE}} | {{TASK_NOTES}} |
+
+## Coverage Batches
+
+| Batch | Stable IDs / paths | Result | Evidence |
+|---|---|---|---|
+| {{BATCH_ID}} | {{COVERED_IDS_OR_PATHS}} | {{BATCH_RESULT}} | {{BATCH_EVIDENCE}} |
 
 ## Blocking Findings
 

@@ -13,10 +13,21 @@ authority. Never implement code, run Spec Kit, perform code/security/acceptance/
 review, approve a gate, invoke another lifecycle skill, or continue into a suggested
 operation.
 
+Use a fresh conversation, fork, or worker for this operation. Reconstruct truth
+from the pointer/index and owning artifacts; do not rely on another Skill body,
+an old pointer, or excerpts inherited across a gate.
+
 Read `.specify/flow-state.yaml` first. Query the generated index with deterministic
-`resolve --id` or `resolve --path`; open the complete index only when its bounded size is
-known to be small. Read only target IDs and relevant sections. Stop on conflicting IDs,
+`resolve --id` or `resolve --path`; never load the complete index into semantic
+context. Full agreement belongs to deterministic `validate --check-paths`. Read
+only target IDs and relevant sections. Stop on conflicting IDs,
 paths, revisions, or truth sources.
+
+Keep each opened semantic slice at or below 8 KiB and the initial target payload at or
+below 24 KiB. If complete coverage requires more, process stable-ID batches in fresh
+worker contexts and merge only citations, findings, and a coverage ledger into the owned
+output. A truncated query or uncovered required batch can never produce `Pass` or a
+ready result.
 
 Use documented deterministic state commands for starts, validation, artifact/hash
 recording, transitions, and index rebuilds. Never hand-edit state or index YAML.
@@ -37,7 +48,7 @@ pre-implementation review, vertical verification record, and proposed change rou
 
 | Operation | Prerequisites | Owned output | Maximum outcome |
 |---|---|---|---|
-| `pre-implement` | Approved `spec.md`, `plan.md`, and `tasks.md` | `specs/NNN-feature/pre-implementation-review.md` | `ready_for_review` or `blocked` |
+| `pre-implement` | Approved `spec`, `plan`, `tasks`, and `requirements_checklist` roles for one supported kind | Work-item `pre-implementation-review.md` | `ready_for_review` or `blocked` |
 | `post-implement` | Approved `pre_implementation`; converged implementation and named evidence | Work-item `verification.md` | Feature: `ready_for_acceptance`; other supported kinds: `ready_for_review` |
 | `change-request` | Source request text | Configured CR or response | `proposed`; `ready_for_review` when materialized |
 
@@ -46,10 +57,11 @@ authorized updating it.
 
 ## `pre-implement`
 
-Read [the alignment matrix](./references/alignment-matrix.md). Compare feature scope and
-requirement IDs with product/roadmap truth, the plan with applicable constraints and
-accepted ADRs, UI scenarios with the approved UI surface/wireframes, and tasks with
-scenarios and prerequisites. Cite both sides by ID, anchor, or line. Classify findings as
+Read only [the pre-implementation contract](./references/alignment-matrix.md); it includes
+the common matrix and the selected kind's applicability row. Require hash-matching
+approved `spec`, `plan`, `tasks`, and `requirements_checklist` roles. Apply feature-only
+roadmap/UI checks only to `feature`; use the kind-specific constraints for all other
+supported kinds. Cite both sides by ID, anchor, or line. Classify findings as
 `Blocking`, `Advisory`, or `Skipped`; a skipped required check prevents `Pass`.
 
 Create or update the work item's `pre-implementation-review.md` from
@@ -59,7 +71,9 @@ concrete result: `Pass` or `Blocked`.
 - For `Pass`, register role `pre_implementation` with `record-output
   --expect-revision N --stage pre_implement --status ready_for_review --artifact
   pre_implementation=<path>`, report the pending human review, and stop. Only a later
-  explicit human generic `decide --decision approved` makes that role `approved`.
+  explicit human generic `decide --decision approved --decided-by ...
+  --decision-date ... --decision-evidence ...` makes that role `approved` and writes a
+  durable indexed decision receipt.
 - For `Blocked`, run `block --expect-revision N --stage pre_implement --artifact
   pre_implementation=<path>` with every concrete blocker, report the required owner action,
   and stop.
@@ -70,11 +84,14 @@ implementation target. `Pass` or `ready_for_review` alone is insufficient.
 
 ## `post-implement`
 
-First enforce the approved `pre_implementation` prerequisite above. Then:
+First enforce the approved `pre_implementation` prerequisite above and read only
+[the post-implementation contract](./references/post-implementation-contract.md).
+Then:
 
 1. Confirm every task/check is complete or has an explicit deferred-work destination.
-2. Trace every acceptance scenario to named implementation evidence; a green build alone
-   does not demonstrate behavior.
+2. Trace every applicable requirement, scenario, regression, migration invariant, or
+   security control to named implementation evidence; a green build alone does not
+   demonstrate behavior.
 3. Check only vertical drift: out-of-scope behavior, violated constraints, or undeclared
    cross-feature decisions; do not review general code style.
 4. Create or update [verification.md](./assets/verification-report.template.md) with
@@ -83,9 +100,9 @@ First enforce the approved `pre_implementation` prerequisite above. Then:
    --expect-revision N --stage post_implement --status ready_for_acceptance
    --artifact verification=<path>`. For `bug`, `maintenance`, `migration`, or
    `security`, use `--status ready_for_review`; a later explicit generic human
-   decision approves or rejects that evidence without pretending it is feature
-   acceptance.
-   otherwise use `block --expect-revision N --stage post_implement --artifact
+   decision approves or rejects that evidence, with a durable receipt, without pretending
+   it is feature acceptance. If blocking drift remains, instead use
+   `block --expect-revision N --stage post_implement --artifact
    verification=<path>` with each concrete blocker.
 
 Never put mutable delivery state or acceptance fields in the roadmap. Feature

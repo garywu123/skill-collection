@@ -3,15 +3,15 @@
 **Source Requirements**: [Relative link to approved product requirements]
 **Source Roadmap**: [Relative link to approved feature roadmap]
 **Status**: Ready for Review
-**Artifact bundle**: single
+**Artifact bundle**: split
 **Last Updated**: YYYY-MM-DD
 
 Human approval is recorded by the lifecycle owner after review; generation of
 this draft does not approve it.
 
-This document owns product-level UI structure: supported interaction contexts,
-navigation, shared regions, screen inventory, and cross-screen behavior. It
-does not own visual style or feature-level screen detail.
+This root owns global interaction contexts, navigation, shared regions,
+cross-domain patterns, terminology, and domain routing. Domain members own only
+domain-level structure.
 
 ## Interaction Contexts
 
@@ -23,22 +23,18 @@ does not own visual style or feature-level screen detail.
 
 - **PR-###**: [Constraint and its structural consequence]
 
-## Navigation Map
+## Global Navigation and Shared Regions
 
 ```mermaid
 flowchart TD
-    ENTRY[Approved entry] --> DEST[Approved destination]
+    ENTRY[Approved entry] --> DOMAIN[Domain entry]
 ```
-
-- [Requirement-backed navigation invariant]
-
-## Shared Regions
 
 ```text
 +--------------------------------------------------+
 | {{ optional persistent region }}                 |
 +--------------------------------------------------+
-| {{ context-specific content region }}            |
+| {{ domain content region }}                      |
 +--------------------------------------------------+
 | {{ optional action or status region }}           |
 +--------------------------------------------------+
@@ -48,13 +44,13 @@ flowchart TD
 |---|---|---|---|
 | [Region] | [Always or condition] | [Approved purpose] | PR-### |
 
-## Screen Inventory
+## Domain Registry
 
-| Screen or view | Owning feature | Serves | Context |
-|---|---|---|---|
-| [Approved outcome] | F00X | PR-00X | [Approved context] |
+| Domain key | Detail path | Roadmap features |
+|---|---|---|
+| [stable-domain-key] | `{{DOMAIN_1_PATH}}` | F001, F002 |
 
-## Cross-Screen Patterns
+## Cross-Domain Patterns
 
 | Pattern | Behavior | Source |
 |---|---|---|
@@ -68,4 +64,13 @@ flowchart TD
 
 ## Open Structural Questions
 
-- [Unresolved structural question and decision owner]
+- [Unresolved global structural question and decision owner]
+
+## Approved Bundle
+
+This is the complete set of domain-detail files owned by this root. List each
+member exactly once; do not list this root or cited source artifacts.
+
+| Path | SHA-256 |
+|---|---|
+| `{{DOMAIN_1_PATH}}` | `{{DOMAIN_1_SHA256}}` |

@@ -1,9 +1,12 @@
 # [Product Name]: Product Requirements
 
 **Status**: Draft | Ready for Review | Approved
+**Artifact bundle**: single
 **Last Updated**: YYYY-MM-DD
 **Approved By**: Not approved | [Name or role]
 **Approval Evidence**: Not approved | [Explicit user statement or review reference]
+**Product UI structure applicability**: required | not_applicable
+**Product UI applicability evidence**: [Approved PR-### anchor]
 
 ## Product Vision
 
@@ -41,6 +44,10 @@
 
 Detailed screen layouts, visual styling, components, and transient UI states are
 defined in the specification for the feature that owns the interaction.
+
+Use `not_applicable` only when the cited approved requirement states that no
+global shell, navigation, or shared cross-feature UI pattern exists. It does not
+turn a roadmap feature's `new screens` or `reuses existing` into `none`.
 
 ## Product Requirements
 

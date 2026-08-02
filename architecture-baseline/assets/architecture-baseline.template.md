@@ -5,6 +5,7 @@
 **Constitution**: [Relative link, or Not present]
 **Mode**: full
 **Status**: Draft | Ready for Review | Approved
+**Artifact bundle**: single
 **Last Updated**: YYYY-MM-DD
 **Approved By**: Not approved | [Name or role]
 **Approval Evidence**: Not approved | [Explicit user statement or review reference]
@@ -27,8 +28,8 @@ requirement behind it is not a driver.
 
 ```mermaid
 flowchart LR
-    USER[Operator] --> SYS[System]
-    SYS --> EXT[External system]
+    ACTOR[External actor] --> SYS[System]
+    SYS --> DEP[External dependency]
 ```
 
 | External dependency | Direction | Protocol | Owned by | Failure behavior |
@@ -50,14 +51,8 @@ flowchart TD
 
 | Area | Choice | Rationale | Door | ADR |
 |------|--------|-----------|------|-----|
-| Language and runtime | [Choice] | [Driver or constraint] | one-way | ADR-0001 |
-| Web framework | [Choice] | [Reason] | two-way | — |
-| Datastore | [Choice] | [Driver] | one-way | ADR-0002 |
-| Migrations | [Choice] | [Reason] | two-way | — |
-| AuthN / AuthZ | [Choice] | [Driver] | one-way | ADR-0003 |
-| Background work | [Choice] | [Reason] | two-way | — |
-| Observability | [Choice] | [Reason] | two-way | — |
-| Packaging and deployment | [Choice] | [Constraint] | one-way | ADR-0004 |
+| [Decision area] | [Choice] | [Driver or constraint] | one-way | ADR-0001 |
+| [Decision area] | [Choice] | [Reason] | two-way | Not required |
 
 Delete rows that are not forced by approved drivers; never choose a technology
 only to complete this table.
@@ -71,20 +66,11 @@ State each as a rule a reviewer can check a `plan.md` against.
 
 | Concern | Strategy |
 |---------|----------|
-| Persistence and transactions | [Boundary and consistency rule] |
-| Connectivity / synchronization, if required | [Availability and conflict rule, or Not applicable with source] |
-| Error taxonomy | [Categories, and what each does at the boundary] |
-| Retry and idempotency | [Which operations, which key] |
-| Authorization | [Where checks live, what they check] |
-| Configuration and secrets | [Where they come from, what is never committed] |
-| Logging and tracing | [What every request emits] |
-| Testing | [Required layers and what each proves] |
+| [Cross-feature concern] | [Requirement-backed rule] |
 
 ## Boundaries and Dependency Rules
 
-- [e.g. Domain code MUST NOT import framework or transport types]
-- [e.g. A feature MUST NOT read another feature's tables directly]
-- [e.g. All external calls go through an adapter in the integration layer]
+- [Testable dependency or ownership rule]
 
 ## Plan Constraints
 
@@ -103,9 +89,9 @@ of rationale — rationale lives above and in the ADRs.
 
 ## Spikes
 
-| # | Question | Time box | Blocks | Output |
+| ID | Question | Time box | Blocks | Output |
 |---|----------|----------|--------|--------|
-| S-1 | [Question an answer would settle] | [e.g. 2 days] | [FNNN] | Throwaway; result recorded as ADR |
+| SPK-001 | [Question an answer would settle] | [e.g. 2 days] | [Owning feature/work item] | Disposable investigation; any architecture change requires a CR |
 
 ## Technical Risks
 

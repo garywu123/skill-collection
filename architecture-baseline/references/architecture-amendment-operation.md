@@ -11,6 +11,10 @@ only amendment/proposed-ADR roles. Report divergence, migration implications,
 and stale guidance without updating other owners.
 
 On later explicit approval, keep the reviewed amendment proposal byte-identical,
-apply the named baseline/ADR changes, record supersession in the ADRs, re-register
-the exact amendment/ADR set plus canonical `architecture`, then use generic
-`decide` and stop.
+apply the named baseline, domain-member, and ADR changes, and record supersession
+in the ADRs. For a split root, enumerate the complete post-change member set,
+compute the SHA-256 of every member including unchanged members, replace the
+root's `## Approved Bundle` table, and verify exact registry coverage. Then
+re-register the exact amendment/ADR set plus canonical `architecture`, use
+generic `decide` with explicit human actor, date, and decision evidence, and
+stop after its indexed receipt. The reviewed proposal remains unchanged throughout.

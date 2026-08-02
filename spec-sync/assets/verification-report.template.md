@@ -1,9 +1,11 @@
 # {{WORK_ID}} Verification Evidence
 
-**Reviewed revision**: [commit/build/revision]
+**Work item**: {{WORK_ID}}
+**Work kind**: {{WORK_KIND}}
+**Reviewed revision**: {{REVIEWED_REVISION}}
 **Reviewed on**: YYYY-MM-DD
 **Candidate state**: {{CANDIDATE_STATE}}
-**Scope**: Vertical implementation-to-spec/constraint evidence only
+**Scope**: Vertical implementation-to-approved-input evidence only
 
 > This record is not human acceptance, code review, security approval, release approval,
 > or permission to claim delivery.
@@ -12,38 +14,43 @@
 
 | Artifact | Path/ID | Revision or anchor |
 |---|---|---|
-| Work-item spec | [path] | [revision/section] |
-| Plan/tasks | [paths] | [revision/section] |
-| Applicable constraints | [AC-###] | [baseline revision] |
-| Evidence source | [test/log/demo path] | [revision/run ID] |
+| Work-item spec | {{SPEC_PATH}} | {{SPEC_REVISION_OR_SECTION}} |
+| Plan/tasks/checklist | {{PLAN_TASK_CHECKLIST_PATHS}} | {{PLAN_TASK_CHECKLIST_REVISION}} |
+| Applicable constraints | {{CONSTRAINT_IDS_OR_NA}} | {{BASELINE_REVISION_OR_NA}} |
+| Evidence source | {{EVIDENCE_SOURCE_PATH}} | {{EVIDENCE_REVISION_OR_RUN_ID}} |
 
-## Scenario evidence
+## Proof Evidence
 
-| Scenario ID | Command/activity | Result | Evidence path/run ID |
+| Requirement, scenario, or proof ID | Command/activity | Result | Evidence path/run ID |
 |---|---|---|---|
-| {{SCENARIO_ID}} | {{COMMAND_OR_ACTIVITY}} | {{SCENARIO_RESULT}} | {{EVIDENCE_PATH_OR_RUN_ID}} |
+| {{PROOF_ID}} | {{COMMAND_OR_ACTIVITY}} | {{PROOF_RESULT}} | {{EVIDENCE_PATH_OR_RUN_ID}} |
 
-## Tasks, checks, and deferrals
+## Tasks, Checks, and Deferrals
 
 | Item | Result | Evidence or deferred-work destination |
 |---|---|---|
 | {{TASK_OR_CHECK_ID}} | {{TASK_OR_CHECK_RESULT}} | {{EVIDENCE_OR_DEFERRED_DESTINATION}} |
 
-## Constraint and scope drift
+## Constraint and Scope Drift
 
 | Constraint/scope ID | Result | Evidence | Required owner/action |
 |---|---|---|---|
 | {{CONSTRAINT_OR_SCOPE_ID}} | {{DRIFT_RESULT}} | {{DRIFT_EVIDENCE}} | {{REQUIRED_OWNER_OR_NONE}} |
 
-## Blocking findings
+## Coverage Batches
 
-- [Finding with evidence on both sides, or `None`.]
+| Batch | Stable IDs / paths | Result | Evidence |
+|---|---|---|---|
+| {{BATCH_ID}} | {{COVERED_IDS_OR_PATHS}} | {{BATCH_RESULT}} | {{BATCH_EVIDENCE}} |
 
-## Skipped checks
+## Blocking Findings
 
-- [Check, missing input, and effect on readiness, or `None`.]
+- {{BLOCKING_FINDING_OR_NONE}}
 
-## Readiness conclusion
+## Skipped Checks
 
-[Why the evidence supports `Blocked`, feature `Ready for Acceptance`, or
-non-feature `Ready for Review`. Do not claim acceptance or approval.]
+- {{SKIPPED_CHECK_WITH_EFFECT_OR_NONE}}
+
+## Readiness Conclusion
+
+{{READINESS_RATIONALE}}

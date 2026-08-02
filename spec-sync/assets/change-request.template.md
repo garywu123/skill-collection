@@ -46,15 +46,12 @@ Order actions from the highest source of truth downward. Assign one owner per ac
 [Exact prompt or command the human may choose to authorize next. Do not run it.]
 ```
 
-## Decision (human-owned)
+## Decision Receipt
 
-**Outcome**: {{PENDING_OR_OUTCOME}}
-**Decided by**: {{PENDING_OR_DECIDER}}
-**Date**: {{PENDING_OR_DECISION_DATE}}
-
-**Rationale**: [blank until decided]
-
-**Rejected alternatives**: [complete only when a decision is made]
+Do not fill decision fields in this proposal. An explicit generic gate decision
+creates a content-hashed `.specify/decisions/*.yaml` receipt containing outcome,
+actor, date, evidence, and the reviewed role/path/hash set. Resolve that receipt
+by this CR ID through the generated artifact index.
 
 ## Notes
 

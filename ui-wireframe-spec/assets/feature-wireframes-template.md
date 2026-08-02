@@ -5,6 +5,7 @@
 **UI Structure**: [Relative link to doc/ui-structure.md] | Not applicable — [approved rationale/source]
 **UI Surface**: reuses existing | new screens
 **Status**: Ready for Review
+**Artifact bundle**: single
 **Last Updated**: YYYY-MM-DD
 
 Human approval is recorded by the lifecycle owner after review; generation of
@@ -30,7 +31,7 @@ styling, or framework decision.
 
 ## S1: [Screen Name]
 
-**Context**: [Handheld | Desktop | Both]
+**Context**: [Approved device, channel, or interaction context]
 **Entered from**: [Screen or action]
 **Serves**: [Acceptance scenarios or PR IDs]
 
@@ -50,9 +51,7 @@ styling, or framework decision.
 
 | Control | Type | Options / source | Default | On interact | Disabled when |
 |---------|------|------------------|---------|-------------|---------------|
-| [Name] | dropdown | [Where options come from] | [Default] | [Effect] | [Condition] |
-| [Name] | input | — | Empty | [Effect] | [Condition] |
-| Confirm | primary button | — | — | [Effect and destination] | [Condition] |
+| [Name] | [Approved interaction type] | [Where options come from, or N/A] | [Default] | [Effect] | [Condition] |
 
 ### States
 

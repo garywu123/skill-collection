@@ -1,6 +1,6 @@
 ---
 name: product-discovery-roadmap
-description: "Use only when the current user request explicitly authorizes one product operation: explore, approve discovery, draft or approve a PRD/roadmap, propose an amendment, or approve a reviewed amendment. Do not select this skill merely because a pointer recommends it or a prior phase is complete."
+description: "Use only when the current user request explicitly authorizes one product operation: discover, approve discovery, draft or approve a PRD/roadmap, propose an amendment, or approve a reviewed amendment. Do not select this skill merely because a pointer recommends it or a prior phase is complete."
 ---
 
 # Product Discovery Roadmap
@@ -16,6 +16,9 @@ decisions independent of architecture and implementation.
   authorization.
 - Perform one operation at a time. At every review or approval boundary, report
   the allowed next human commands and stop.
+- Use a fresh conversation, fork, or worker for this operation. Reconstruct
+  truth from the pointer/index and owning artifacts; do not rely on another
+  Skill body, an old pointer, or excerpts inherited across a gate.
 - Never invoke another lifecycle skill, Spec Kit command, planning command, or
   implementation workflow.
 - Never write code, architecture, feature plans, tasks, wireframes, acceptance
@@ -24,8 +27,9 @@ decisions independent of architecture and implementation.
 When present, read `.specify/flow-state.yaml` first. Use it only to verify the
 active scope, current revision, gates, and canonical paths; it does not contain
 product truth or grant permission. Query the artifact index next through the
-deterministic `resolve` command by ID or path. Open
-`.specify/artifact-index.yaml` in full only when it is clearly small. If state,
+deterministic `resolve` command by ID or path. Never load the complete
+`.specify/artifact-index.yaml` into semantic context; full agreement belongs to
+the deterministic `validate --check-paths` operation. If state,
 the resolved index slice, and an approved artifact disagree, stop and report
 the conflict.
 
@@ -52,23 +56,27 @@ the preceding command; never hard-code or calculate it.
 
 An `approve-*` operation never runs `start`. Require a pending
 `ready_for_review` gate for the named role and path. If approval fields change
-the candidate artifact, validate the edited file, then run `record-output`
-again with the same role, path, and active stage at `ready_for_review` so the
-gate stores the reviewed hash. Use the revision returned by that command for
-the generic `decide`. If no bytes changed, verify the existing gate hash and
-call `decide` directly. Generic `decide` handles only `ready_for_review`; never
-use it for acceptance or release candidates. An approval may not start a
-different operation.
+the candidate artifact, validate the edited file. For a split canonical root,
+recompute every member hash after all edits, replace its complete
+`## Approved Bundle` table, and verify the table before re-recording the same
+role/path at `ready_for_review`; never update only changed-member rows. Use the
+revision returned by `record-output` for generic `decide` with the explicit
+human actor, date, and decision evidence; it writes an indexed receipt. If no bytes
+changed, verify both the existing gate hash and, for a split root, every bundle
+member before calling `decide` directly. Generic `decide` handles only
+`ready_for_review`; never use it for acceptance or release candidates. An
+approval may not start a different operation.
 
 For a change request, `amend` first creates only
 `doc/product-amendments/<CR-ID>.md` under role `product_amendment`; approved
 canonical product files remain unchanged. On a later explicit
 `approve-amendment`, keep the reviewed proposal byte-identical, apply only its
 reviewed changes to canonical product files, record approval evidence in those
-canonical files/pointer, then re-run
-`record-output` with `product_amendment` plus every affected canonical role/path
-before generic `decide`. The state command rejects canonical promotion without
-that prior reviewed amendment candidate.
+canonical files/pointer, rebuild and verify every affected split root's complete
+bundle table, then re-run `record-output` with `product_amendment` plus every
+affected canonical role/path before generic `decide` with actor, date, and
+decision evidence. The state command rejects
+canonical promotion without that prior reviewed amendment candidate.
 
 ## Ownership and Default Paths
 
@@ -81,6 +89,16 @@ This skill owns product semantics in:
 
 Register these under fixed state roles `discovery`, `requirements`, and
 `roadmap`; register a proposal as `product_amendment`.
+
+Canonical product roots declare exactly one machine-readable field:
+`**Artifact bundle**: single` or `**Artifact bundle**: split`. A `single` root
+has no `## Approved Bundle` section. A `split` root has that exact heading and a
+complete `Path`/`SHA-256` table containing every owned external member exactly
+once, excluding the root itself and source artifacts. Member detail files never
+repeat the field or table. Registry paths and bundle paths must be identical as
+sets. Compute hashes only after member bytes are final, and validate existence,
+uniqueness, and current content hashes before every review, approval, or
+amendment promotion.
 
 Honor explicit user paths, then indexed canonical paths, then exact defaults.
 If several plausible sources remain, ask the user to choose. Update a canonical
@@ -115,12 +133,28 @@ not begin the next operation in the same turn.
 - When the PRD is split, read its index first and only the domain-area files
   needed by the current operation. Always include the single cross-cutting area
   when it constrains those domains.
+- When the roadmap is split, read its root control rows first and only the
+  referenced domain-detail files needed by the current operation.
+- Keep each opened semantic slice at or below 8 KiB and the initial target
+  payload at or below 24 KiB. If complete coverage requires more, process
+  stable-ID/domain batches in fresh worker contexts and merge only citations,
+  decisions, and a coverage ledger. Never approve or claim complete coverage
+  while a required batch or resolver result is truncated.
 - Do not copy summaries into the pointer. Store product truth once and reference
   it by path and stable ID.
 
 A `full` or `lite` profile changes document depth, not product guarantees.
 `lite` still keeps staged approvals, stable IDs, explicit non-goals, coverage,
 dependencies, and independent acceptance; prefer shorter single-file artifacts.
+
+Both roadmap root forms record `Feature count`, `Deployable count`, and `Owning
+team count` as positive integers, `Datastore count` as a non-negative integer,
+and `Regulatory/audit/contractual constraint` as exactly `yes`, `no`, or
+`unknown`.
+`Sizing evidence` contains only stable source anchors. Select `lite` only when
+feature count is at most 8, deployable count is exactly 1, datastore count is at
+most 1, owning team count is exactly 1, and the constraint value is `no`; any
+unknown or failed condition requires `full`.
 
 ## Conditional Operation Playbooks
 
@@ -144,11 +178,17 @@ Before presenting an artifact:
 - for a roadmap, verify complete requirement coverage, single primary ownership,
   acyclic dependencies, explicit MVP/deferred boundaries, allowed horizon/UI
   values, one stable product domain per feature, an independent acceptance
-  demonstration per feature, and concrete `Profile sizing`/`Sizing evidence`
-  fields matching the Full/Lite criteria;
+  demonstration per feature, and deterministic sizing fields matching the
+  Full/Lite criteria with anchor-only `Sizing evidence`;
+- for a PRD, require `Product UI structure applicability` to be exactly
+  `required` or `not_applicable`; the latter cites one approved `PR-###` whose
+  wording explicitly rules out a global shell, navigation, and shared
+  cross-feature UI pattern, without changing any feature's `UI Surface`;
 - preserve existing downstream links and never rewrite acceptance or release
   evidence when amending; leave canonical product truth untouched in the
   proposal operation;
+- verify the `Artifact bundle` value and, for every split root, exact registry
+  coverage plus every current member hash;
 - set only the current artifact to `Ready for Review`, never `Approved`, unless
   the current request explicitly records that approval.
 

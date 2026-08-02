@@ -1,7 +1,7 @@
 interface:
   display_name: "Product Discovery Roadmap"
   short_description: "Explore products and stage an approved roadmap"
-  default_prompt: "Use $product-discovery-roadmap for one explicitly authorized discovery, PRD, roadmap, amendment-proposal, or amendment-approval operation."
+  default_prompt: "Use $product-discovery-roadmap for one explicitly authorized discover, approve-discovery, draft-prd, approve-prd, draft-roadmap, approve-roadmap, amend, or approve-amendment operation."
 
 policy:
   allow_implicit_invocation: false

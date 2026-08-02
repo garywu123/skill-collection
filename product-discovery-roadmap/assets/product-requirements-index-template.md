@@ -1,16 +1,20 @@
 # [Product Name]: Product Requirements
 
 **Status**: Draft | Ready for Review | Approved
+**Artifact bundle**: split
 **Last Updated**: YYYY-MM-DD
-**Structure**: Split by domain area. This file is canonical for IDs, coverage,
-waves, and cross-cutting rules.
 **Approved By**: Not approved | [Name or role]
 **Approval Evidence**: Not approved | [Explicit user statement or review reference]
+**Product UI structure applicability**: required | not_applicable
+**Product UI applicability evidence**: [Approved PR-### registry entry and member anchor]
 
-Use this index form only when the single-file product requirements document has
-outgrown one file. The threshold and splitting rules are in the skill's
-`Draft Product Requirements` section. Everything below stays here; only
-domain-specific requirement detail moves out.
+This root owns product-wide scope, stable-ID routing and status, waves, success
+measures, and bundle membership. Domain members own requirement wording and
+domain-specific rules. Do not copy member summaries into this root.
+
+Use `not_applicable` only when the cited cross-cutting approved requirement
+states that no global shell, navigation, or shared cross-feature UI pattern
+exists. Feature-level `UI Surface` remains independently authoritative.
 
 ## Product Vision
 
@@ -35,51 +39,32 @@ domain-specific requirement detail moves out.
 
 ## Requirement Waves
 
-Discovery horizon. Only `Approved` requirements may be owned by a `Committed`
-roadmap feature.
-
-| Wave | Status | Covers | Interviewed |
-|------|--------|--------|-------------|
-| Wave 1 | Approved | [Areas] | YYYY-MM |
+| Wave | Status | Covers | Evidence date |
+|---|---|---|---|
+| Wave 1 | Approved | [Areas] | YYYY-MM-DD |
 | Wave 2 | Candidate | [Areas] | Not yet |
-| Wave 3 | Unknown | [Areas mentioned with no business owner] | No |
 
 ## Requirement Registry
 
-Every `PR-###` in the product appears exactly once in this table. IDs are
-append-only: a changed requirement gets a new ID and the old one is marked
-superseded. Never renumber and never reuse.
+Every `PR-###` appears exactly once. Requirement text lives only at the linked
+member anchor. IDs are append-only; never renumber or reuse them.
 
-| ID | Summary | Area | Wave | Status |
-|----|---------|------|------|--------|
-| PR-001 | [One line] | `{{AREA_1_PATH}}` | 1 | Approved |
-| PR-002 | [One line] | `{{AREA_1_PATH}}` | 1 | Superseded by PR-014 |
-| PR-050 | [One line] | `{{CROSS_CUTTING_PATH}}` | 1 | Approved |
-| PR-100 | [One line] | `{{CROSS_CUTTING_PATH}}` | 1 | Approved |
+| ID | Detail path | Detail anchor | Area | Wave | Status |
+|---|---|---|---|---|---|
+| PR-001 | `{{AREA_1_PATH}}` | `#pr-001` | {{AREA_1_KEY}} | 1 | Approved |
+| PR-050 | `{{CROSS_CUTTING_PATH}}` | `#pr-050` | cross-cutting | 1 | Approved |
 
 Status values: `Draft`, `Approved`, `Superseded by PR-###`, `Withdrawn`.
 
-## Domain Areas
+## Domain Registry
 
-| Area | File | Owns | Notes |
-|------|------|------|-------|
-| {{AREA_1_NAME}} | `{{AREA_1_PATH}}` | PR-001–PR-00X | |
-| {{AREA_2_NAME}} | `{{AREA_2_PATH}}` | PR-0XX–PR-0YY | |
-| Cross-cutting | `{{CROSS_CUTTING_PATH}}` | PR-050+, PR-100+ | Never split further |
+| Domain key | Detail path | Purpose |
+|---|---|---|
+| {{AREA_1_KEY}} | `{{AREA_1_PATH}}` | Domain requirement detail |
+| cross-cutting | `{{CROSS_CUTTING_PATH}}` | Shared experience, safety, or policy rules |
 
-Split by domain area, which is stable. Do not split by feature — features get
-re-decomposed and the requirements would follow them, dissolving single
-ownership. Do not split by wave — a wave is a time slice, and Wave 1 and Wave 2
-requirements about the same area belong together.
-
-## Cross-Cutting Rules
-
-Cross-cutting rules live in exactly one file and are referenced from every area
-that they constrain. They are listed here by ID only; the text lives in the
-cross-cutting area file.
-
-- **PR-050**: [One line] — experience requirement
-- **PR-100**: [One line] — safety or policy rule
+Split by stable domain area, never by feature or discovery wave. The requirement
+registry is the sole ID-to-member mapping.
 
 ## Success Measures
 
@@ -87,14 +72,24 @@ cross-cutting area file.
 
 ## Assumptions
 
-- **A-001**: [Bounded assumption and impact if false].
+- **A-001**: [Product-wide bounded assumption and impact if false].
 
 ## Open Questions
 
-- **Q-001**: [Unresolved decision and why it matters].
+- **Q-001**: [Product-wide unresolved decision and why it matters].
 
 ## Decision Log
 
-| Date | Decision | Rationale | Affected Requirements |
-|------|----------|-----------|-----------------------|
+| Date | Decision | Rationale | Affected IDs |
+|---|---|---|---|
 | YYYY-MM-DD | [Decision] | [Reason] | PR-001 |
+
+## Approved Bundle
+
+This table is the complete set of external files owned by this root. List each
+member exactly once; do not list this root or cited source artifacts.
+
+| Path | SHA-256 |
+|---|---|
+| `{{AREA_1_PATH}}` | `{{AREA_1_SHA256}}` |
+| `{{CROSS_CUTTING_PATH}}` | `{{CROSS_CUTTING_SHA256}}` |

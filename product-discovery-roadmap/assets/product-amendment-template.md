@@ -14,6 +14,16 @@
 |---|---|---|
 | {{PR_OR_F_ID}} | {{unchanged | superseded | added}} | {{ID_OR_REASON}} |
 
+## Canonical Bundle Effects
+
+List only roots and members whose bytes or membership would change. Approval
+recomputes the complete table for each listed split root; this proposal does not
+replace that verification.
+
+| Canonical root role | Member path | Disposition |
+|---|---|---|
+| {{requirements | roadmap}} | `{{REPO_RELATIVE_PATH}}` | {{add | modify | remove | none}} |
+
 ## Downstream Impact
 
 - Affected roadmap features/dependencies: {{IDS_OR_NONE}}
@@ -25,6 +35,7 @@
 - [ ] Scope and non-goals remain explicit.
 - [ ] Requirement ownership and dependency graph remain valid.
 - [ ] Approved history is preserved by successor IDs.
+- [ ] Split-root membership changes are complete and unambiguous.
 
 This proposal remains byte-identical during promotion. The later canonical
-review plus pointer decision is the durable approval record.
+review plus content-hashed generic decision receipt is the durable approval record.

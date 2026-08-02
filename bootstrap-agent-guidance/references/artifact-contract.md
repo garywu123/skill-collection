@@ -12,6 +12,7 @@ of truth.
 | Feature roadmap | Feature outcomes, boundaries, dependencies, horizon, MVP, and requirement ownership | Mutable delivery status, detailed behavior, or implementation tasks |
 | Flow-state pointer | Active work, phase, gate, bounded artifact gate states, blockers, and human-required next actions | Domain truth, approval rationale, or detailed history |
 | Artifact index | Generated paths, hashes, and traceability IDs | Artifact content or lifecycle decisions |
+| Generic decision receipt | Gate outcome, actor/date/evidence, and reviewed role/path/hash set | Domain truth or authorization for another operation |
 | UI structure | Navigation, global shell, device contexts, screen inventory, cross-screen patterns | Feature screen layout or visual style |
 | Feature `wireframes.md` | Screen skeletons, control and state tables, and flows for one feature | Component library, styling, or framework choices |
 | Constitution | Stable engineering governance and non-negotiable principles | Product scope, feature status, and named technologies |
@@ -24,7 +25,7 @@ of truth.
 | Feature `acceptance.md` | Independent scenario/gate review and durable human acceptance decision | Implementation fixes or product/architecture changes |
 | Release readiness | Release-scope evidence, disposition, authorization, and execution result | Deployment logic or rewritten feature history |
 | `TD-###` record | Concrete implementation debt, impact, owner, repayment trigger/evidence | Future product scope or cross-feature architecture truth |
-| Change request | Impact, routing, and decision for one change | Requirement text, which stays in the product requirements |
+| Change request | Original request, impact, and proposed routing | Requirement text or human gate decision; the latter lives in a receipt |
 
 ## Default precedence
 

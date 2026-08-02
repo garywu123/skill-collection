@@ -5,6 +5,7 @@
 **Mode**: lite
 **Sizing test**: [Which conditions passed, e.g. 5 features, 1 binary, no datastore, solo]
 **Status**: Draft | Ready for Review | Approved
+**Artifact bundle**: single
 **Last Updated**: YYYY-MM-DD
 **Approved By**: Not approved | [Name or role]
 **Approval Evidence**: Not approved | [Explicit user statement or review reference]
@@ -59,6 +60,12 @@ ADR file, not the comparison or reversal analysis.
 | # | Undecided | Trigger | Keep the option open by |
 |---|-----------|---------|-------------------------|
 | D-1 | [Decision] | [What forces it] | [What code must avoid doing] |
+
+## Spikes
+
+| ID | Question | Time box | Blocks | Output |
+|---|---|---|---|---|
+| SPK-001 | [Question an answer would settle] | [e.g. 1 day] | [Owning feature/work item] | Disposable investigation; any architecture change requires a CR |
 
 ## Risks
 

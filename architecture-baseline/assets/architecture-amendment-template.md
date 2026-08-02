@@ -29,5 +29,14 @@
 - Proposed ADRs: {{ADR_PATHS_OR_NONE}}
 - ADRs to supersede only after approval: {{ADR_IDS_OR_NONE}}
 
+## Canonical Bundle Effects
+
+List only roots and members whose bytes or membership would change. Approval
+recomputes the complete table for a split root.
+
+| Canonical root | Member path | Disposition |
+|---|---|---|
+| `{{BASELINE_PATH}}` | `{{REPO_RELATIVE_PATH}}` | {{add | modify | remove | none}} |
+
 This proposal remains byte-identical during promotion. The later canonical
-review plus pointer decision is the durable approval record.
+review plus content-hashed generic decision receipt is the durable approval record.

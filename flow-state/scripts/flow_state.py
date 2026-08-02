@@ -60,6 +60,7 @@ PROJECT_CANONICAL_KEYS = {
 }
 PROJECT_ARTIFACT_KEYS = PROJECT_CANONICAL_KEYS - {"artifact_index"}
 SEMANTIC_CANONICAL_KEYS = {"discovery", "requirements", "roadmap", "architecture"}
+BUNDLE_DECLARATION_ROLES = SEMANTIC_CANONICAL_KEYS | {"ui_structure"}
 ARTIFACT_STATUSES = STATUSES | {"derived"}
 ACTIVE_ARTIFACT_LIMIT = 24
 CONTEXT_ID_LIMIT = 32
@@ -68,9 +69,10 @@ BLOCKER_LIMIT = 20
 NEXT_ACTION_LIMIT = 8
 POINTER_TEXT_LIMIT = 500
 ROLE_TEXT_LIMIT = 64
-POINTER_FILE_SIZE_LIMIT = 64 * 1024
+POINTER_FILE_SIZE_LIMIT = 32 * 1024
 INDEX_FILE_SIZE_LIMIT = 16 * 1024 * 1024
-RESOLVE_OUTPUT_BYTE_LIMIT = 24 * 1024
+RESOLVE_OUTPUT_BYTE_LIMIT = 16 * 1024
+RESOLVE_OCCURRENCE_LIMIT = 12
 STATE_KEYS = {
     "schema_version",
     "revision",
@@ -93,6 +95,11 @@ ID_PATTERN = re.compile(
 )
 ROLE_PATTERN = re.compile(r"[a-z][a-z0-9_-]*")
 AMENDMENT_ROLES = {"product_amendment", "architecture_amendment", "change_request"}
+SPECIAL_DECISION_RECEIPT_TYPES = {
+    "feature_acceptance_decision",
+    "release_authorization",
+    "release_result",
+}
 IMPLEMENTATION_KINDS = {"feature", "bug", "maintenance", "migration", "security"}
 CANONICAL_ROLE_STAGES = {
     "discovery": "discovery",
@@ -103,6 +110,15 @@ CANONICAL_ROLE_STAGES = {
     "ui_structure": "product_ui",
 }
 REFRESHABLE_CANONICAL_ROLES = {"agent_guidance", "ui_structure"}
+WORK_ROLE_STAGES = {
+    "spec": {"specify"},
+    "wireframes": {"feature_ui"},
+    "plan": {"plan"},
+    "tasks": {"plan"},
+    "requirements_checklist": {"plan"},
+    "verification": {"post_implement"},
+    "spike_result": {"spike_result"},
+}
 STAGE_KINDS = {
     "discovery": {"project"},
     "prd": {"project"},
@@ -110,15 +126,16 @@ STAGE_KINDS = {
     "architecture": {"project", "change_request"},
     "agent_guidance": {"project", "change_request"},
     "product_ui": {"project", "change_request"},
-    "specify": {"feature", "bug", "maintenance", "spike", "migration", "security"},
+    "specify": {"feature", "bug", "maintenance", "migration", "security"},
     "feature_ui": {"feature"},
-    "plan": {"feature", "bug", "maintenance", "spike", "migration", "security"},
+    "plan": {"feature", "bug", "maintenance", "migration", "security"},
     "pre_implement": IMPLEMENTATION_KINDS,
     "implementation": {"feature", "bug", "maintenance", "migration", "security"},
     "post_implement": IMPLEMENTATION_KINDS,
     "acceptance": {"feature"},
     "change_request": {"change_request"},
     "release_readiness": {"release"},
+    "spike_result": {"spike"},
 }
 NON_STARTABLE_STAGES = {"post_implement", "acceptance"}
 
@@ -134,6 +151,10 @@ def pointer_path(root: Path) -> Path:
 
 def index_path(root: Path) -> Path:
     return root / ".specify" / "artifact-index.yaml"
+
+
+def index_digest_path(root: Path) -> Path:
+    return root / ".specify" / "artifact-index.sha256"
 
 
 def read_yaml(path: Path) -> dict[str, Any]:
@@ -161,6 +182,16 @@ def read_index(root: Path) -> dict[str, Any]:
         fail(
             f"artifact index exceeds {INDEX_FILE_SIZE_LIMIT} bytes; split large domain artifacts/indexes"
         )
+    if not path.is_file():
+        fail(f"missing file: {path}")
+    digest_path = index_digest_path(root)
+    if not digest_path.is_file():
+        fail("artifact index digest is missing; run rebuild-index")
+    recorded_digest = digest_path.read_text(encoding="utf-8").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", recorded_digest):
+        fail("artifact index digest is invalid; run rebuild-index")
+    if sha256_file(path) != recorded_digest:
+        fail("artifact index digest mismatch; run rebuild-index")
     return read_yaml(path)
 
 
@@ -396,10 +427,15 @@ def validate_state(state: dict[str, Any], root: Path, check_paths: bool) -> list
                     continue
                 if resolved.is_file() and sha256_file(resolved) != digest:
                     errors.append(f"canonical artifact hash is stale: {raw_path}")
-                elif resolved.is_file() and status == "approved":
+                elif resolved.is_file() and status != "not_started":
                     errors.extend(
                         f"canonical.{key} bundle: {error}"
-                        for error in validate_approved_bundle(resolved, root)
+                        for error in validate_approved_bundle(
+                            resolved,
+                            root,
+                            role=key,
+                            require_declaration=key in BUNDLE_DECLARATION_ROLES,
+                        )
                     )
     active_artifacts = state.get("active_artifacts")
     if not isinstance(active_artifacts, list) or len(active_artifacts) > ACTIVE_ARTIFACT_LIMIT:
@@ -685,7 +721,12 @@ def require_approved_canonical_integrity(
         normalized = require_repo_file(root, role_path, f"approved canonical {role}")
         if sha256_file(root / normalized) != expected:
             fail(f"approved canonical artifact changed outside a reviewed operation: {normalized}")
-        bundle_errors = validate_approved_bundle(root / normalized, root)
+        bundle_errors = validate_approved_bundle(
+            root / normalized,
+            root,
+            role=role,
+            require_declaration=role in BUNDLE_DECLARATION_ROLES,
+        )
         if bundle_errors:
             fail(f"approved canonical bundle is stale: {'; '.join(bundle_errors[:3])}")
 
@@ -717,6 +758,8 @@ def require_decision_field(
         or "{{" in value
         or "}}" in value
         or " | " in value
+        or re.fullmatch(r"\[[^\]]+\]", value)
+        or re.fullmatch(r"<[^>]+>", value)
     ):
         fail(f"decision artifact field is unresolved: {label}")
     if expected is not None and value.lower() != expected.lower():
@@ -729,6 +772,16 @@ def require_decision_field(
         if parsed_date.isoformat() != value:
             fail(f"decision artifact field {label} must be a real YYYY-MM-DD date")
     return value
+
+
+def require_integer_field(fields: dict[str, str], label: str, minimum: int = 0) -> int:
+    value = require_decision_field(fields, label)
+    if not re.fullmatch(r"0|[1-9][0-9]*", value):
+        fail(f"decision artifact field {label} must be a non-negative integer")
+    parsed = int(value)
+    if parsed < minimum:
+        fail(f"decision artifact field {label} must be at least {minimum}")
+    return parsed
 
 
 def require_unresolved_field(fields: dict[str, str], label: str) -> None:
@@ -764,6 +817,9 @@ def section_has_concrete_findings(text: str, heading: str) -> bool:
 
 def require_markdown_sections(text: str, headings: tuple[str, ...], table: bool = False) -> None:
     for heading in headings:
+        matches = list(re.finditer(rf"(?m)^## {re.escape(heading)}\s*$", text))
+        if len(matches) > 1:
+            fail(f"candidate artifact contains duplicate required section: {heading}")
         body = markdown_section_body(text, heading)
         if body is None:
             fail(f"candidate artifact is missing required section: {heading}")
@@ -798,10 +854,268 @@ def markdown_table_rows(text: str, heading: str) -> list[list[str]]:
     return rows
 
 
-def validate_approved_bundle(root_artifact: Path, root: Path) -> list[str]:
-    """Validate an optional root-bound list of split canonical files."""
+def normalized_table_token(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", value.strip().lower()).strip("_")
+
+
+def require_allowed_result_rows(
+    text: str, heading: str, result_column: int, allowed: set[str]
+) -> None:
+    rows = markdown_table_rows(text, heading)
+    for position, row in enumerate(rows[1:], start=1):
+        if len(row) <= result_column:
+            fail(f"{heading} row {position} lacks a result column")
+        result = normalized_table_token(row[result_column])
+        if result not in allowed:
+            fail(f"{heading} row {position} has non-ready result: {row[result_column]}")
+
+
+def require_gate_categories(
+    text: str, heading: str, categories: dict[str, set[str]]
+) -> None:
+    rows = markdown_table_rows(text, heading)
+    labels = [normalized_table_token(row[0]) for row in rows[1:] if row]
+    for category, aliases in categories.items():
+        count = sum(label in aliases for label in labels)
+        if count != 1:
+            fail(f"{heading} must contain exactly one {category} gate row")
+
+
+def require_gate_applicability(
+    text: str, heading: str, aliases: set[str], expected: str, label: str
+) -> None:
+    rows = markdown_table_rows(text, heading)
+    matches = [
+        row for row in rows[1:]
+        if row and normalized_table_token(row[0]) in aliases
+    ]
+    if len(matches) != 1 or len(matches[0]) < 2:
+        fail(f"{heading} must contain exactly one complete {label} gate row")
+    applicability = normalized_table_token(matches[0][1])
+    if applicability != expected:
+        fail(f"{heading} {label} applicability must be {expected}")
+
+
+def require_exact_scenario_coverage(
+    text: str, root: Path, spec_path: str
+) -> None:
+    spec_text = (root / spec_path).read_text(encoding="utf-8")
+    spec_ids = {
+        match.upper()
+        for match in re.findall(r"\bSC-\d+\b", spec_text, re.IGNORECASE)
+    }
+    if not spec_ids:
+        fail("acceptance spec must define at least one stable SC-### scenario ID")
+    evidence_ids: list[str] = []
+    for position, row in enumerate(
+        markdown_table_rows(text, "Scenario Evidence")[1:], start=1
+    ):
+        if not row:
+            fail(f"Scenario Evidence row {position} is incomplete")
+        scenario_id = row[0].strip().strip("`").upper()
+        if not re.fullmatch(r"SC-\d+", scenario_id):
+            fail(f"Scenario Evidence row {position} must start with one SC-### ID")
+        evidence_ids.append(scenario_id)
+    if len(evidence_ids) != len(set(evidence_ids)):
+        fail("Scenario Evidence contains duplicate scenario IDs")
+    if set(evidence_ids) != spec_ids:
+        missing = sorted(spec_ids - set(evidence_ids))
+        extra = sorted(set(evidence_ids) - spec_ids)
+        fail(
+            "Scenario Evidence must exactly cover the registered spec scenario IDs; "
+            f"missing={missing[:8]}, extra={extra[:8]}"
+        )
+
+
+def table_has_concrete_data_row(text: str, heading: str) -> bool:
+    none_values = {
+        "", "none", "n_a", "not_applicable", "not_required", "no", "false",
+    }
+    return any(
+        any(normalized_table_token(cell) not in none_values for cell in row)
+        for row in markdown_table_rows(text, heading)[1:]
+    )
+
+
+def require_concrete_table_column(
+    text: str, heading: str, column: int, label: str
+) -> None:
+    none_values = {"", "none", "n_a", "not_applicable", "not_available", "missing"}
+    for position, row in enumerate(markdown_table_rows(text, heading)[1:], start=1):
+        if len(row) <= column:
+            fail(f"{heading} row {position} lacks {label}")
+        value = row[column].strip().strip("`")
+        if (
+            normalized_table_token(value) in none_values
+            or "{{" in value
+            or "}}" in value
+            or re.fullmatch(r"\[[^\]]+\]", value)
+            or re.fullmatch(r"<[^>]+>", value)
+        ):
+            fail(f"{heading} row {position} requires concrete {label}")
+
+
+def approved_spike_definition(
+    state: dict[str, Any], root: Path, spike_id: str
+) -> tuple[str, str, str]:
+    if not re.fullmatch(r"SPK-\d+", spike_id, re.IGNORECASE):
+        fail("spike work-id must use SPK-###")
+    architecture = state.get("canonical", {}).get("architecture")
+    if not architecture or state.get("canonical_status", {}).get("architecture") != "approved":
+        fail("spike_result requires an approved architecture baseline containing the spike")
+    normalized = require_repo_file(root, architecture, "approved architecture")
+    text = (root / normalized).read_text(encoding="utf-8")
+    definitions: list[tuple[str, str, str]] = []
+    for heading in ("Spikes", "Deferred Decisions and Spikes"):
+        rows = markdown_table_rows(text, heading)
+        if not rows:
+            continue
+        headers = [normalized_table_token(cell) for cell in rows[0]]
+        for row in rows[1:]:
+            if not row or row[0].strip().strip("`").lower() != spike_id.lower():
+                continue
+            try:
+                if heading == "Spikes":
+                    question = row[headers.index("question")]
+                    time_box = row[headers.index("time_box")]
+                    blocks = row[headers.index("blocks")]
+                else:
+                    kind = row[headers.index("kind")]
+                    if normalized_table_token(kind) != "spike":
+                        fail(f"{spike_id} must be typed Spike in the architecture registry")
+                    question = row[headers.index("question_or_decision")]
+                    time_box = row[headers.index("trigger_time_box")]
+                    blocks = row[headers.index("blocks")]
+            except (ValueError, IndexError):
+                fail(f"architecture spike table has an invalid schema for {spike_id}")
+            definitions.append((question.strip(), time_box.strip(), blocks.strip()))
+    if len(definitions) != 1:
+        fail(f"approved architecture must define {spike_id} exactly once in a spike table")
+    question, time_box, blocks = definitions[0]
+    for label, value in (("question", question), ("time box", time_box), ("blocked owner/work", blocks)):
+        if (
+            not value
+            or normalized_table_token(value) in {"none", "n_a", "unknown"}
+            or "{{" in value
+            or "}}" in value
+            or re.fullmatch(r"\[[^\]]+\]", value)
+            or re.fullmatch(r"<[^>]+>", value)
+        ):
+            fail(f"architecture spike {spike_id} requires a concrete {label}")
+    return question, time_box, normalized
+
+
+def feature_numbers_from_scope(scope: str) -> set[int]:
+    numbers = {int(value) for value in re.findall(r"\bF-?(\d+)\b", scope, re.IGNORECASE)}
+    for start_raw, end_raw in re.findall(
+        r"\bF-?(\d+)\s*(?:\.\.|-)\s*F-?(\d+)\b", scope, re.IGNORECASE
+    ):
+        start, end = int(start_raw), int(end_raw)
+        if end < start or end - start > 100:
+            fail("release Scope contains an invalid or over-broad feature range")
+        numbers.update(range(start, end + 1))
+    if not numbers:
+        fail("release Scope must name at least one F-ID")
+    return numbers
+
+
+def validate_included_acceptance_decisions(
+    text: str, root: Path, scope: str
+) -> None:
+    rows = markdown_table_rows(text, "Included Acceptance Decisions")
+    decision_receipts = special_decision_receipts(root)
+    included_numbers: set[int] = set()
+    for position, row in enumerate(rows[1:], start=1):
+        if len(row) < 3:
+            fail(f"Included Acceptance Decisions row {position} is incomplete")
+        feature_id = row[0].strip().strip("`")
+        if not re.fullmatch(r"F-?\d+", feature_id, re.IGNORECASE):
+            fail(f"Included Acceptance Decisions row {position} has an invalid feature ID")
+        feature_number = int(re.search(r"\d+", feature_id).group(0))
+        if feature_number in included_numbers:
+            fail(f"Included Acceptance Decisions contains duplicate feature {feature_id}")
+        included_numbers.add(feature_number)
+        if normalized_table_token(row[1]) != "accepted":
+            fail(f"Included Acceptance Decisions row {position} is not human Accepted")
+        raw_evidence = row[2].strip().strip("`")
+        link_match = re.fullmatch(r"\[[^\]]+\]\(([^)]+)\)", raw_evidence)
+        if link_match:
+            raw_evidence = link_match.group(1).split("#", 1)[0]
+        evidence_path = require_repo_file(root, raw_evidence, "feature acceptance decision")
+        evidence_fields = markdown_fields(root / evidence_path)
+        require_decision_field(evidence_fields, "Work item", feature_id)
+        require_decision_field(evidence_fields, "Human decision", "Accepted")
+        require_accepted_feature_decision_receipt(
+            root, feature_id, evidence_path, decision_receipts
+        )
+    scoped_numbers = feature_numbers_from_scope(scope)
+    if included_numbers != scoped_numbers:
+        fail("Included Acceptance Decisions must exactly cover the fixed release Scope")
+
+
+def require_passing_result_rows(
+    text: str, heading: str, result_column: int, review_status: str
+) -> None:
+    if review_status not in {"ready", "conditional"}:
+        return
+    rows = markdown_table_rows(text, heading)
+    for position, row in enumerate(rows[1:], start=1):
+        if len(row) <= result_column:
+            fail(f"{heading} row {position} lacks a result column")
+        if normalized_table_token(row[result_column]) not in {"pass", "passed", "accepted"}:
+            fail(f"{heading} row {position} is not passing for Review status {review_status}")
+
+
+def validate_applicability_rows(text: str, heading: str, review_status: str) -> None:
+    rows = markdown_table_rows(text, heading)
+    allowed_applicability = {"required", "applicable", "not_applicable"}
+    allowed_results = {"pass", "passed", "fail", "failed", "missing", "not_run", "not_applicable"}
+    for position, row in enumerate(rows[1:], start=1):
+        if len(row) < 4:
+            fail(f"{heading} row {position} must contain gate, applicability, result, and evidence")
+        applicability = normalized_table_token(row[1])
+        result = normalized_table_token(row[2])
+        evidence = row[3].strip()
+        if applicability not in allowed_applicability:
+            fail(f"{heading} row {position} has invalid applicability: {row[1]}")
+        if result not in allowed_results:
+            fail(f"{heading} row {position} has invalid result: {row[2]}")
+        if not evidence or "{{" in evidence or "}}" in evidence:
+            fail(f"{heading} row {position} requires concrete evidence or an N/A reason")
+        if review_status in {"ready", "conditional"}:
+            if applicability == "not_applicable" and result != "not_applicable":
+                fail(f"{heading} row {position} must record result not_applicable")
+            if applicability != "not_applicable" and result not in {"pass", "passed"}:
+                fail(f"{heading} row {position} is not passing for Review status {review_status}")
+
+
+def validate_approved_bundle(
+    root_artifact: Path,
+    root: Path,
+    *,
+    role: str | None = None,
+    require_declaration: bool = False,
+) -> list[str]:
+    """Validate a root-bound list of split canonical files when declared."""
     text = root_artifact.read_text(encoding="utf-8", errors="replace")
+    mode_values = [
+        match.group(1).strip().lower()
+        for match in re.finditer(r"(?m)^\*\*Artifact bundle\*\*:\s*(.*?)\s*$", text)
+    ]
+    if len(mode_values) > 1:
+        return ["Artifact bundle field must appear at most once"]
+    mode = mode_values[0] if mode_values else None
+    if require_declaration and mode is None:
+        return ["Artifact bundle field must declare single or split"]
+    if mode is not None and mode not in {"single", "split"}:
+        return ["Artifact bundle must be single or split"]
+    if role == "discovery" and mode == "split":
+        return ["discovery is a single-file canonical artifact"]
     body = markdown_section_body(text, "Approved Bundle")
+    if mode == "single" and body is not None:
+        return ["single artifacts must not contain an Approved Bundle table"]
+    if mode == "split" and body is None:
+        return ["split artifacts require an Approved Bundle table"]
     if body is None:
         return []
     rows: list[list[str]] = []
@@ -842,6 +1156,55 @@ def validate_approved_bundle(root_artifact: Path, root: Path) -> list[str]:
             errors.append(f"bundle path does not exist: {normalized}")
         elif sha256_file(resolved) != digest:
             errors.append(f"bundle hash is stale: {normalized}")
+    registry_specs = {
+        "requirements": (("Domain Registry", "Detail path"),),
+        "roadmap": (("Domain Registry", "Detail path"),),
+        "architecture": (
+            ("Domain Detail Registry", "Detail path"),
+            ("Decision Record Registry", "Path"),
+        ),
+        "ui_structure": (("Domain Registry", "Detail path"),),
+    }
+    if mode == "split" and role in registry_specs:
+        registry_paths: list[str] = []
+        for heading, path_column in registry_specs[role]:
+            registry_rows = markdown_table_rows(text, heading)
+            if not registry_rows:
+                errors.append(f"split {role} root is missing {heading}")
+                continue
+            headers = [normalized_table_token(cell) for cell in registry_rows[0]]
+            try:
+                path_index = headers.index(normalized_table_token(path_column))
+            except ValueError:
+                errors.append(f"{heading} is missing column {path_column}")
+                continue
+            for position, row in enumerate(registry_rows[1:], start=1):
+                if len(row) <= path_index:
+                    errors.append(f"{heading} row {position} lacks {path_column}")
+                    continue
+                raw_registry_path = row[path_index].strip().strip("`")
+                link_match = re.fullmatch(r"\[[^\]]+\]\(([^)]+)\)", raw_registry_path)
+                if link_match:
+                    raw_registry_path = link_match.group(1).split("#", 1)[0]
+                try:
+                    normalized_registry, _resolved = resolve_repo_path(root, raw_registry_path)
+                except ValueError as exc:
+                    errors.append(f"{heading} row {position}: {exc}")
+                    continue
+                registry_paths.append(normalized_registry)
+        duplicate_registry_paths = sorted(
+            path for path in set(registry_paths) if registry_paths.count(path) > 1
+        )
+        if duplicate_registry_paths:
+            errors.append(f"duplicate registry paths: {duplicate_registry_paths[:3]}")
+        registry_set = set(registry_paths)
+        if registry_set != seen:
+            missing_from_bundle = sorted(registry_set - seen)
+            missing_from_registry = sorted(seen - registry_set)
+            if missing_from_bundle:
+                errors.append(f"registry paths missing from Approved Bundle: {missing_from_bundle[:3]}")
+            if missing_from_registry:
+                errors.append(f"Approved Bundle paths missing from registries: {missing_from_registry[:3]}")
     return errors
 
 
@@ -861,26 +1224,41 @@ def require_work_item(fields: dict[str, str], work_id: str, label: str = "Work i
 
 
 def validate_candidate_artifact(
-    role: str, resolved: Path, root: Path, work_id: str,
+    role: str, resolved: Path, root: Path, work_id: str, work_kind: str,
     expected_inputs: dict[str, str] | None = None,
 ) -> None:
-    if role not in {"pre_implementation", "acceptance", "release_readiness"}:
+    if role not in {
+        "pre_implementation", "verification", "spike_result", "acceptance", "release_readiness"
+    }:
         return
     text = resolved.read_text(encoding="utf-8")
     fields = markdown_fields(resolved)
     if role == "pre_implementation":
         require_work_item(fields, work_id)
+        require_decision_field(fields, "Work kind", work_kind)
         require_decision_field(fields, "Review result", "Pass")
         require_decision_field(fields, "Reviewed revision")
         require_decision_field(fields, "Reviewed by")
         require_decision_field(fields, "Reviewed on", date=True)
-        require_markdown_sections(text, ("Inputs", "Alignment Checks"), table=True)
+        require_markdown_sections(
+            text, ("Inputs", "Alignment Checks", "Coverage Batches"), table=True
+        )
         require_markdown_sections(
             text,
             ("Blocking Findings", "Advisory Findings", "Skipped Checks", "Outcome Rationale"),
         )
         if section_has_concrete_findings(text, "Blocking Findings"):
             fail("a passing pre-implementation review cannot contain blocking findings")
+        if section_has_concrete_findings(text, "Skipped Checks"):
+            fail("a passing pre-implementation review cannot contain skipped checks")
+        require_allowed_result_rows(
+            text, "Alignment Checks", 1, {"pass", "passed", "not_applicable"}
+        )
+        require_allowed_result_rows(
+            text, "Coverage Batches", 2, {"pass", "passed", "complete", "completed", "covered"}
+        )
+        for column, label in ((0, "batch ID"), (1, "stable IDs or paths"), (3, "evidence")):
+            require_concrete_table_column(text, "Coverage Batches", column, label)
         reject_unresolved_placeholders(text, set())
         input_rows = markdown_table_rows(text, "Inputs")
         input_by_label = {
@@ -905,13 +1283,91 @@ def validate_candidate_artifact(
                     f"{expected_inputs.get(input_role)}"
                 )
         return
+    if role == "verification":
+        require_work_item(fields, work_id)
+        require_decision_field(fields, "Work kind", work_kind)
+        require_decision_field(fields, "Reviewed revision")
+        require_decision_field(fields, "Reviewed on", date=True)
+        expected_candidate = (
+            "Ready for Acceptance" if work_kind == "feature" else "Ready for Review"
+        )
+        require_decision_field(fields, "Candidate state", expected_candidate)
+        require_markdown_sections(
+            text,
+            (
+                "Inputs", "Proof Evidence", "Tasks, Checks, and Deferrals",
+                "Constraint and Scope Drift", "Coverage Batches",
+            ),
+            table=True,
+        )
+        require_markdown_sections(
+            text, ("Blocking Findings", "Skipped Checks", "Readiness Conclusion")
+        )
+        if section_has_concrete_findings(text, "Blocking Findings"):
+            fail("a ready verification candidate cannot contain blocking findings")
+        if section_has_concrete_findings(text, "Skipped Checks"):
+            fail("a ready verification candidate cannot contain skipped checks")
+        require_allowed_result_rows(
+            text, "Proof Evidence", 2, {"pass", "passed", "accepted"}
+        )
+        require_allowed_result_rows(
+            text,
+            "Tasks, Checks, and Deferrals",
+            1,
+            {"complete", "completed", "pass", "passed", "deferred", "not_applicable"},
+        )
+        require_allowed_result_rows(
+            text,
+            "Constraint and Scope Drift",
+            1,
+            {"aligned", "pass", "passed", "accepted", "deferred", "not_applicable"},
+        )
+        require_allowed_result_rows(
+            text, "Coverage Batches", 2, {"pass", "passed", "complete", "completed", "covered"}
+        )
+        for column, label in ((0, "batch ID"), (1, "stable IDs or paths"), (3, "evidence")):
+            require_concrete_table_column(text, "Coverage Batches", column, label)
+        reject_unresolved_placeholders(text, set())
+        return
+    if role == "spike_result":
+        if work_kind != "spike":
+            fail("spike_result requires active work kind spike")
+        require_work_item(fields, work_id)
+        question = require_decision_field(fields, "Question")
+        source_architecture = require_decision_field(fields, "Source architecture")
+        time_box = require_decision_field(fields, "Time box")
+        for label in ("Investigated revision", "Investigated by"):
+            require_decision_field(fields, label)
+        require_decision_field(fields, "Investigated on", date=True)
+        outcome = require_decision_field(fields, "Outcome").lower()
+        if outcome not in {"answered", "inconclusive"}:
+            fail("spike_result Outcome must be answered or inconclusive")
+        approved_question, approved_time_box, architecture_path = approved_spike_definition(
+            read_valid_state(root, check_paths=True), root, work_id
+        )
+        if question != approved_question or time_box != approved_time_box:
+            fail("spike_result question and time box must match the approved spike definition")
+        source_path, separator, source_anchor = source_architecture.partition("#")
+        normalized_source = require_repo_file(root, source_path, "spike source architecture")
+        if normalized_source != architecture_path or not separator or work_id.lower() not in source_anchor.lower():
+            fail("spike_result Source architecture must cite the canonical path and SPK anchor")
+        require_markdown_sections(text, ("Evidence",), table=True)
+        require_markdown_sections(text, ("Findings", "Answer", "Follow-up Routing"))
+        require_concrete_table_column(text, "Evidence", 0, "activity")
+        require_concrete_table_column(text, "Evidence", 1, "result")
+        require_concrete_table_column(text, "Evidence", 2, "evidence reference")
+        reject_unresolved_placeholders(text, set())
+        return
     review_status = require_decision_field(fields, "Review status").lower()
     if review_status not in {"ready", "conditional", "not_ready"}:
         fail(f"{role} Review status must be ready, conditional, or not_ready")
     if role == "acceptance":
         require_work_item(fields, work_id)
+        require_decision_field(fields, "Reviewed by")
+        require_decision_field(fields, "Reviewed on", date=True)
+        require_decision_field(fields, "Independence", "non-implementer")
         spec_path = require_decision_field(fields, "Spec")
-        require_repo_file(root, spec_path, "acceptance spec")
+        spec_path = require_repo_file(root, spec_path, "acceptance spec")
         require_decision_field(fields, "Implementation revision")
         decision_labels = {"Human decision", "Decided by", "Decision date", "Decision evidence"}
         for label in decision_labels:
@@ -924,10 +1380,43 @@ def validate_candidate_artifact(
             text, "Blockers"
         ):
             fail(f"acceptance Review status {review_status} cannot contain blockers")
+        if review_status == "not_ready" and not section_has_concrete_findings(text, "Blockers"):
+            fail("acceptance Review status not_ready requires a concrete blocker")
+        if review_status == "conditional" and not table_has_concrete_data_row(
+            text, "Follow-ups"
+        ):
+            fail("conditional acceptance requires a concrete follow-up condition")
+        require_gate_categories(
+            text,
+            "Applicable Quality Gates",
+            {
+                "tests/deterministic verification": {
+                    "tests", "deterministic_verification", "tests_deterministic_verification"
+                },
+                "coverage policy": {"coverage", "coverage_policy"},
+                "CI": {"ci"},
+                "code review": {"code_review"},
+                "security review": {"security_review"},
+            },
+        )
+        require_passing_result_rows(text, "Scenario Evidence", 1, review_status)
+        require_concrete_table_column(text, "Scenario Evidence", 2, "scenario evidence")
+        require_exact_scenario_coverage(text, root, spec_path)
+        require_gate_applicability(
+            text,
+            "Applicable Quality Gates",
+            {"tests", "deterministic_verification", "tests_deterministic_verification"},
+            "required",
+            "tests / deterministic verification",
+        )
+        validate_applicability_rows(text, "Applicable Quality Gates", review_status)
         reject_unresolved_placeholders(text, decision_labels)
         return
     require_work_item(fields, work_id, "Release ID")
-    require_decision_field(fields, "Scope")
+    require_decision_field(fields, "Reviewed by")
+    require_decision_field(fields, "Reviewed on", date=True)
+    require_decision_field(fields, "Independence", "non-implementer")
+    release_scope = require_decision_field(fields, "Scope")
     require_decision_field(fields, "Artifact revision")
     decision_labels = {
         "Human readiness decision",
@@ -936,6 +1425,7 @@ def validate_candidate_artifact(
         "Authorized on",
         "Execution",
         "Execution evidence",
+        "Execution evidence SHA-256",
         "Confirmed by",
         "Confirmed on",
     }
@@ -951,20 +1441,82 @@ def validate_candidate_artifact(
         text, "Blockers"
     ):
         fail(f"release readiness Review status {review_status} cannot contain blockers")
+    if review_status == "not_ready" and not section_has_concrete_findings(text, "Blockers"):
+        fail("release readiness Review status not_ready requires a concrete blocker")
+    if review_status == "conditional" and not table_has_concrete_data_row(
+        text, "Deferred Items"
+    ):
+        fail("conditional release readiness requires a concrete deferred condition")
+    require_gate_categories(
+        text,
+        "Release Gates",
+        {
+            "build provenance": {"build_provenance"},
+            "CI": {"ci"},
+            "code review": {"code_review"},
+            "dependency review": {"dependency_review"},
+            "security review": {"security_review"},
+            "migration": {"migration"},
+            "compatibility": {"compatibility"},
+            "rollback": {"rollback"},
+            "observability/operations": {
+                "observability", "operations", "observability_operations"
+            },
+            "user/operator documentation": {
+                "documentation", "user_documentation", "operator_documentation",
+                "user_operator_documentation",
+            },
+        },
+    )
+    require_passing_result_rows(text, "Included Acceptance Decisions", 1, review_status)
+    validate_included_acceptance_decisions(text, root, release_scope)
+    require_gate_applicability(
+        text, "Release Gates", {"build_provenance"}, "required", "build provenance"
+    )
+    validate_applicability_rows(text, "Release Gates", review_status)
     reject_unresolved_placeholders(text, decision_labels)
 
 
-def validate_block_artifact(role: str, resolved: Path, work_id: str) -> None:
-    if role != "pre_implementation":
+def validate_block_artifact(
+    role: str, resolved: Path, root: Path, work_id: str, work_kind: str
+) -> None:
+    if role not in {"pre_implementation", "verification", "release_readiness"}:
+        return
+    if role == "release_readiness":
+        validate_candidate_artifact(role, resolved, root, work_id, work_kind)
+        require_decision_field(markdown_fields(resolved), "Review status", "not_ready")
         return
     text = resolved.read_text(encoding="utf-8")
     fields = markdown_fields(resolved)
     require_work_item(fields, work_id)
+    if role == "verification":
+        require_decision_field(fields, "Work kind", work_kind)
+        require_decision_field(fields, "Reviewed revision")
+        require_decision_field(fields, "Reviewed on", date=True)
+        require_decision_field(fields, "Candidate state", "Blocked")
+        require_markdown_sections(
+            text,
+            (
+                "Inputs", "Proof Evidence", "Tasks, Checks, and Deferrals",
+                "Constraint and Scope Drift", "Coverage Batches",
+            ),
+            table=True,
+        )
+        require_markdown_sections(
+            text, ("Blocking Findings", "Skipped Checks", "Readiness Conclusion")
+        )
+        if not section_has_concrete_findings(text, "Blocking Findings"):
+            fail("a blocked verification review requires a concrete blocking finding")
+        reject_unresolved_placeholders(text, set())
+        return
     require_decision_field(fields, "Review result", "Blocked")
+    require_decision_field(fields, "Work kind", work_kind)
     require_decision_field(fields, "Reviewed revision")
     require_decision_field(fields, "Reviewed by")
     require_decision_field(fields, "Reviewed on", date=True)
-    require_markdown_sections(text, ("Inputs", "Alignment Checks"), table=True)
+    require_markdown_sections(
+        text, ("Inputs", "Alignment Checks", "Coverage Batches"), table=True
+    )
     require_markdown_sections(
         text,
         ("Blocking Findings", "Advisory Findings", "Skipped Checks", "Outcome Rationale"),
@@ -982,6 +1534,8 @@ def validated_decision_value(label: str, value: str, date: bool = False) -> str:
         or "{{" in normalized
         or "}}" in normalized
         or " | " in normalized
+        or re.fullmatch(r"\[[^\]]+\]", normalized)
+        or re.fullmatch(r"<[^>]+>", normalized)
         or "\n" in normalized
         or "\r" in normalized
         or len(normalized) > POINTER_TEXT_LIMIT
@@ -1042,6 +1596,350 @@ def validate_release_receipt(
     return normalized, sha256_file(root / normalized)
 
 
+def validate_special_decision_receipt(
+    receipt: dict[str, Any], path: Path, root: Path
+) -> list[str]:
+    errors: list[str] = []
+    required_keys = {
+        "schema_version", "receipt_type", "pointer_revision", "work_kind", "work_id",
+        "stage", "decision", "decided_by", "decided_on", "evidence", "artifacts",
+    }
+    if set(receipt) != required_keys:
+        return [f"special decision receipt schema mismatch: {path.name}"]
+    receipt_type = receipt.get("receipt_type")
+    expected = {
+        "feature_acceptance_decision": (
+            "feature", "acceptance", {"accepted", "rejected", "changes_requested"}, "acceptance"
+        ),
+        "release_authorization": (
+            "release", "release_readiness", {"authorized"}, "release_readiness"
+        ),
+        "release_result": (
+            "release", "release_readiness", {"succeeded", "failed", "held", "cancelled"},
+            "release_readiness",
+        ),
+    }
+    if receipt_type not in SPECIAL_DECISION_RECEIPT_TYPES:
+        return [f"special decision receipt type is invalid: {path.name}"]
+    work_kind, stage, decisions, role = expected[receipt_type]
+    if type(receipt.get("schema_version")) is not int or receipt["schema_version"] != SCHEMA_VERSION:
+        errors.append(f"special decision receipt schema_version must be {SCHEMA_VERSION}: {path.name}")
+    if type(receipt.get("pointer_revision")) is not int or receipt["pointer_revision"] < 1:
+        errors.append(f"special decision receipt pointer_revision must be positive: {path.name}")
+    if receipt.get("work_kind") != work_kind or receipt.get("stage") != stage:
+        errors.append(f"special decision receipt work kind/stage is invalid: {path.name}")
+    if receipt.get("decision") not in decisions:
+        errors.append(f"special decision receipt decision is invalid: {path.name}")
+    for key in ("work_id", "decided_by", "evidence"):
+        value = receipt.get(key)
+        if (
+            not bounded_text(value)
+            or "{{" in str(value)
+            or "}}" in str(value)
+            or re.fullmatch(r"\[[^\]]+\]", str(value))
+            or re.fullmatch(r"<[^>]+>", str(value))
+        ):
+            errors.append(f"special decision receipt {key} must be concrete: {path.name}")
+    decided_on = receipt.get("decided_on")
+    if not isinstance(decided_on, str):
+        errors.append(f"special decision receipt decided_on must be YYYY-MM-DD: {path.name}")
+    else:
+        try:
+            parsed_date = calendar_date.fromisoformat(decided_on)
+        except ValueError:
+            errors.append(f"special decision receipt decided_on must be YYYY-MM-DD: {path.name}")
+        else:
+            if parsed_date.isoformat() != decided_on:
+                errors.append(f"special decision receipt decided_on must be YYYY-MM-DD: {path.name}")
+    artifacts = receipt.get("artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 1:
+        errors.append(f"special decision receipt must bind exactly one artifact: {path.name}")
+    else:
+        artifact = artifacts[0]
+        artifact_keys = {"role", "path", "reviewed_sha256", "result_sha256"}
+        if not isinstance(artifact, dict) or set(artifact) != artifact_keys:
+            errors.append(f"special decision receipt artifact schema mismatch: {path.name}")
+        else:
+            if artifact.get("role") != role:
+                errors.append(f"special decision receipt artifact role is invalid: {path.name}")
+            try:
+                _normalized, resolved = resolve_repo_path(root, artifact.get("path"))
+            except ValueError as exc:
+                errors.append(f"special decision receipt artifact path is invalid: {exc}")
+            else:
+                if not resolved.is_file():
+                    errors.append(f"special decision receipt artifact is missing: {artifact.get('path')}")
+            for key in ("reviewed_sha256", "result_sha256"):
+                if not isinstance(artifact.get(key), str) or not re.fullmatch(
+                    r"[0-9a-f]{64}", artifact.get(key, "")
+                ):
+                    errors.append(f"special decision receipt {key} is invalid: {path.name}")
+    return errors
+
+
+def validate_decision_receipt_file(path: Path, root: Path) -> list[str]:
+    errors: list[str] = []
+    digest = sha256_file(path)
+    suffix = path.stem.rsplit("-", 1)[-1]
+    if not re.fullmatch(r"[0-9a-f]{64}", suffix) or suffix != digest:
+        errors.append(f"decision receipt filename does not match content hash: {path.name}")
+    try:
+        receipt = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return errors + [f"invalid decision receipt YAML {path.name}: {exc}"]
+    if isinstance(receipt, dict) and "receipt_type" in receipt:
+        return errors + validate_special_decision_receipt(receipt, path, root)
+    required_keys = {
+        "schema_version", "pointer_revision", "work_kind", "work_id", "stage", "gate",
+        "decision", "decided_by", "decided_on", "evidence", "artifacts",
+    }
+    if not isinstance(receipt, dict) or set(receipt) != required_keys:
+        return errors + [f"decision receipt schema mismatch: {path.name}"]
+    if type(receipt.get("schema_version")) is not int or receipt["schema_version"] != SCHEMA_VERSION:
+        errors.append(f"decision receipt schema_version must be {SCHEMA_VERSION}: {path.name}")
+    if type(receipt.get("pointer_revision")) is not int or receipt["pointer_revision"] < 1:
+        errors.append(f"decision receipt pointer_revision must be a positive integer: {path.name}")
+    work_kind = receipt.get("work_kind")
+    stage = receipt.get("stage")
+    if work_kind not in KINDS or stage not in STAGE_KINDS or work_kind not in STAGE_KINDS[stage]:
+        errors.append(f"decision receipt work kind/stage is invalid: {path.name}")
+    for key in ("work_id", "gate", "decided_by", "evidence"):
+        if not bounded_text(receipt.get(key)):
+            errors.append(f"decision receipt {key} must be bounded: {path.name}")
+    if receipt.get("decision") not in {"approved", "rejected"}:
+        errors.append(f"decision receipt decision is invalid: {path.name}")
+    decided_on = receipt.get("decided_on")
+    if not isinstance(decided_on, str):
+        errors.append(f"decision receipt decided_on must be YYYY-MM-DD: {path.name}")
+    else:
+        try:
+            parsed_date = calendar_date.fromisoformat(decided_on)
+        except ValueError:
+            errors.append(f"decision receipt decided_on must be YYYY-MM-DD: {path.name}")
+        else:
+            if parsed_date.isoformat() != decided_on:
+                errors.append(f"decision receipt decided_on must be YYYY-MM-DD: {path.name}")
+    artifacts = receipt.get("artifacts")
+    if not isinstance(artifacts, list) or not artifacts or len(artifacts) > ACTIVE_ARTIFACT_LIMIT:
+        errors.append(f"decision receipt artifacts must be a non-empty bounded list: {path.name}")
+    else:
+        roles: set[str] = set()
+        for position, artifact in enumerate(artifacts):
+            if not isinstance(artifact, dict) or set(artifact) != {
+                "role", "path", "reviewed_sha256"
+            }:
+                errors.append(f"decision receipt artifact {position} schema mismatch: {path.name}")
+                continue
+            role = artifact.get("role")
+            if not isinstance(role, str) or not ROLE_PATTERN.fullmatch(role) or role in roles:
+                errors.append(f"decision receipt artifact role is invalid or duplicate: {path.name}")
+            else:
+                roles.add(role)
+            try:
+                resolve_repo_path(root, artifact.get("path"))
+            except ValueError as exc:
+                errors.append(f"decision receipt artifact path is invalid: {exc}")
+            reviewed_digest = artifact.get("reviewed_sha256")
+            if not isinstance(reviewed_digest, str) or not re.fullmatch(
+                r"[0-9a-f]{64}", reviewed_digest
+            ):
+                errors.append(f"decision receipt artifact hash is invalid: {path.name}")
+    return errors
+
+
+def special_decision_receipts(root: Path) -> list[tuple[Path, dict[str, Any]]]:
+    decision_directory = root / ".specify" / "decisions"
+    if not decision_directory.is_dir():
+        return []
+    receipts: list[tuple[Path, dict[str, Any]]] = []
+    for path in sorted(decision_directory.rglob("*.yaml")):
+        receipt = read_yaml(path)
+        if receipt.get("receipt_type") not in SPECIAL_DECISION_RECEIPT_TYPES:
+            continue
+        errors = validate_decision_receipt_file(path, root)
+        if errors:
+            fail("; ".join(errors[:3]))
+        receipts.append((path, receipt))
+    return receipts
+
+
+def normalized_receipt_artifact_path(root: Path, receipt: dict[str, Any]) -> str:
+    artifact = receipt["artifacts"][0]
+    normalized, _resolved = resolve_repo_path(root, artifact["path"])
+    return normalized
+
+
+def latest_special_receipt(
+    candidates: list[tuple[Path, dict[str, Any]]], label: str
+) -> tuple[Path, dict[str, Any]]:
+    if not candidates:
+        fail(f"missing durable {label} receipt")
+    highest_revision = max(receipt["pointer_revision"] for _path, receipt in candidates)
+    latest = [
+        item for item in candidates
+        if item[1]["pointer_revision"] == highest_revision
+    ]
+    if len(latest) != 1:
+        fail(f"durable {label} receipts have an ambiguous latest revision")
+    return latest[0]
+
+
+def require_accepted_feature_decision_receipt(
+    root: Path, feature_id: str, artifact_path: str,
+    receipts: list[tuple[Path, dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    normalized_artifact = require_repo_file(
+        root, artifact_path, "feature acceptance decision"
+    )
+    candidates = [
+        (path, receipt)
+        for path, receipt in (
+            special_decision_receipts(root) if receipts is None else receipts
+        )
+        if receipt["receipt_type"] == "feature_acceptance_decision"
+        and str(receipt["work_id"]).lower() == feature_id.lower()
+        and normalized_receipt_artifact_path(root, receipt) == normalized_artifact
+    ]
+    receipt_path, receipt = latest_special_receipt(
+        candidates, f"accepted feature decision for {feature_id}"
+    )
+    if receipt["decision"] != "accepted":
+        fail(f"latest durable feature decision for {feature_id} is not accepted")
+    artifact = receipt["artifacts"][0]
+    current_digest = sha256_file(root / normalized_artifact)
+    if current_digest != artifact["result_sha256"]:
+        fail(f"durable accepted feature decision artifact hash is stale: {normalized_artifact}")
+    fields = markdown_fields(root / normalized_artifact)
+    require_decision_field(fields, "Work item", feature_id)
+    require_decision_field(fields, "Human decision", "Accepted")
+    require_decision_field(fields, "Decided by", str(receipt["decided_by"]))
+    require_decision_field(fields, "Decision date", str(receipt["decided_on"]), date=True)
+    require_decision_field(fields, "Decision evidence", str(receipt["evidence"]))
+    if not receipt_path.is_file():
+        fail(f"durable accepted feature decision receipt is missing: {receipt_path}")
+    return receipt
+
+
+def validate_release_result_receipt_evidence(
+    root: Path, receipt: dict[str, Any]
+) -> tuple[str, str]:
+    raw_path, separator, recorded_digest = str(receipt["evidence"]).rpartition("#")
+    if not separator or not re.fullmatch(r"[0-9a-f]{64}", recorded_digest):
+        fail("release-result decision receipt evidence must be PATH#SHA256")
+    normalized, actual_digest = validate_release_receipt(
+        root, raw_path, str(receipt["work_id"]), str(receipt["decision"])
+    )
+    if actual_digest != recorded_digest:
+        fail(f"release-result decision receipt evidence hash is stale: {normalized}")
+    return normalized, actual_digest
+
+
+def validate_special_decision_bindings(
+    root: Path,
+    receipts: list[tuple[Path, dict[str, Any]]] | None = None,
+) -> None:
+    if receipts is None:
+        receipts = special_decision_receipts(root)
+    feature_groups: dict[
+        tuple[str, str], list[tuple[Path, dict[str, Any]]]
+    ] = {}
+    release_groups: dict[
+        tuple[str, str], list[tuple[Path, dict[str, Any]]]
+    ] = {}
+    for path, receipt in receipts:
+        key = (
+            str(receipt["work_id"]).lower(),
+            normalized_receipt_artifact_path(root, receipt),
+        )
+        if receipt["receipt_type"] == "feature_acceptance_decision":
+            feature_groups.setdefault(key, []).append((path, receipt))
+        else:
+            release_groups.setdefault(key, []).append((path, receipt))
+
+    for (feature_id, artifact_path), candidates in feature_groups.items():
+        _path, latest = latest_special_receipt(
+            candidates, f"feature decision for {feature_id}"
+        )
+        if latest["decision"] == "accepted":
+            require_accepted_feature_decision_receipt(
+                root, feature_id, artifact_path, receipts
+            )
+
+    for (release_id, artifact_path), candidates in release_groups.items():
+        ordered = sorted(
+            candidates, key=lambda item: (item[1]["pointer_revision"], item[0].name)
+        )
+        for _path, receipt in ordered:
+            if receipt["receipt_type"] != "release_result":
+                continue
+            validate_release_result_receipt_evidence(root, receipt)
+            reviewed_digest = receipt["artifacts"][0]["reviewed_sha256"]
+            prior_authorizations = [
+                candidate
+                for candidate in ordered
+                if candidate[1]["receipt_type"] == "release_authorization"
+                and candidate[1]["pointer_revision"] < receipt["pointer_revision"]
+                and candidate[1]["artifacts"][0]["result_sha256"] == reviewed_digest
+            ]
+            if not prior_authorizations:
+                fail(
+                    f"release-result receipt for {release_id} is not chained to a prior authorization"
+                )
+
+        _latest_path, latest = latest_special_receipt(
+            candidates, f"release decision for {release_id}"
+        )
+        artifact = latest["artifacts"][0]
+        must_bind_current = (
+            latest["receipt_type"] == "release_authorization"
+            or latest["decision"] == "succeeded"
+        )
+        if not must_bind_current:
+            continue
+        current_digest = sha256_file(root / artifact_path)
+        if current_digest != artifact["result_sha256"]:
+            fail(f"durable release decision artifact hash is stale: {artifact_path}")
+        fields = markdown_fields(root / artifact_path)
+        require_decision_field(fields, "Release ID", release_id)
+        if latest["receipt_type"] == "release_authorization":
+            authorization = latest
+        else:
+            authorization = max(
+                (
+                    candidate[1]
+                    for candidate in ordered
+                    if candidate[1]["receipt_type"] == "release_authorization"
+                    and candidate[1]["pointer_revision"] < latest["pointer_revision"]
+                    and candidate[1]["artifacts"][0]["result_sha256"]
+                    == artifact["reviewed_sha256"]
+                ),
+                key=lambda receipt: receipt["pointer_revision"],
+            )
+        require_decision_field(fields, "Human readiness decision", "Authorized")
+        require_decision_field(
+            fields, "Authorization evidence", str(authorization["evidence"])
+        )
+        require_decision_field(fields, "Authorized by", str(authorization["decided_by"]))
+        require_decision_field(
+            fields, "Authorized on", str(authorization["decided_on"]), date=True
+        )
+        if latest["receipt_type"] == "release_result":
+            execution_path, execution_digest = validate_release_result_receipt_evidence(
+                root, latest
+            )
+            require_decision_field(
+                fields, "Execution", str(latest["decision"]).replace("_", " ").title()
+            )
+            require_decision_field(fields, "Execution evidence", execution_path)
+            require_decision_field(
+                fields, "Execution evidence SHA-256", execution_digest
+            )
+            require_decision_field(fields, "Confirmed by", str(latest["decided_by"]))
+            require_decision_field(
+                fields, "Confirmed on", str(latest["decided_on"]), date=True
+            )
+
+
 def append_evidence(state: dict[str, Any], path: str, digest: str) -> None:
     evidence_by_path = {
         item["path"]: dict(item)
@@ -1052,6 +1950,80 @@ def append_evidence(state: dict[str, Any], path: str, digest: str) -> None:
     if len(evidence_by_path) > EVIDENCE_LIMIT:
         fail(f"evidence limit exceeded ({EVIDENCE_LIMIT})")
     state["evidence"] = [evidence_by_path[key] for key in sorted(evidence_by_path)]
+
+
+def decision_receipt_path(state: dict[str, Any], receipt_digest: str) -> str:
+    active = state["active_work"]
+    raw_parts = [str(active["kind"]), str(active["id"]), str(active["stage"])]
+    slug_parts = [
+        re.sub(r"[^a-z0-9._-]+", "-", value.lower()).strip("-.") or "item"
+        for value in raw_parts
+    ]
+    slug = "-".join(slug_parts)[:80].rstrip("-.") or "decision"
+    return (
+        f".specify/decisions/{state['revision'] + 1:06d}-{slug}-"
+        f"{receipt_digest}.yaml"
+    )
+
+
+def build_special_decision_receipt(
+    state: dict[str, Any], *, receipt_type: str, decision: str,
+    decided_by: str, decided_on: str, evidence: str, role: str,
+    artifact: str, reviewed_sha256: str, result_sha256: str,
+) -> tuple[str, bytes, str]:
+    receipt = {
+        "schema_version": SCHEMA_VERSION,
+        "receipt_type": receipt_type,
+        "pointer_revision": state["revision"] + 1,
+        "work_kind": state["active_work"]["kind"],
+        "work_id": state["active_work"]["id"],
+        "stage": state["active_work"]["stage"],
+        "decision": decision,
+        "decided_by": decided_by,
+        "decided_on": decided_on,
+        "evidence": evidence,
+        "artifacts": [
+            {
+                "role": role,
+                "path": artifact,
+                "reviewed_sha256": reviewed_sha256,
+                "result_sha256": result_sha256,
+            }
+        ],
+    }
+    rendered = yaml.safe_dump(
+        receipt, sort_keys=False, allow_unicode=True, width=1000
+    ).encode("utf-8")
+    digest = hashlib.sha256(rendered).hexdigest()
+    return decision_receipt_path(state, digest), rendered, digest
+
+
+def commit_decision_receipt_and_state(
+    root: Path,
+    state: dict[str, Any],
+    relative_receipt: str,
+    receipt_rendered: bytes,
+) -> None:
+    errors = validate_state(state, root, False)
+    if errors:
+        fail("refusing to commit invalid workflow pointer: " + "; ".join(errors[:8]))
+    receipt_path = root / relative_receipt
+    if receipt_path.exists():
+        fail(f"decision receipt already exists: {relative_receipt}")
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path = pointer_path(root)
+    receipt_temporary = receipt_path.with_suffix(receipt_path.suffix + ".tmp")
+    state_temporary = state_path.with_suffix(state_path.suffix + ".tmp")
+    receipt_temporary.write_bytes(receipt_rendered)
+    state_temporary.write_bytes(
+        yaml.safe_dump(state, sort_keys=False, allow_unicode=True, width=1000).encode("utf-8")
+    )
+    os.replace(receipt_temporary, receipt_path)
+    try:
+        os.replace(state_temporary, state_path)
+    except BaseException:
+        receipt_path.unlink(missing_ok=True)
+        raise
 
 
 def render_unresolved_markdown_fields(
@@ -1114,6 +2086,46 @@ def commit_decision_artifact_and_state(
         restore = artifact_path.with_suffix(artifact_path.suffix + ".restore.tmp")
         restore.write_bytes(original)
         os.replace(restore, artifact_path)
+        raise
+    rebuild_index(root)
+
+
+def commit_decision_artifact_receipt_and_state(
+    root: Path, state: dict[str, Any], artifact_path: Path, artifact_rendered: bytes,
+    relative_receipt: str, receipt_rendered: bytes,
+) -> None:
+    errors = validate_state(state, root, False)
+    if errors:
+        fail("refusing to commit invalid workflow pointer: " + "; ".join(errors[:8]))
+    receipt_path = root / relative_receipt
+    if receipt_path.exists():
+        fail(f"decision receipt already exists: {relative_receipt}")
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path = pointer_path(root)
+    original_artifact = artifact_path.read_bytes()
+    artifact_temporary = artifact_path.with_suffix(artifact_path.suffix + ".decision.tmp")
+    receipt_temporary = receipt_path.with_suffix(receipt_path.suffix + ".tmp")
+    state_temporary = state_path.with_suffix(state_path.suffix + ".tmp")
+    artifact_temporary.write_bytes(artifact_rendered)
+    receipt_temporary.write_bytes(receipt_rendered)
+    state_temporary.write_bytes(
+        yaml.safe_dump(state, sort_keys=False, allow_unicode=True, width=1000).encode("utf-8")
+    )
+    artifact_replaced = False
+    receipt_replaced = False
+    try:
+        os.replace(artifact_temporary, artifact_path)
+        artifact_replaced = True
+        os.replace(receipt_temporary, receipt_path)
+        receipt_replaced = True
+        os.replace(state_temporary, state_path)
+    except BaseException:
+        if receipt_replaced:
+            receipt_path.unlink(missing_ok=True)
+        if artifact_replaced:
+            restore = artifact_path.with_suffix(artifact_path.suffix + ".restore.tmp")
+            restore.write_bytes(original_artifact)
+            os.replace(restore, artifact_path)
         raise
     rebuild_index(root)
 
@@ -1247,6 +2259,8 @@ def command_start(args: argparse.Namespace, root: Path) -> None:
         fail(f"stage {args.stage} is recorded by its owning review and cannot be started")
     if args.kind not in STAGE_KINDS[args.stage]:
         fail(f"stage {args.stage} is not valid for work kind {args.kind}")
+    if args.stage == "spike_result":
+        approved_spike_definition(state, root, args.work_id)
     current_work = state.get("active_work", {})
     current_status = current_work.get("status")
     current_gate = state.get("human_gate", {}).get("status")
@@ -1305,7 +2319,44 @@ def command_confirm_profile(args: argparse.Namespace, root: Path) -> None:
     roadmap_path = require_repo_file(root, roadmap, "roadmap")
     sizing_fields = markdown_fields(root / roadmap_path)
     require_decision_field(sizing_fields, "Profile sizing", args.profile)
-    require_decision_field(sizing_fields, "Sizing evidence")
+    sizing_evidence = require_decision_field(sizing_fields, "Sizing evidence")
+    if not (
+        ID_PATTERN.search(sizing_evidence)
+        or re.search(r"https?://\S+", sizing_evidence)
+        or re.search(r"(?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+(?:#[A-Za-z0-9_.-]+)?", sizing_evidence)
+        or re.search(r"\b[0-9a-f]{7,64}\b", sizing_evidence, re.IGNORECASE)
+    ):
+        fail("Sizing evidence must cite a stable ID, path/anchor, URL, or revision hash")
+    feature_count = require_integer_field(sizing_fields, "Feature count", minimum=1)
+    deployable_count = require_integer_field(sizing_fields, "Deployable count", minimum=1)
+    datastore_count = require_integer_field(sizing_fields, "Datastore count")
+    team_count = require_integer_field(sizing_fields, "Owning team count", minimum=1)
+    constraint = require_decision_field(
+        sizing_fields, "Regulatory/audit/contractual constraint"
+    ).lower()
+    if constraint not in {"yes", "no", "unknown"}:
+        fail("Regulatory/audit/contractual constraint must be yes, no, or unknown")
+    roadmap_text = (root / roadmap_path).read_text(encoding="utf-8", errors="replace")
+    indexed_features = {value.upper() for value in re.findall(r"\bF-?\d+\b", roadmap_text)}
+    if len(indexed_features) != feature_count:
+        fail(
+            f"Feature count is {feature_count} but roadmap contains "
+            f"{len(indexed_features)} unique feature IDs"
+        )
+    if args.profile == "lite":
+        lite_failures: list[str] = []
+        if feature_count > 8:
+            lite_failures.append("feature count exceeds 8")
+        if deployable_count != 1:
+            lite_failures.append("deployable count is not 1")
+        if datastore_count > 1:
+            lite_failures.append("datastore count exceeds 1")
+        if team_count != 1:
+            lite_failures.append("owning team count is not 1")
+        if constraint != "no":
+            lite_failures.append("regulatory/audit/contractual constraint is not no")
+        if lite_failures:
+            fail("roadmap is not eligible for lite: " + "; ".join(lite_failures))
     state["project"]["profile"] = args.profile
     state["project"]["profile_status"] = "confirmed"
     transition(state, "confirm-profile")
@@ -1354,6 +2405,9 @@ def command_record_output(args: argparse.Namespace, root: Path) -> None:
         fail(f"cannot record stage {args.stage} from active stage {current_stage}")
     artifacts = parse_pairs(args.artifact)
     artifact_roles = set(artifacts)
+    for role in artifact_roles & set(WORK_ROLE_STAGES):
+        if args.stage not in WORK_ROLE_STAGES[role]:
+            fail(f"artifact role {role} is not owned by stage {args.stage}")
     if args.stage == "pre_implement" and artifact_roles != {"pre_implementation"}:
         fail("pre_implement candidate must contain exactly role pre_implementation")
     if args.stage == "post_implement":
@@ -1366,8 +2420,19 @@ def command_record_output(args: argparse.Namespace, root: Path) -> None:
         require_approved_active_artifact(state, root, "pre_implementation")
     if args.stage == "acceptance" and artifact_roles != {"acceptance"}:
         fail("acceptance candidate must contain exactly role acceptance")
-    if args.stage == "release_readiness" and artifact_roles != {"release_readiness"}:
-        fail("release-readiness candidate must contain exactly role release_readiness")
+    if args.stage == "release_readiness" and (
+        active_kind != "release"
+        or args.status != "ready_for_release"
+        or artifact_roles != {"release_readiness"}
+    ):
+        fail(
+            "release-readiness candidate requires kind release, status ready_for_release, "
+            "and exactly role release_readiness"
+        )
+    if args.stage == "spike_result" and (
+        args.status != "ready_for_review" or artifact_roles != {"spike_result"}
+    ):
+        fail("spike-result candidate must contain exactly role spike_result at ready_for_review")
     prior_gate_roles = set(state["human_gate"]["artifact_roles"])
     amendment_roles = {
         role for role in artifacts if role in AMENDMENT_ROLES or role.startswith("adr-")
@@ -1497,6 +2562,15 @@ def command_record_output(args: argparse.Namespace, root: Path) -> None:
     output_hashes: dict[str, str] = {}
     for key, relative in artifacts.items():
         normalized = require_repo_file(root, relative, "artifact")
+        if key in PROJECT_ARTIFACT_KEYS:
+            bundle_errors = validate_approved_bundle(
+                root / normalized,
+                root,
+                role=key,
+                require_declaration=key in BUNDLE_DECLARATION_ROLES,
+            )
+            if bundle_errors:
+                fail(f"invalid canonical bundle: {'; '.join(bundle_errors[:3])}")
         expected_inputs = None
         if key == "pre_implementation":
             expected_inputs = {
@@ -1504,8 +2578,17 @@ def command_record_output(args: argparse.Namespace, root: Path) -> None:
                 for role in ("spec", "plan", "tasks", "requirements_checklist")
             }
         validate_candidate_artifact(
-            key, root / normalized, root, state["active_work"]["id"], expected_inputs
+            key,
+            root / normalized,
+            root,
+            state["active_work"]["id"],
+            state["active_work"]["kind"],
+            expected_inputs,
         )
+        if key == "release_readiness" and require_decision_field(
+            markdown_fields(root / normalized), "Review status"
+        ).lower() == "not_ready":
+            fail("not_ready release readiness must use block, not a pending release gate")
         if key == "acceptance":
             candidate_spec = require_decision_field(markdown_fields(root / normalized), "Spec")
             candidate_spec_path = require_repo_file(root, candidate_spec, "acceptance spec")
@@ -1597,6 +2680,22 @@ def command_block(args: argparse.Namespace, root: Path) -> None:
     if stage not in STAGE_KINDS or kind not in STAGE_KINDS[stage]:
         fail(f"stage {stage} is not valid for work kind {kind}")
     artifacts = parse_pairs(args.artifact)
+    artifact_roles = set(artifacts)
+    for role in artifact_roles & set(WORK_ROLE_STAGES):
+        if stage not in WORK_ROLE_STAGES[role]:
+            fail(f"artifact role {role} is not owned by stage {stage}")
+    if stage == "pre_implement" and artifact_roles not in (
+        set(), {"pre_implementation"}
+    ):
+        fail("blocked pre_implement may contain only role pre_implementation")
+    if stage == "post_implement" and artifact_roles not in (set(), {"verification"}):
+        fail("blocked post_implement may contain only role verification")
+    if stage == "spike_result" and artifact_roles not in (set(), {"spike_result"}):
+        fail("blocked spike_result may contain only role spike_result")
+    if stage == "release_readiness" and artifact_roles not in (
+        set(), {"release_readiness"}
+    ):
+        fail("blocked release_readiness may contain only role release_readiness")
     active_by_role = {
         item["role"]: dict(item)
         for item in state.get("active_artifacts", [])
@@ -1606,7 +2705,13 @@ def command_block(args: argparse.Namespace, root: Path) -> None:
         if role in PROJECT_CANONICAL_KEYS:
             fail(f"block artifacts must use a work-item role, got: {role}")
         normalized = require_repo_file(root, relative, "block artifact")
-        validate_block_artifact(role, root / normalized, state["active_work"]["id"])
+        validate_block_artifact(
+            role,
+            root / normalized,
+            root,
+            state["active_work"]["id"],
+            state["active_work"]["kind"],
+        )
         active_by_role[role] = {
             "role": role,
             "path": normalized,
@@ -1639,7 +2744,6 @@ def command_block(args: argparse.Namespace, root: Path) -> None:
 
 
 def command_decide(args: argparse.Namespace, root: Path) -> None:
-    path = pointer_path(root)
     state = read_valid_state(root, check_paths=True)
     require_revision(state, args.expect_revision)
     next_actions = allowed_actions(args.next)
@@ -1654,6 +2758,48 @@ def command_decide(args: argparse.Namespace, root: Path) -> None:
     gate_roles = set(state.get("human_gate", {}).get("artifact_roles", []))
     if not gate_roles:
         fail("pending review gate has no artifact roles")
+    if args.decision == "approved":
+        for role in sorted(gate_roles & PROJECT_ARTIFACT_KEYS):
+            bundle_errors = validate_approved_bundle(
+                root / verified[role][0],
+                root,
+                role=role,
+                require_declaration=role in BUNDLE_DECLARATION_ROLES,
+            )
+            if bundle_errors:
+                fail(f"cannot approve invalid canonical bundle: {'; '.join(bundle_errors[:3])}")
+    decided_by = validated_decision_value("Decided by", args.decided_by)
+    decision_date = validated_decision_value(
+        "Decision date", args.decision_date, date=True
+    )
+    decision_evidence = validated_decision_value(
+        "Decision evidence", args.decision_evidence
+    )
+    receipt = {
+        "schema_version": SCHEMA_VERSION,
+        "pointer_revision": state["revision"] + 1,
+        "work_kind": state["active_work"]["kind"],
+        "work_id": state["active_work"]["id"],
+        "stage": state["active_work"]["stage"],
+        "gate": state["human_gate"]["name"],
+        "decision": args.decision,
+        "decided_by": decided_by,
+        "decided_on": decision_date,
+        "evidence": decision_evidence,
+        "artifacts": [
+            {
+                "role": role,
+                "path": verified[role][0],
+                "reviewed_sha256": verified[role][1],
+            }
+            for role in sorted(gate_roles)
+        ],
+    }
+    receipt_rendered = yaml.safe_dump(
+        receipt, sort_keys=False, allow_unicode=True, width=1000
+    ).encode("utf-8")
+    receipt_digest = hashlib.sha256(receipt_rendered).hexdigest()
+    receipt_path = decision_receipt_path(state, receipt_digest)
     result_status = "rejected" if args.decision == "rejected" else "approved"
     state["human_gate"]["status"] = args.decision
     state["active_work"]["status"] = result_status
@@ -1665,13 +2811,13 @@ def command_decide(args: argparse.Namespace, root: Path) -> None:
         "auto_invoke": False,
     }
     transition(state, "decide")
-    write_valid_state(path, state, root)
+    append_evidence(state, receipt_path, receipt_digest)
+    commit_decision_receipt_and_state(root, state, receipt_path, receipt_rendered)
     rebuild_index(root)
     print(state["revision"])
 
 
 def command_record_feature_decision(args: argparse.Namespace, root: Path) -> None:
-    path = pointer_path(root)
     state = read_valid_state(root, check_paths=True)
     require_revision(state, args.expect_revision)
     next_actions = allowed_actions(args.next)
@@ -1700,18 +2846,33 @@ def command_record_feature_decision(args: argparse.Namespace, root: Path) -> Non
             fail("cannot accept while blockers remain")
         if review_status == "not_ready":
             fail("cannot accept an acceptance review marked not_ready")
+    decided_by = validated_decision_value("Decided by", args.decided_by)
+    decision_date = validated_decision_value(
+        "Decision date", args.decision_date, date=True
+    )
+    decision_evidence = validated_decision_value(
+        "Decision evidence", args.decision_evidence
+    )
     replacements = {
         "Human decision": expected_decision,
-        "Decided by": validated_decision_value("Decided by", args.decided_by),
-        "Decision date": validated_decision_value(
-            "Decision date", args.decision_date, date=True
-        ),
-        "Decision evidence": validated_decision_value(
-            "Decision evidence", args.decision_evidence
-        ),
+        "Decided by": decided_by,
+        "Decision date": decision_date,
+        "Decision evidence": decision_evidence,
     }
     rendered, digest = render_unresolved_markdown_fields(
         root / artifact, replacements, reviewed_digest
+    )
+    receipt_path, receipt_rendered, receipt_digest = build_special_decision_receipt(
+        state,
+        receipt_type="feature_acceptance_decision",
+        decision=args.decision,
+        decided_by=decided_by,
+        decided_on=decision_date,
+        evidence=decision_evidence,
+        role="acceptance",
+        artifact=artifact,
+        reviewed_sha256=reviewed_digest,
+        result_sha256=digest,
     )
     result_status = "accepted" if args.decision == "accepted" else "rejected"
     gate_status = "approved" if args.decision == "accepted" else "rejected"
@@ -1725,12 +2886,14 @@ def command_record_feature_decision(args: argparse.Namespace, root: Path) -> Non
         "auto_invoke": False,
     }
     transition(state, "record-feature-decision")
-    commit_decision_artifact_and_state(root, state, root / artifact, rendered)
+    append_evidence(state, receipt_path, receipt_digest)
+    commit_decision_artifact_receipt_and_state(
+        root, state, root / artifact, rendered, receipt_path, receipt_rendered
+    )
     print(state["revision"])
 
 
 def command_authorize_release(args: argparse.Namespace, root: Path) -> None:
-    path = pointer_path(root)
     state = read_valid_state(root, check_paths=True)
     require_revision(state, args.expect_revision)
     next_actions = allowed_actions(args.next)
@@ -1753,18 +2916,33 @@ def command_authorize_release(args: argparse.Namespace, root: Path) -> None:
     review_status = require_decision_field(fields, "Review status").lower()
     if review_status not in {"ready", "conditional"}:
         fail("release authorization requires Review status ready or conditional")
+    authorization_evidence = validated_decision_value(
+        "Authorization evidence", args.authorization_evidence
+    )
+    authorized_by = validated_decision_value("Authorized by", args.authorized_by)
+    authorized_on = validated_decision_value(
+        "Authorized on", args.authorized_on, date=True
+    )
     replacements = {
         "Human readiness decision": "Authorized",
-        "Authorization evidence": validated_decision_value(
-            "Authorization evidence", args.authorization_evidence
-        ),
-        "Authorized by": validated_decision_value("Authorized by", args.authorized_by),
-        "Authorized on": validated_decision_value(
-            "Authorized on", args.authorized_on, date=True
-        ),
+        "Authorization evidence": authorization_evidence,
+        "Authorized by": authorized_by,
+        "Authorized on": authorized_on,
     }
     rendered, digest = render_unresolved_markdown_fields(
         root / artifact, replacements, reviewed_digest
+    )
+    receipt_path, receipt_rendered, receipt_digest = build_special_decision_receipt(
+        state,
+        receipt_type="release_authorization",
+        decision="authorized",
+        decided_by=authorized_by,
+        decided_on=authorized_on,
+        evidence=authorization_evidence,
+        role="release_readiness",
+        artifact=artifact,
+        reviewed_sha256=reviewed_digest,
+        result_sha256=digest,
     )
     state["active_work"]["status"] = "release_authorized"
     update_artifact_role(state, "release_readiness", "release_authorized", digest)
@@ -1781,12 +2959,14 @@ def command_authorize_release(args: argparse.Namespace, root: Path) -> None:
         "auto_invoke": False,
     }
     transition(state, "authorize-release")
-    commit_decision_artifact_and_state(root, state, root / artifact, rendered)
+    append_evidence(state, receipt_path, receipt_digest)
+    commit_decision_artifact_receipt_and_state(
+        root, state, root / artifact, rendered, receipt_path, receipt_rendered
+    )
     print(state["revision"])
 
 
 def command_record_release_result(args: argparse.Namespace, root: Path) -> None:
-    path = pointer_path(root)
     state = read_valid_state(root, check_paths=True)
     require_revision(state, args.expect_revision)
     next_actions = allowed_actions(args.next)
@@ -1799,6 +2979,8 @@ def command_record_release_result(args: argparse.Namespace, root: Path) -> None:
         or active.get("status") != "release_authorized"
     ):
         fail("release result requires a previously authorized active release")
+    if set(state.get("human_gate", {}).get("artifact_roles", [])) != {"release_readiness"}:
+        fail("release result gate must contain exactly artifact role release_readiness")
     artifact, authorized_digest, fields = require_gate_artifact(
         state, root, "release_readiness", args.artifact
     )
@@ -1812,19 +2994,34 @@ def command_record_release_result(args: argparse.Namespace, root: Path) -> None:
     require_decision_field(fields, "Authorization evidence")
     if args.result == "succeeded" and state.get("blockers"):
         fail("cannot mark release succeeded while blockers remain")
-    receipt_path, receipt_digest = validate_release_receipt(
+    execution_receipt_path, execution_receipt_digest = validate_release_receipt(
         root, args.execution_evidence, active["id"], args.result
+    )
+    confirmed_by = validated_decision_value("Confirmed by", args.confirmed_by)
+    confirmed_on = validated_decision_value(
+        "Confirmed on", args.confirmed_on, date=True
     )
     replacements = {
         "Execution": expected_execution,
-        "Execution evidence": receipt_path,
-        "Confirmed by": validated_decision_value("Confirmed by", args.confirmed_by),
-        "Confirmed on": validated_decision_value(
-            "Confirmed on", args.confirmed_on, date=True
-        ),
+        "Execution evidence": execution_receipt_path,
+        "Execution evidence SHA-256": execution_receipt_digest,
+        "Confirmed by": confirmed_by,
+        "Confirmed on": confirmed_on,
     }
     rendered, digest = render_unresolved_markdown_fields(
         root / artifact, replacements, authorized_digest
+    )
+    receipt_path, receipt_rendered, receipt_digest = build_special_decision_receipt(
+        state,
+        receipt_type="release_result",
+        decision=args.result,
+        decided_by=confirmed_by,
+        decided_on=confirmed_on,
+        evidence=f"{execution_receipt_path}#{execution_receipt_digest}",
+        role="release_readiness",
+        artifact=artifact,
+        reviewed_sha256=authorized_digest,
+        result_sha256=digest,
     )
     result_status = "released" if args.result == "succeeded" else "rejected"
     gate_status = "approved" if args.result == "succeeded" else "rejected"
@@ -1832,14 +3029,17 @@ def command_record_release_result(args: argparse.Namespace, root: Path) -> None:
     state["human_gate"]["artifact_hashes"]["release_readiness"] = digest
     state["active_work"]["status"] = result_status
     update_artifact_role(state, "release_readiness", result_status, digest)
-    append_evidence(state, receipt_path, receipt_digest)
+    append_evidence(state, execution_receipt_path, execution_receipt_digest)
     state["next"] = {
         "allowed": next_actions,
         "recommended": args.next[0] if args.next else None,
         "auto_invoke": False,
     }
     transition(state, "record-release-result")
-    commit_decision_artifact_and_state(root, state, root / artifact, rendered)
+    append_evidence(state, receipt_path, receipt_digest)
+    commit_decision_artifact_receipt_and_state(
+        root, state, root / artifact, rendered, receipt_path, receipt_rendered
+    )
     print(state["revision"])
 
 
@@ -1859,6 +3059,11 @@ def candidate_artifacts(root: Path) -> list[Path]:
     constitution = root / ".specify" / "memory" / "constitution.md"
     if constitution.is_file():
         results.add(constitution)
+    decision_directory = root / ".specify" / "decisions"
+    if decision_directory.is_dir():
+        for path in decision_directory.rglob("*.yaml"):
+            if path.is_file():
+                results.add(path)
     contained: list[Path] = []
     resolved_root = root.resolve()
     for path in results:
@@ -1870,9 +3075,67 @@ def candidate_artifacts(root: Path) -> list[Path]:
     return sorted(contained, key=lambda item: item.relative_to(root).as_posix())
 
 
+def validate_historical_release_result_file(path: Path, root: Path) -> None:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if "**Release ID**:" not in text or "**Execution**:" not in text:
+        return
+    fields = markdown_fields(path)
+    execution = fields.get("Execution", "").strip()
+    if (
+        not execution
+        or execution.lower() in PLACEHOLDER_VALUES | {"not run", "not available"}
+        or "{{" in execution
+        or "}}" in execution
+    ):
+        return
+    result_by_execution = {
+        "succeeded": "succeeded",
+        "failed": "failed",
+        "held": "held",
+        "cancelled": "cancelled",
+    }
+    normalized_execution = normalized_table_token(execution)
+    if normalized_execution not in result_by_execution:
+        fail(f"historical release artifact has invalid Execution: {path}")
+    release_id = require_decision_field(fields, "Release ID")
+    evidence_path = require_decision_field(fields, "Execution evidence")
+    recorded_digest = require_decision_field(fields, "Execution evidence SHA-256")
+    if not re.fullmatch(r"[0-9a-f]{64}", recorded_digest):
+        fail(f"historical release artifact has invalid evidence SHA-256: {path}")
+    _normalized, actual_digest = validate_release_receipt(
+        root, evidence_path, release_id, result_by_execution[normalized_execution]
+    )
+    if actual_digest != recorded_digest:
+        fail(f"historical release execution evidence hash is stale: {evidence_path}")
+
+
+def validate_durable_history(root: Path) -> None:
+    decision_directory = root / ".specify" / "decisions"
+    specialized: list[tuple[Path, dict[str, Any]]] = []
+    if decision_directory.is_dir():
+        for path in sorted(decision_directory.rglob("*.yaml")):
+            errors = validate_decision_receipt_file(path, root)
+            if errors:
+                fail("; ".join(errors[:3]))
+            receipt = read_yaml(path)
+            if receipt.get("receipt_type") in SPECIAL_DECISION_RECEIPT_TYPES:
+                specialized.append((path, receipt))
+    validate_special_decision_bindings(root, specialized)
+    release_directory = root / "doc" / "releases"
+    if release_directory.is_dir():
+        for path in sorted(release_directory.rglob("*.md")):
+            validate_historical_release_result_file(path, root)
+
+
 def expected_index(root: Path) -> dict[str, Any]:
     artifacts: list[dict[str, Any]] = []
     for path in candidate_artifacts(root):
+        if root / ".specify" / "decisions" in path.parents:
+            receipt_errors = validate_decision_receipt_file(path, root)
+            if receipt_errors:
+                fail("; ".join(receipt_errors[:3]))
+        if path.suffix.lower() == ".md":
+            validate_historical_release_result_file(path, root)
         raw = path.read_bytes()
         text = raw.decode("utf-8", errors="replace")
         artifacts.append(
@@ -1984,7 +3247,17 @@ def rebuild_index(root: Path) -> None:
         fail(
             f"generated artifact index exceeds {INDEX_FILE_SIZE_LIMIT} bytes; split large domain artifacts/indexes"
         )
-    atomic_write_yaml(index_path(root), index)
+    path = index_path(root)
+    digest_path = index_digest_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    index_temporary = path.with_suffix(path.suffix + ".tmp")
+    digest_temporary = digest_path.with_suffix(digest_path.suffix + ".tmp")
+    index_temporary.write_bytes(rendered)
+    digest_temporary.write_text(
+        hashlib.sha256(rendered).hexdigest() + "\n", encoding="utf-8", newline="\n"
+    )
+    os.replace(index_temporary, path)
+    os.replace(digest_temporary, digest_path)
 
 
 def command_rebuild_index(_args: argparse.Namespace, root: Path) -> None:
@@ -2027,8 +3300,8 @@ def command_resolve(args: argparse.Namespace, root: Path) -> None:
         if not resolved.is_file() or sha256_file(resolved) != artifact["sha256"]:
             fail(f"matched artifact is stale or missing: {normalized}; run rebuild-index")
         text_value = resolved.read_text(encoding="utf-8", errors="replace")
-        line_number: int | None = None
-        nearest_heading: str | None = None
+        occurrences: list[dict[str, Any]] = []
+        occurrence_count = 0
         if target_id:
             current_heading: str | None = None
             for number, line in enumerate(text_value.splitlines(), start=1):
@@ -2036,19 +3309,22 @@ def command_resolve(args: argparse.Namespace, root: Path) -> None:
                     current_heading = line.strip()
                 line_ids = {value.upper() for value in ID_PATTERN.findall(line)}
                 if target_id in line_ids:
-                    line_number = number
-                    nearest_heading = current_heading
-                    break
-            if line_number is None:
+                    occurrence_count += 1
+                    if len(occurrences) < RESOLVE_OCCURRENCE_LIMIT:
+                        occurrences.append({"line": number, "heading": current_heading})
+            if occurrence_count == 0:
                 fail(f"artifact index ID is stale for matched artifact: {normalized}")
         compact_matches.append(
             {
                 "path": normalized,
                 "sha256": artifact["sha256"],
                 "matched_id": target_id,
-                "line": line_number,
-                "heading": nearest_heading,
-                "id_count": len(artifact["ids"]),
+                "line": occurrences[0]["line"] if occurrences else None,
+                "heading": occurrences[0]["heading"] if occurrences else None,
+                "occurrence_count": occurrence_count,
+                "occurrences_truncated": occurrence_count > RESOLVE_OCCURRENCE_LIMIT,
+                "occurrences": occurrences,
+                "artifact_unique_id_count": len(artifact["ids"]),
             }
         )
     result = {
@@ -2116,6 +3392,9 @@ def build_parser() -> argparse.ArgumentParser:
     decide = subparsers.add_parser("decide", help="resolve a generic ready_for_review gate")
     decide.add_argument("--expect-revision", type=int, required=True)
     decide.add_argument("--decision", choices=("approved", "rejected"), required=True)
+    decide.add_argument("--decided-by", required=True)
+    decide.add_argument("--decision-date", required=True)
+    decide.add_argument("--decision-evidence", required=True)
     decide.add_argument("--next", action="append", default=[])
     decide.set_defaults(handler=command_decide)
 
@@ -2179,6 +3458,8 @@ def main() -> None:
     root = Path(args.root).resolve()
     if not root.is_dir():
         fail(f"project root does not exist: {root}")
+    if args.operation != "init":
+        validate_durable_history(root)
     args.handler(args, root)
 
 
