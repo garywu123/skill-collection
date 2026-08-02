@@ -1,4 +1,7 @@
 interface:
   display_name: "Bootstrap Agent Guidance"
-  short_description: "Generate verified cross-tool project guidance"
-  default_prompt: "Use $bootstrap-agent-guidance to create or refresh this project's AGENTS.md and compatible tool instruction files."
+  short_description: "Compile approved sources into agent guidance"
+  default_prompt: "Use $bootstrap-agent-guidance to create, refresh, or audit this project's AGENTS.md and requested thin tool adapters from approved sources."
+
+policy:
+  allow_implicit_invocation: false

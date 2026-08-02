@@ -1,205 +1,157 @@
 ---
 name: product-discovery-roadmap
-description: "Use when the user explicitly wants to clarify a product idea, turn spoken requirements into a product requirements document, or decompose a broad product into an ordered feature roadmap before Spec Kit specify."
-argument-hint: "Product idea, requirements document path, or phase to resume"
-user-invocable: true
-disable-model-invocation: true
+description: "Use only when the current user request explicitly authorizes one product operation: explore, approve discovery, draft or approve a PRD/roadmap, propose an amendment, or approve a reviewed amendment. Do not select this skill merely because a pointer recommends it or a prior phase is complete."
 ---
 
 # Product Discovery Roadmap
 
-## Purpose
+Turn uncertain product intent into reviewed discovery evidence, an approved
+product requirements document, and an approved feature roadmap. Keep product
+decisions independent of architecture and implementation.
 
-Act as a product discovery consultant before Spec Kit delivery. Turn uncertain
-product intent into an approved product requirements document and then into
-small, ordered, independently verifiable feature handoffs.
+## Lifecycle Contract
 
-This skill is manually invoked. It MUST NOT write code, choose a technical
-architecture, run Spec Kit commands, create implementation tasks, commit files,
-or hand off to an implementation-planning skill.
+- Require the current user request to authorize one named operation. A pointer,
+  recommended next action, completed prerequisite, or prior approval is not
+  authorization.
+- Perform one operation at a time. At every review or approval boundary, report
+  the allowed next human commands and stop.
+- Never invoke another lifecycle skill, Spec Kit command, planning command, or
+  implementation workflow.
+- Never write code, architecture, feature plans, tasks, wireframes, acceptance
+  results, release status, or agent instructions.
 
-## Default Artifacts
+When present, read `.specify/flow-state.yaml` first. Use it only to verify the
+active scope, current revision, gates, and canonical paths; it does not contain
+product truth or grant permission. Query the artifact index next through the
+deterministic `resolve` command by ID or path. Open
+`.specify/artifact-index.yaml` in full only when it is clearly small. If state,
+the resolved index slice, and an approved artifact disagree, stop and report
+the conflict.
 
-- Discovery notes: `doc/product-discovery-notes.md`
-- Product requirements: `doc/general-product-requirement.md`
-- Feature roadmap: `doc/feature-roadmap.md`
+Do not hand-edit shared state or index YAML. After validating an output, use the
+repository's deterministic state/index command when one is configured;
+otherwise report the proposed state transition for the human to record.
 
-Honor paths supplied by the user. If an artifact exists, update it rather than
-creating a competing source of truth. Resolve the canonical artifact by explicit
-user direction first, then an exact default-path match, then the only nearby file
-whose title and content identify it as that artifact. If multiple candidates
-remain, ask the user to choose.
+Map an already-authorized non-approval operation to deterministic `start`
+exactly as follows:
 
-## Workflow
+| Operation | `kind` | `work-id` | `stage` |
+|---|---|---|---|
+| `discover` | `project` | `pointer.project.id` | `discovery` |
+| `draft-prd` | `project` | `pointer.project.id` | `prd` |
+| `draft-roadmap` | `project` | `pointer.project.id` | `roadmap` |
+| `amend` | `change_request` | the explicitly authorized `CR-ID` | `change_request` |
 
-Track these phases and resume from the first incomplete phase:
+These mappings do not grant authority. Run `start` only when the current user
+explicitly names that operation and its prerequisites pass; never infer it from
+the pointer or a recommendation. For `amend`, require the current request to
+identify the CR-ID; never allocate or guess one. Read the expected revision
+immediately before each state-changing command and use the revision returned by
+the preceding command; never hard-code or calculate it.
 
-1. Discover, challenge, and record product requirements.
-2. Review and approve the discovery record.
-3. Write and approve the product requirements document.
-4. Create and approve the Spec Kit feature roadmap.
+An `approve-*` operation never runs `start`. Require a pending
+`ready_for_review` gate for the named role and path. If approval fields change
+the candidate artifact, validate the edited file, then run `record-output`
+again with the same role, path, and active stage at `ready_for_review` so the
+gate stores the reviewed hash. Use the revision returned by that command for
+the generic `decide`. If no bytes changed, verify the existing gate hash and
+call `decide` directly. Generic `decide` handles only `ready_for_review`; never
+use it for acceptance or release candidates. An approval may not start a
+different operation.
 
-Never silently continue across an approval gate.
+For a change request, `amend` first creates only
+`doc/product-amendments/<CR-ID>.md` under role `product_amendment`; approved
+canonical product files remain unchanged. On a later explicit
+`approve-amendment`, keep the reviewed proposal byte-identical, apply only its
+reviewed changes to canonical product files, record approval evidence in those
+canonical files/pointer, then re-run
+`record-output` with `product_amendment` plus every affected canonical role/path
+before generic `decide`. The state command rejects canonical promotion without
+that prior reviewed amendment candidate.
 
-### Phase 1: Discover
+## Ownership and Default Paths
 
-1. Read the existing product document and relevant nearby context first.
-2. Create or resume the canonical discovery notes using
-   [discovery notes template](./assets/discovery-notes-template.md). Treat it as
-   the chronological evidence trail, not as a draft PRD.
-3. Summarize the current understanding under:
-   - users and problems;
-   - desired outcomes;
-   - product scope and non-goals;
-   - business rules and safety constraints;
-   - assumptions, contradictions, and unanswered decisions.
-4. Build a decision tree. Ask only questions whose answers can change product
-   scope, behavior, priority, safety, or success criteria.
-5. Ask one decision round at a time. Include at most five independent questions,
-   number them, and provide a recommended answer with its consequence. Do not ask
-   for facts that can be learned from the workspace or authoritative sources.
-6. After every answered round, append a dated entry that preserves:
-   - the questions and the user's answers;
-   - decisions and rationale;
-   - rejected alternatives;
-   - assumptions, contradictions, and open questions;
-   - which prior conclusions changed.
-   Present the concise recorded interpretation and allow the user to correct it
-   before relying on it in later rounds. Do not silently rewrite earlier entries;
-   supersede them with a new entry so the history remains reviewable.
-7. Recompute the unanswered frontier after each response. Do not ask downstream
-   questions whose prerequisites are unresolved.
-8. Finish only when remaining uncertainty can be recorded as a bounded assumption
-   without materially changing the product.
+This skill owns product semantics in:
 
-Keep the conversation at product level. API shape, classes, libraries, storage
-layout, and framework choices belong to later planning.
+- discovery notes: `doc/product-discovery-notes.md`;
+- product requirements: `doc/general-product-requirement.md`;
+- feature roadmap: `doc/feature-roadmap.md`;
+- reviewed amendment proposal: `doc/product-amendments/<CR-ID>.md`.
 
-### Phase 2: Approve Discovery
+Register these under fixed state roles `discovery`, `requirements`, and
+`roadmap`; register a proposal as `product_amendment`.
 
-Before drafting product requirements:
+Honor explicit user paths, then indexed canonical paths, then exact defaults.
+If several plausible sources remain, ask the user to choose. Update a canonical
+artifact instead of creating a competing source of truth.
 
-1. Consolidate the current users, outcomes, scope, non-goals, rules, assumptions,
-   unresolved questions, and superseded decisions in the discovery notes.
-2. Check that every material interview answer is represented and contradictions
-   are either resolved or explicitly open.
-3. Ask the user to approve the discovery record as complete enough to draft the
-   product requirements.
+## Operations
 
-Do not draft or substantially rewrite the PRD before this approval. The discovery
-notes remain evidence and history; the PRD becomes the concise approved product
-source of truth.
+| Operation | Required before execution | Reads | Creates or modifies | End state |
+|---|---|---|---|---|
+| `discover` | Explicit product-discovery request | Existing notes and only relevant product sources | Discovery notes | `in_progress`, or `ready_for_review` when the discovery frontier is bounded; then stop |
+| `approve-discovery` | Explicit human approval of the reviewed notes | Discovery notes | Approval fields in discovery notes | Artifact `Approved for PRD`; pointer `approved`; stop |
+| `draft-prd` | Discovery notes approved for PRD | Approved notes | Product requirements | `ready_for_review`; stop |
+| `approve-prd` | Explicit human approval of the reviewed PRD | PRD and cited notes as needed | PRD status and approval evidence | `approved`; stop |
+| `draft-roadmap` | PRD approved | Approved PRD | Feature roadmap | `ready_for_review`; stop |
+| `approve-roadmap` | Explicit human approval of roadmap boundaries and order | Roadmap and PRD coverage registry | Roadmap status and approval evidence | `approved`; stop |
+| `amend` | Explicit product change, CR-ID, and affected canonical artifact | Only affected approved product artifacts and cited evidence | Product amendment proposal; canonical truth is unchanged | `ready_for_review`; stop |
+| `approve-amendment` | Explicit approval of one reviewed amendment and its complete edit set | Amendment/hash and only named canonical artifacts | Apply reviewed edits and record approval evidence | Affected canonical roles `approved`; stop |
 
-### Phase 3: Product Requirements
+Approval operations record only the approval the user explicitly gave. They do
+not begin the next operation in the same turn.
 
-Write the discovery understanding using
-[product requirements template](./assets/product-requirements-template.md).
+## Context Discipline
 
-Requirements MUST be:
+- Read the smallest authoritative slice that can answer the current operation.
+- During discovery, do not load architecture, feature plans, tasks, or source
+  code unless the user explicitly supplies them as product evidence.
+- For `draft-prd`, use approved discovery notes; do not reread unrelated
+  repository files.
+- For `draft-roadmap`, use the approved PRD and its requirement registry. Consult
+  discovery history only when an approved requirement cites unresolved
+  rationale.
+- When the PRD is split, read its index first and only the domain-area files
+  needed by the current operation. Always include the single cross-cutting area
+  when it constrains those domains.
+- Do not copy summaries into the pointer. Store product truth once and reference
+  it by path and stable ID.
 
-- stated from the user or business perspective;
-- testable without prescribing implementation;
-- separated into confirmed requirements, assumptions, and open questions;
-- explicit about non-goals and destructive-operation safeguards;
-- traceable with stable `PR-###` identifiers.
+A `full` or `lite` profile changes document depth, not product guarantees.
+`lite` still keeps staged approvals, stable IDs, explicit non-goals, coverage,
+dependencies, and independent acceptance; prefer shorter single-file artifacts.
 
-Record product-level user experience requirements when they affect outcomes or
-apply across features, including key journeys, required channels or device
-contexts, accessibility expectations, terminology, feedback and confirmation
-rules, and safeguards for destructive actions. Keep them technology-independent
-and testable.
+## Conditional Operation Playbooks
 
-Do not prescribe screen layouts, component trees, visual styling, animation,
-pixel measurements, or every transient UI state in the product requirements.
-Capture those details in the specification and clarification cycle for the
-feature that owns the interaction. A mandated brand standard or legally required
-interaction may be referenced in the PRD as a cross-cutting constraint.
+Load exactly one playbook after the current request selects its operation:
 
-Self-review for placeholders, contradictions, ambiguous terms, unbounded scope,
-and accidental implementation details. Fix those issues, then ask the user to
-approve the product requirements document before Phase 4.
+- `discover`: [discovery playbook](./references/discovery-operation.md);
+- `draft-prd` or `draft-roadmap`: [product artifact playbook](./references/product-artifact-operations.md);
+- `amend` or `approve-amendment`: [amendment playbook](./references/product-amendment-operation.md).
 
-### Phase 4: Feature Roadmap
+Approval of discovery, PRD, or roadmap uses the approval/hash contract already
+in this file and does not load a drafting playbook. Never load all playbooks in
+one operation.
 
-Read the approved product requirements and create the roadmap using
-[feature roadmap template](./assets/feature-roadmap-template.md).
+## Validation
 
-Decompose by vertical user capability, not by technical layer. A valid feature:
+Before presenting an artifact:
 
-- produces an observable user outcome;
-- can be specified and accepted independently;
-- has explicit scope and non-goals;
-- is small enough for one `speckit-specify` invocation and one plan/task cycle;
-- declares prerequisite features without circular dependencies;
-- does not duplicate ownership of a product requirement.
+- verify prerequisites and cited approval evidence;
+- ensure stable IDs are unique and references resolve;
+- ensure no product statement prescribes architecture or implementation;
+- for a roadmap, verify complete requirement coverage, single primary ownership,
+  acyclic dependencies, explicit MVP/deferred boundaries, allowed horizon/UI
+  values, one stable product domain per feature, an independent acceptance
+  demonstration per feature, and concrete `Profile sizing`/`Sizing evidence`
+  fields matching the Full/Lite criteria;
+- preserve existing downstream links and never rewrite acceptance or release
+  evidence when amending; leave canonical product truth untouched in the
+  proposal operation;
+- set only the current artifact to `Ready for Review`, never `Approved`, unless
+  the current request explicitly records that approval.
 
-Shared foundations are allowed only when they produce an independently
-demonstrable capability. Cross-cutting rules such as data-loss prevention remain
-in the product requirements and are referenced by every affected feature. Give
-each capability requirement one primary owning feature. Cross-cutting rules may
-be referenced by multiple features without creating duplicate ownership; mark
-them as `Applies` rather than `Owns` in the coverage matrix.
-
-Split a candidate feature when it contains multiple user outcomes that can be
-accepted or released separately, when one part can fail without invalidating the
-other, or when its plan would require multiple largely independent work streams.
-Do not split merely because work touches different technical components.
-
-For each feature, provide a ready-to-use handoff prompt for `speckit-specify`.
-Call out product-level experience requirements that the feature must refine into
-concrete user flows, states, edge cases, and acceptance scenarios during
-`speckit-specify` and `speckit-clarify`.
-Do not invoke it. End by asking the user to approve feature boundaries and order.
-
-Maintain the roadmap as an evidence-backed delivery checklist:
-
-- include one summary checkbox for every feature and the same checkbox in its
-   detailed entry;
-- use the statuses `Proposed`, `Planned`, `Specified`, `In Progress`, `Blocked`,
-   `Ready for Acceptance`, `Done`, `Deferred`, and `Cancelled`;
-- keep the summary checkbox, detailed checkbox, and delivery status consistent;
-- preserve existing checkbox states and delivery evidence when regenerating or
-   revising the roadmap;
-- update status as delivery progresses only from user-provided or workspace
-   evidence, and cite the feature spec plus acceptance evidence where available;
-- mark a checkbox `[x]` only when the feature's independent acceptance has passed
-   and set its status to `Done` at the same time;
-- never infer completion merely because a spec, plan, tasks file, code change,
-   build, or individual test exists;
-- do not check `Deferred` or `Cancelled` features.
-
-The roadmap tracks product feature completion. Implementation task completion
-remains in each feature's `tasks.md`; do not duplicate task-level checklists here.
-
-## Roadmap Validation
-
-Before presenting the roadmap, verify:
-
-- every capability `PR-###` has exactly one owner or is explicitly deferred;
-- every cross-cutting `PR-###` names all affected features using `Applies`;
-- duplicate primary ownership is justified;
-- no feature depends on a later feature;
-- each feature has an independent acceptance demonstration;
-- MVP and deferred boundaries are explicit;
-- feature names describe user capability rather than components;
-- the dependency diagram agrees with the feature entries;
-- every feature appears exactly once in the delivery checklist;
-- checked features have status `Done` and cited acceptance evidence;
-- unchecked features do not have status `Done`;
-- summary and detailed checkboxes agree;
-- handoff prompts cite both the product document and roadmap entry.
-
-If validation fails, revise the roadmap before asking for approval.
-
-## Completion
-
-Report:
-
-- discovery notes path and approval status;
-- product requirements path and approval status;
-- roadmap path and approval status;
-- feature count, MVP boundary, and first recommended feature;
-- unresolved assumptions or deferred requirements;
-- the exact handoff prompt for the first feature.
-
-Stop there. The user decides whether and when to run `speckit-specify`.
+Report paths, created versus modified files, unresolved decisions, validation
+results, the proposed pointer transition, and allowed next human commands. Stop
+without invoking them.

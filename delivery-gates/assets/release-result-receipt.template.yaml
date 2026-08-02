@@ -1,0 +1,8 @@
+schema_version: 1
+release_id: '{{RELEASE_ID}}'
+result: '{{succeeded|failed|held|cancelled}}'
+producer: '{{CI_OR_DEPLOYMENT_SYSTEM}}'
+run_id: '{{EXACT_RUN_OR_DEPLOYMENT_ID}}'
+completed_at: '{{YYYY-MM-DDTHH:MM:SSZ}}'
+# Use null only for a non-success terminal result.
+artifact_sha256: '{{RELEASED_ARTIFACT_SHA256}}'

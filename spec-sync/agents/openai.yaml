@@ -1,0 +1,7 @@
+interface:
+  display_name: "Spec Sync"
+  short_description: "Review vertical alignment and route changes"
+  default_prompt: "Use $spec-sync for one explicitly authorized pre-implement, post-implement, or change-request review."
+
+policy:
+  allow_implicit_invocation: false

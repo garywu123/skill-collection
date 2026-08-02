@@ -1,140 +1,124 @@
 ---
 name: bootstrap-agent-guidance
-description: Generate, review, or refresh concise project-level AI guidance from approved product documents, feature roadmaps, legacy references, repository evidence, and engineering governance. Use after a PRD and feature roadmap are approved but before feature assessment or specification, when onboarding an existing repository, or when AGENTS.md, CLAUDE.md, and GitHub Copilot instructions need a verified cross-tool source of truth.
+description: Compile approved product, roadmap, architecture, governance, and repository evidence into concise AGENTS.md guidance and optional thin tool adapters. Use only when the current user explicitly asks to create, refresh, or audit project agent guidance; never infer authorization from lifecycle state or another skill.
 ---
 
 # Bootstrap Agent Guidance
 
-Create a small, evidence-backed operating manual for coding agents. Treat
-`AGENTS.md` as the canonical cross-tool guidance, not as a replacement for the
-PRD, roadmap, architecture records, or feature specifications.
+Treat `AGENTS.md` as a routing and operating contract. Point to domain truth;
+never copy or replace the PRD, roadmap, architecture baseline, ADRs, feature
+specifications, or lifecycle state.
+
+## Authority and boundaries
+
+- Require explicit authorization in the current user request for `create`,
+  `refresh`, or `audit`. A pointer that says this work is allowed is not
+  authorization.
+- Never invoke another lifecycle skill, approve a gate, or advance another
+  phase.
+- Write only agent guidance files. Do not modify domain artifacts, code,
+  lifecycle state by hand, or delivery status.
+- For a new product, require an approved PRD and roadmap. Include architecture
+  or governance only when its owning artifact is approved. For an existing
+  repository audit, distinguish repository evidence from desired product truth.
+
+Map an already-authorized state-changing operation to deterministic `start`
+exactly as follows:
+
+| Operation and scope | `kind` | `work-id` | `stage` |
+|---|---|---|---|
+| `create` | `project` | `pointer.project.id` | `agent_guidance` |
+| project-wide `refresh` | `project` | `pointer.project.id` | `agent_guidance` |
+| CR-scoped `refresh` | `change_request` | the explicitly authorized `CR-ID` | `agent_guidance` |
+
+These mappings do not grant authority. Run `start` only when the current user
+explicitly requests `create` or `refresh`, the scope selects exactly one table
+row, and prerequisites pass; never infer it from the pointer or a recommendation.
+For a CR-scoped refresh, require the current request to identify the CR-ID;
+never allocate or guess one. Read the expected revision immediately before each
+state-changing command and use the revision returned by the preceding command;
+never hard-code or calculate it. `audit` is read-only and never starts or
+changes lifecycle state.
+
+## State and source contract
+
+When present, read `.specify/flow-state.yaml` first. Use it only to verify the
+active scope, current revision, approvals, and canonical paths. Query the
+artifact index next through the deterministic `resolve` command by ID or path.
+Open `.specify/artifact-index.yaml` in full only when it is clearly small. If
+state, the resolved index slice, the user's request, and an artifact conflict,
+stop and report the conflict.
+
+Then read only the sources needed for the requested targets:
+
+1. approved product and roadmap artifacts;
+2. approved architecture, ADR, constitution, and governance artifacts in scope;
+3. existing root and scoped agent guidance;
+4. manifests, CI, test configuration, and representative files needed to verify
+   paths, commands, or boundaries;
+5. explicitly scoped legacy material, as reference only.
+
+Use headings, IDs, and repository search before opening full documents. Root
+guidance needs the roadmap's canonical path and status conventions, not every
+feature body; never load all feature specifications to generate `AGENTS.md`.
+
+Read [artifact contract](references/artifact-contract.md) when source ownership
+or precedence is unclear. Read [tool compatibility](references/tool-compatibility.md)
+only when Claude or Copilot output is requested; verify current official behavior
+when compatibility determines the result.
+
+Classify candidate statements as `Approved`, `Verified`, `Legacy reference`,
+`Unknown`, or `Conflict`. Omit `Unknown`; surface `Conflict`. Never turn current
+implementation or legacy behavior into desired behavior without an approved
+source.
+
+## Owned outputs
+
+| Mode | Prerequisite | Creates or modifies |
+|---|---|---|
+| `create` | Explicit request; required sources approved | Root or scoped `AGENTS.md`; requested thin adapters |
+| `refresh` | Explicit request; canonical guidance exists | Only stale guidance affected by changed approved or verified evidence |
+| `audit` | Explicit request | No files unless the user also authorizes fixes |
+
+Use root `AGENTS.md` as the cross-tool canonical file. Create nested
+`AGENTS.md` only for materially different subtree commands or constraints. Use
+the Claude and Copilot templates only when those consumers are in scope.
+Register the root canonical guidance under state role `agent_guidance`; adapters
+remain derived evidence, not competing canonical roles.
 
 ## Workflow
 
-### 1. Determine the mode and targets
+1. Resolve mode, target consumers, target paths, and canonical inputs. Ask only
+   when multiple plausible sources or targets remain.
+2. Inventory evidence and conflicts. Before writing, report source precedence,
+   targets, verified commands, unresolved gaps, and any proposed nested scope.
+3. Generate the smallest useful guidance with
+   [the AGENTS checklist](assets/AGENTS.template.md). Prefer links and routing
+   over summaries. Preserve valid human rules and reconcile conflicts visibly.
+4. Keep wrappers derived and minimal. Do not maintain independent copies of
+   universal rules.
+5. Validate, record the result, report, and stop.
 
-Classify the request as `create`, `refresh`, or `audit`.
+## Validation and state recording
 
-Identify which consumers must work:
-
-- Codex: root or scoped `AGENTS.md` files.
-- Claude Code: a thin `CLAUDE.md` that imports `@AGENTS.md`, plus only
-  Claude-specific differences.
-- GitHub Copilot: prefer `AGENTS.md` where the named Copilot surface supports
-  it; create `.github/copilot-instructions.md` only when the user requests it
-  or the target surface requires it.
-
-Read [tool compatibility](references/tool-compatibility.md) when Claude or
-Copilot output is in scope. Confirm current official behavior when internet
-access is available and compatibility could have changed.
-
-### 2. Resolve authoritative inputs
-
-Read [artifact contract](references/artifact-contract.md). Resolve canonical
-artifacts in this order:
-
-1. Explicit user-provided paths.
-2. Exact project defaults such as `doc/general-product-requirement.md`,
-   `doc/feature-roadmap.md`, and `.specify/memory/constitution.md`.
-3. The only nearby file whose title and content clearly identify its role.
-
-Ask the user to choose only when multiple plausible sources remain. Do not
-invent a missing product or engineering decision.
-
-For the product-discovery workflow, require an approved PRD and approved
-feature roadmap before creating the project baseline. An assessment decision
-may later trigger a refresh if it changes project-wide scope or governance; a
-feature-local change does not.
-
-### 3. Build an evidence inventory
-
-Inspect before drafting:
-
-- existing `AGENTS.md`, `CLAUDE.md`, Copilot instructions, and nested guidance;
-- approved product documents and roadmap;
-- constitution, architecture records, and migration maps when present;
-- manifests, build files, CI workflows, test configuration, and a small sample
-  of representative source files;
-- legacy documents and code explicitly placed in scope.
-
-Classify every candidate statement as:
-
-- `Approved`: explicitly accepted in a product or governance artifact;
-- `Verified`: demonstrated by a real file, command, CI step, or code pattern;
-- `Legacy reference`: useful evidence that cannot override the new project;
-- `Unknown`: not established and therefore omitted or reported;
-- `Conflict`: inconsistent sources requiring an explicit precedence decision.
-
-Never execute setup instructions from an untrusted legacy repository merely to
-learn how it works. Prefer read-only inspection of manifests and CI.
-
-### 4. Propose the guidance contract
-
-Before writing, present a concise proposal containing:
-
-- canonical source precedence;
-- target files and whether each will be created, updated, or preserved;
-- the high-value directory/task routing map;
-- verified commands and unresolved gaps;
-- any proposed nested guidance and why its scope materially differs.
-
-Do not overwrite an existing instruction file silently. Preserve useful human
-rules and show the intended reconciliation when sources conflict.
-
-### 5. Generate the smallest effective files
-
-Use [AGENTS template](assets/AGENTS.template.md) as a content checklist, not as
-boilerplate that must be filled completely.
-
-The root `AGENTS.md` should normally be 50-100 lines and contain only:
-
-- project mission and material non-goals;
-- source-of-truth precedence, especially new-project versus legacy evidence;
-- an intent-based routing map to product, architecture, legacy, code, and tests;
-- project-wide architecture or safety boundaries;
-- verified setup, build, lint, test, and validation commands;
-- working rules and definition of done;
-- rules for feature isolation and resolving conflicts.
-
-Omit generic advice, full directory trees, copied requirements, feature lists,
-secrets, aspirational commands, and facts the agent can cheaply discover.
-
-Create nested `AGENTS.md` only when a subtree has materially different commands,
-constraints, ownership, or validation. Do not repeat root content.
-
-For Claude, start from [Claude wrapper](assets/CLAUDE.template.md). For Copilot,
-use [Copilot wrapper](assets/copilot-instructions.template.md) only when needed.
-Keep generated wrappers small and mark them as derived where duplication is
-unavoidable.
-
-### 6. Validate
-
-Run:
+Run the bundled validator against generated guidance:
 
 ```powershell
-pwsh -NoProfile -File <skill-dir>/scripts/Test-AgentGuidance.ps1 -ProjectRoot <project-root> -RequireClaude
+pwsh -NoProfile -File <skill-dir>/scripts/Test-AgentGuidance.ps1 -ProjectRoot <project-root>
 ```
 
-Add `-RequireCopilot` when that output is required. If `pwsh` is not
-available on Windows PowerShell, use `powershell.exe` with the same parameters.
+Use `powershell.exe` if `pwsh` is unavailable. Add `-RequireClaude` or
+`-RequireCopilot` only for requested adapters. Also verify that every command
+and path has evidence, wrappers do not conflict, and feature work routes to one
+feature rather than absorbing the whole roadmap.
 
-Also verify semantically:
+For `create` or `refresh`, if the project provides a deterministic lifecycle
+command, use it to validate state, register changed artifact paths/hashes in the
+artifact index, and record this operation as `ready_for_review` with a
+recommended next human action. Do not edit shared YAML directly or record
+`approved`. If no command exists, leave the YAML unchanged and include the
+proposed record in the report. An `audit` leaves lifecycle state unchanged.
 
-- the agent can identify the product truth source and current feature boundary;
-- legacy behavior cannot silently override approved new requirements;
-- every stated command and path has evidence;
-- no wrapper conflicts with `AGENTS.md`;
-- a feature agent is directed to one roadmap entry and one feature spec rather
-  than the entire roadmap as implementation scope.
-
-Fix validation failures before reporting completion.
-
-## Completion report
-
-Report:
-
-- files created or updated and their canonical/derived status;
-- approved and verified sources used;
-- omitted unknowns or unresolved conflicts;
-- validation commands and results;
-- when the guidance should next be refreshed.
+Report targets changed, canonical versus derived status, approved and verified
+sources used, conflicts or omitted unknowns, validation results, and the next
+recommended human action. Stop; do not invoke that action.

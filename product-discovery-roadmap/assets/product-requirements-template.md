@@ -1,7 +1,9 @@
 # [Product Name]: Product Requirements
 
-**Status**: Discovery | Review | Approved
+**Status**: Draft | Ready for Review | Approved
 **Last Updated**: YYYY-MM-DD
+**Approved By**: Not approved | [Name or role]
+**Approval Evidence**: Not approved | [Explicit user statement or review reference]
 
 ## Product Vision
 

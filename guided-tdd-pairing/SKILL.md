@@ -1,51 +1,49 @@
 ---
 name: guided-tdd-pairing
-description: Use when the user wants to implement code themselves with step-by-step coaching instead of having you write it — pair-programming or learning-oriented sessions (often with TDD) where the user asks for hints rather than a finished solution, says they are learning, or wants to control who writes what per step.
+description: Coach a user who explicitly wants to write implementation code themselves through small test-driven steps, hints, or negotiated pair programming. Use for clear learning or pairing intent, not as an automatic lifecycle phase and not when the user simply wants the feature implemented.
 ---
 
 # Guided TDD Pairing
 
-## Overview
+This is an optional collaboration mode, not a lifecycle skill. It may help with
+an already-authorized implementation task but never authorizes or advances it.
 
-Coach the user through implementation one small step at a time on a TDD red→green loop. The user writes the core logic (to learn); you write the tests and the rote parts. **Who writes each piece is negotiable per step** — the user can always say "I'll write this" or "you write this," and you adapt without friction.
+## Context and ownership
 
-## When to Use
+- Confirm the current task and who writes tests, core logic, and boilerplate.
+  Default to the agent writing failing tests/fixtures and the user writing core
+  logic; honor changes at any step.
+- In a spec-driven repository, read `.specify/flow-state.yaml`, then query the
+  generated index through deterministic `resolve` to locate the active
+  feature/task. Open the complete index only when it is demonstrably small.
+  Read that task, the smallest applicable spec section, existing code, and the
+  targeted tests; do not load the whole roadmap or unrelated feature artifacts.
+- Write only files the user assigns within the already-authorized implementation
+  scope. Do not create or modify lifecycle artifacts, pointer/index YAML,
+  approvals, roadmap status, or release state.
+- Never invoke another skill or phase. Report a missing prerequisite or scope
+  conflict and wait for the user.
 
-- The user says "I'll write the code, guide me", "give me hints not the whole thing", "I'm using this to learn", or asks you to coach rather than implement.
-- Any task where the user wants to type the implementation themselves but wants direction.
+## One-step loop
 
-**When NOT to use:** the user just wants the feature done fast, or it's throwaway/mechanical work — write it yourself.
+1. State one behavior and the smallest test that proves it.
+2. Write and run that test when assigned to the agent. Confirm it fails for the
+   intended reason; fix an invalid test before proceeding.
+3. Give one minimal hint or function-level example for the current behavior.
+   Do not pre-implement later behavior or dump the full solution.
+4. Hand the implementation step to the user and stop. Do not continue until the
+   user supplies or saves their change.
+5. Run the targeted test, explain the result, and make only the agreed cleanup.
+6. Repeat with the next behavior. Run broader relevant validation only after the
+   focused loops pass.
 
-## The Loop
+Use short teaching comments only while explaining unfamiliar syntax or an
+idiom. Remove instructional scaffolding from production code once understood.
+If the user asks for speed, switch the agreed writer instead of enforcing the
+default division.
 
-1. **Ideas first.** For core/design logic, give the approach and reasoning before any code.
-2. **RED.** Write the failing test yourself, run it, and confirm it fails for the right reason. One behavior per loop.
-3. **Hand off GREEN.** Give the user the minimal step to make it pass.
-4. **User implements**, then runs the test to green.
-5. **Comments after.** Once they save it, replace any teaching comments with production docstrings/comments.
-6. **Next RED.** Repeat.
+## Completion
 
-## Labor Division (default — override per step)
-
-| Piece | Default writer |
-|---|---|
-| Failing tests + fixtures | You |
-| Core / design logic | User (by imitation) |
-| Boilerplate, established idioms, scaffolding | You |
-| Final docstrings / comments | You |
-
-The user flips any cell on request. If a step is slow and the user wants speed, offer to write it — don't force hand-writing.
-
-## Teaching by Imitation
-
-When the user implements a step, give a **worked, function-level code example with inline comments** that explain *what each line does, why, and the language idiom in play* — so the user learns by retyping and adapting it, not from prose alone.
-
-- Keep the example **minimal for the current RED step** — never pre-implement behavior that has no failing test yet (TDD discipline).
-- The teaching comments are scaffolding; after the user writes it, swap them for clean production comments.
-
-## Common Mistakes
-
-- **Dumping the whole solution** when the user wanted to learn — give one step, commented for understanding.
-- **Forcing hand-writing** when the user wants speed — let them flip the step to you.
-- **Code before a failing test** — always RED first, even in teaching mode.
-- **Pre-implementing untested behavior** in the worked example — only what the current test demands.
+Report behaviors completed, files changed by each participant, focused and
+broader test results, and remaining implementation work. Leave lifecycle state
+unchanged and return control to the user.

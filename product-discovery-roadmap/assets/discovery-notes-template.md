@@ -67,4 +67,5 @@
 - **Approved for PRD**: Yes | No
 - **Approved By**: [Name or role]
 - **Date**: YYYY-MM-DD
+- **Approval Evidence**: [Explicit user statement or review reference]
 - **Remaining bounded assumptions**: [IDs or None]

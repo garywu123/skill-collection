@@ -1,0 +1,7 @@
+interface:
+  display_name: "Guided TDD Pairing"
+  short_description: "Coach user-written code with focused TDD steps"
+  default_prompt: "Use $guided-tdd-pairing to coach me through one small failing-test and implementation step at a time."
+
+policy:
+  allow_implicit_invocation: false
