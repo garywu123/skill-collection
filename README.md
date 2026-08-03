@@ -17,6 +17,12 @@ active Skill, at most one operation reference and only the selected output
 variant's minimal template set, the workflow pointer, a small index result, and
 bounded targeted artifact/code/evidence slices.
 
+## Operator instructions
+
+- [WMS SPEC Drive Instruction](wms-spec-drive-instruction.md): start an enterprise WMS and deliver one feature at a time.
+- [WMS Change Playbook](wms-change-playbook.md): add, change, fix, or migrate an existing WMS repository without losing approved history.
+- [Flow State Command Reference](flow-state-command-reference.md): when to use every `flow_state.py` command and its prerequisites.
+
 ## Operating model
 
 ```text
@@ -29,19 +35,25 @@ Human selects one operation
 ```
 
 - A workflow arrow means prerequisite order, never automatic invocation.
-- Run each lifecycle operation in a fresh conversation, fork, or worker context;
-  reconstruct current truth from pointer/index and canonical artifacts instead
-  of carrying earlier Skills and excerpts forward. `guided-tdd-pairing` may keep
-  one interactive implementation loop, but that context must stop before a
-  lifecycle review or gate. A fresh worker is only a memory/coverage boundary
-  inside the already authorized operation; it cannot select another Skill,
-  stage, gate, or work item.
+- One named lifecycle authorization may span turns. A context that creates or
+  resolves a human gate, or emits a blocked/terminal handoff, must stop after
+  read-only reporting. Any gate decision, downstream lifecycle operation, or
+  independent review must begin in a new minimal context explicitly authorized
+  by the user and rebuilt from pointer/index and canonical artifacts; a fork or
+  worker does not grant new authorization. `guided-tdd-pairing` may keep one
+  interactive implementation loop, but it stops before a lifecycle review or
+  gate. A fresh worker is only a memory/coverage boundary inside the already
+  authorized operation; it cannot select another Skill, stage, gate, or work
+  item.
 - All eight Skills disable implicit invocation and require explicit
   `$skill-name` authorization. Pointer state and a recommended command do not
   grant permission.
 - Skills never invoke other lifecycle Skills or Spec Kit. An authorized Skill
   may call `flow-state/scripts/flow_state.py` for a mechanical state/index
-  update; that is a deterministic tool call, not semantic orchestration.
+  update; that is a deterministic tool call, not semantic orchestration. Every
+  Skill names that one entry point explicitly — deployed skills reach it as
+  `<their-skill-dir>/../flow-state/scripts/flow_state.py` — so no Skill has to
+  load another Skill to find it.
 - An explicit `$skill-name <operation>` request may mechanically `start` only
   that named stage after prerequisites pass. It cannot use the pointer to infer
   or start the recommended next operation.
@@ -63,7 +75,10 @@ Human selects one operation
   bounded pointer changes work item.
 - Canonical discovery, PRD, roadmap, architecture, and product-UI roots declare
   `single` or `split`; every split root lists a complete member Path/SHA-256
-  bundle, and candidate recording or approval rejects stale members.
+  bundle, and candidate recording or approval rejects stale members. The
+  `sync-bundle` command computes and writes that table, so no Skill ever
+  transcribes a digest; `record-output --check-only` pre-flights a complex
+  transition without writing state or consuming a revision.
 - PRD, roadmap, architecture, UI, verification, and acceptance meaning remains
   in the owning artifacts. Never copy their summaries into the pointer.
 - Roadmap owns durable product outcomes, horizons, dependencies, and release

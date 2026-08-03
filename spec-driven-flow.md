@@ -100,8 +100,9 @@ Full 只增加分析深度、拆分文档和风险证据，不增加自动化权
 python flow-state/scripts/flow_state.py --root . <operation> [options]
 ```
 
-命令不熟悉时先运行对应的 `--help`。所有写操作都带
-`--expect-revision N`，过期 revision 必须停止，不能覆盖。
+命令不熟悉时先运行对应的 `--help`。所有写操作都带 `--expect-revision`：一个上下文
+里的第一次写入用 `<revision-from-status>`，之后使用上一条命令返回的 revision。遇到
+`stale revision` 必须停止并报告冲突，不得刷新重试，也不得覆盖。
 
 ### 3.1 初始化与状态操作卡
 
@@ -110,13 +111,15 @@ python flow-state/scripts/flow_state.py --root . <operation> [options]
 | `init --project-id WMS --profile full` | 人类明确要求初始化；pointer 不存在 | 无 | pointer、index、index SHA-256 sidecar | 无 | profile 为 `provisional`；initial `start_discovery` gate pending | 查看 `status`，再明确选择 discovery |
 | `start --expect-revision 0 --kind project --work-id WMS --stage discovery` | 人类选择 project discovery | pointer | 无 | pointer | `in_progress` | 明确调用 discovery Skill |
 | `status` / `validate --check-paths` | 状态或校验请求 | pointer；validate 时检查路径 | 无 | 无 | 不变 | 修正冲突，或选择一个允许操作 |
-| `record-output --expect-revision N --stage <stage> --artifact key=path --next "<prompt>"` | 当前 Skill 已获授权且输出已验证 | pointer、输出路径 | 无 | pointer、index、index sidecar | 候选状态、pending gate | Skill 报告并停止，等人类审阅 |
-| `block --expect-revision N --artifact key=path --blocker "<fact>"` | 当前已授权操作发现确定 blocker，且没有 pending gate | pointer、blocker 证据 | 无 | pointer、index、index sidecar；登记 blocker artifact | `blocked` | 报告解除 blocker 所需的人类动作并停 |
-| `decide --expect-revision N --decision approved\|rejected --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>` | 当前 gate 为 `ready_for_review`，且当前消息明确批准或拒绝并提供三项 provenance | pointer、候选 artifact/证据及 gate hashes | `.specify/decisions/...yaml` durable receipt | pointer、index、index sidecar | `approved` 或 `rejected` | 报告 receipt path/hash 后停；不得用于 acceptance/release |
+| `record-output --expect-revision <revision-from-status> --stage <stage> --artifact key=path --next "<prompt>"` | 当前 Skill 已获授权且输出已验证 | pointer、输出路径 | 无 | pointer、index、index sidecar | 候选状态、pending gate | Skill 报告并停止，等人类审阅 |
+| `record-output ... --check-only` | 想在写入前预检一次复杂 transition | 与 `record-output` 相同 | 无 | 无 | 状态不变，且不消耗 revision | 预检通过后再运行同一条不带 `--check-only` 的命令 |
+| `sync-bundle --artifact <split-root> --member <path> [--member ...] --role <role>` | 当前已授权操作拥有该 split root；成员字节已定稿 | root 声明与全部成员文件 | 无 | 只重写该 root 的 `## Approved Bundle` 表 | 状态不变；不触碰 pointer | 模型永不手写 SHA-256；随后再 `record-output` |
+| `block --expect-revision <revision-from-status> --artifact key=path --blocker "<fact>"` | 当前已授权操作发现确定 blocker，且没有 pending gate | pointer、blocker 证据 | 无 | pointer、index、index sidecar；登记 blocker artifact | `blocked` | 报告解除 blocker 所需的人类动作并停 |
+| `decide --expect-revision <revision-from-status> --decision approved\|rejected --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>` | 当前 gate 为 `ready_for_review`，且当前消息明确批准或拒绝并提供三项 provenance | pointer、候选 artifact/证据及 gate hashes | `.specify/decisions/...yaml` durable receipt | pointer、index、index sidecar | `approved` 或 `rejected` | 报告 receipt path/hash 后停；不得用于 acceptance/release |
 | `record-feature-decision ...` | 当前消息给出明确决定、actor/date/evidence；acceptance hash 未变；`Accepted` 还要求 review status 为 `ready`/`conditional` 且无 unresolved blocker | pointer、acceptance | `.specify/decisions/...yaml` 专用内容哈希回执 | 脚本只替换四个决定字段；回执绑定审阅前/决定后 hash；更新 pointer、index、sidecar | `accepted` 或 `rejected` | 报告 artifact pre/post hash 与 receipt path/hash；不改 review findings；停 |
 | `authorize-release ...` | readiness review status 为 `ready`/`conditional`、无 unresolved blocker；当前消息明确授权固定 scope | pointer、readiness hash | `.specify/decisions/...yaml` release authorization 回执 | 脚本只替换四个授权字段；回执绑定审阅前/授权后 hash；更新 pointer、index、sidecar | `release_authorized` | 报告 receipt path/hash；不运行 release tooling；停 |
 | `record-release-result ... --execution-evidence <receipt.yaml>` | 外部 tooling 已另行授权并终止；结构化 receipt 匹配 ID/result；当前消息确认 | pointer、authorized readiness、外部 receipt | `.specify/decisions/...yaml` release result 回执 | 脚本写入外部 receipt path/SHA-256 并替换五个执行字段；专用回执链接授权 hash 与结果 hash；更新 pointer、index、sidecar | `released` 或 `rejected` | 只有 succeeded 且有 artifact SHA 可 released；报告两个 receipt path/hash 后停 |
-| `confirm-profile --expect-revision N --profile full` | Roadmap 已批准且其 `Profile sizing: full` / concrete `Sizing evidence` 已复核 | pointer、Roadmap sizing 字段 | 无 | pointer | profile `confirmed` | 再选择 architecture mode |
+| `confirm-profile --expect-revision <revision-from-status> --profile full` | Roadmap 已批准且其 `Profile sizing: full` / concrete `Sizing evidence` 已复核 | pointer、Roadmap sizing 字段 | 无 | pointer | profile `confirmed` | 再选择 architecture mode |
 | `rebuild-index` | noncanonical indexed artifact 绕过 `record-output`/决定命令发生 out-of-band 变化；pointer integrity 通过；approved canonical hash 未漂移 | pointer integrity、受索引目录元数据 | index/sidecar（若不存在） | index、index sidecar | 状态不变 | 随后执行 `validate --check-paths`；canonical 漂移必须走 amendment |
 | `resolve --id F001` | 需要定位一个稳定 ID | pointer integrity、派生 index structure、命中 artifact | 无 | 无 | 状态不变 | 只打开返回的 compact path/line/heading |
 
@@ -342,7 +345,7 @@ acceptance 与 release 记录通过 feature ID 在 index 中解析，避免两�
 Roadmap 批准后，人类复核 Full/Lite sizing，并运行：
 
 ```text
-python flow-state/scripts/flow_state.py --root . confirm-profile --expect-revision N --profile full
+python flow-state/scripts/flow_state.py --root . confirm-profile --expect-revision <revision-from-status> --profile full
 ```
 
 ## 6. Architecture、Agent Guidance 与 Product UI
@@ -367,7 +370,7 @@ Discovery history、所有 feature specs、tasks 和源码默认都不读。WMS 
 | 操作/示例 prompt | 执行前 | 精确最小读取 | 创建 | 修改 | 最大结束状态 | 停止与下一次人类动作 |
 |---|---|---|---|---|---|---|
 | `$bootstrap-agent-guidance create；只生成根 AGENTS.md` | PRD/Roadmap/architecture 已批准 | pointer/index；这些 artifacts 的 routing/constraints；现有 guidance；manifest、CI/test config 与代表文件用于验证命令 | `AGENTS.md` | 存在时仅更新已过时 guidance | `ready_for_review` | validator 后停；人类审阅再显式调用 `$flow-state decide` |
-| `$flow-state decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（guidance） | 人类已审阅 guidance/validation 并在当前消息明确批准 | pointer、guidance hash、validation、当前人类决定 | `.specify/decisions/...yaml` durable receipt | pointer/index；不扩写 guidance 语义 | `approved` | 报告 receipt path/hash 后停；不自动选择 feature |
+| `$flow-state decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（guidance） | 人类已审阅 guidance/validation 并在当前消息明确批准 | pointer、guidance hash、validation、当前人类决定 | `.specify/decisions/...yaml` durable receipt | pointer/index；不扩写 guidance 语义 | `approved` | 报告 receipt path/hash 后停；不自动选择 feature |
 
 `AGENTS.md` 应指向 PRD、Roadmap、baseline 和 active spec，不复制它们。示例不
 要求 `CLAUDE.md` 或 Copilot adapter；只有这些 consumer 真正在用时，人类才显式
@@ -378,7 +381,7 @@ Discovery history、所有 feature specs、tasks 和源码默认都不读。WMS 
 | 操作/示例 prompt | 执行前 | 精确最小读取 | 创建 | 修改 | 最大结束状态 | 停止与下一次人类动作 |
 |---|---|---|---|---|---|---|
 | `$ui-wireframe-spec product；为 WMS 手持端与经理端生成 doc/ui-structure.md` | PRD/Roadmap 已批准；产品确有 UI | pointer/index；product experience constraints；Roadmap 的 feature outcome/domain/dependency/UI Surface | `doc/ui-structure.md` | canonical 文件已存在时更新 | `ready_for_review` | 只画 L0 + global shell；停等人类批准 |
-| `$flow-state decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（product UI） | 人类已审阅 UI structure/validation 并在当前消息明确批准 | pointer、ui_structure hash、validation、当前人类决定 | `.specify/decisions/...yaml` durable receipt | pointer/index/sidecar；不扩写 UI 语义 | `approved` | 报告 receipt path/hash 后停；不自动选择 feature |
+| `$flow-state decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（product UI） | 人类已审阅 UI structure/validation 并在当前消息明确批准 | pointer、ui_structure hash、validation、当前人类决定 | `.specify/decisions/...yaml` durable receipt | pointer/index/sidecar；不扩写 UI 语义 | `approved` | 报告 receipt path/hash 后停；不自动选择 feature |
 
 大型 Roadmap 不应一次读入：先画 global shell，再由人类每轮选择一个 domain。
 Product mode 不画 F001 具体 screen。
@@ -388,7 +391,7 @@ Product mode 不画 F001 具体 screen。
 先由人类选择工作项：
 
 ```text
-python flow-state/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F001 --stage specify
+python flow-state/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F001 --stage specify
 ```
 
 ### 7.1 Spec Kit：水平一致性
@@ -412,11 +415,11 @@ Spec Kit 本身不拥有共享状态；本例在 bundle 边界机械登记：
 | Bundle checkpoint | 机械状态动作 | 候选态与人工停止点 |
 |---|---|---|
 | clarify 完成 | `record-output ... --stage specify --artifact spec=specs/001-receiving/spec.md` | `ready_for_review`；人类批准后才可选 UI/plan |
-| 人类选择 plan | `python flow-state/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F001 --stage plan` | `in_progress`；只授权 plan bundle |
+| 人类选择 plan | `python flow-state/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F001 --stage plan` | `in_progress`；只授权 plan bundle |
 | analyze 无 blocker | `record-output` 登记 `plan`、`requirements_checklist`、`tasks` 与各自精确路径 | `ready_for_review`；人类用带三项 provenance 的 generic `decide` 批准并生成 indexed receipt 后，才可选 pre-sync |
 | pre-sync Pass | `record-output ... --stage pre_implement --artifact pre_implementation=specs/001-receiving/pre-implementation-review.md` | `ready_for_review`；停等人类用带三项 provenance 的 generic `decide`，该命令会生成 indexed receipt |
-| 人类批准 pre-sync review | `python flow-state/scripts/flow_state.py --root . decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>` | `approved`；生成 `.specify/decisions/...yaml` 并自动登记 index；只批准 role `pre_implementation`，报告 receipt path/hash 后停 |
-| 人类另行选择 implement | `python flow-state/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F001 --stage implementation` | `in_progress`；只授权实现范围，然后再明确运行 `/speckit.implement 001-receiving` |
+| 人类批准 pre-sync review | `python flow-state/scripts/flow_state.py --root . decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>` | `approved`；生成 `.specify/decisions/...yaml` 并自动登记 index；只批准 role `pre_implementation`，报告 receipt path/hash 后停 |
+| 人类另行选择 implement | `python flow-state/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F001 --stage implementation` | `in_progress`；只授权实现范围，然后再明确运行 `/speckit.implement 001-receiving` |
 
 Feature wireframe 的 `start`、role `wireframes` 和 candidate 由当前已获授权的
 `$ui-wireframe-spec feature` 按共享契约登记；它在 `ready_for_review` 停止。只有后续
@@ -496,7 +499,7 @@ Spec 中每个 `SC-###` 必须在 acceptance 的 `Scenario Evidence` 中恰好�
 |---|---|---|---|---|---|---|
 | `start ... --kind change_request --work-id CR-0007 --stage change_request` | 人类选择原始 change request | pointer | 无 | pointer | in_progress | 人类明确调用 spec-sync change-request |
 | `$spec-sync change-request CR-0007；保留原始请求并 materialize doc/change-requests/CR-0007.md` | 原始请求文本存在；durable CR path 已指定 | pointer/index；受影响 ID 的目标 sections；routing rules | `doc/change-requests/CR-0007.md` | 仅既有 CR 草稿 | pointer `ready_for_review` | 列最高层与建议 prompts 后停；不得直接进入 owner amend |
-| `$flow-state decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（CR-0007 intake） | materialized CR 已由人类审阅并明确批准作为路由输入 | pointer、CR artifact/hash、当前人类决定 | `.specify/decisions/...yaml` durable receipt | pointer/index | `approved` | 报告 receipt path/hash 后停；此后人类才可选择 routed owner `amend` |
+| `$flow-state decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（CR-0007 intake） | materialized CR 已由人类审阅并明确批准作为路由输入 | pointer、CR artifact/hash、当前人类决定 | `.specify/decisions/...yaml` durable receipt | pointer/index | `approved` | 报告 receipt path/hash 后停；此后人类才可选择 routed owner `amend` |
 | `$product-discovery-roadmap amend CR-0007；只提议受影响的 PR/F IDs` | CR intake 已 approved；人类批准产品路由 | pointer/index；CR；受影响的 approved product sections | `doc/product-amendments/CR-0007.md`；candidate 只登记 role `product_amendment` | 不改 canonical PRD/Roadmap | `ready_for_review` | 人类审阅 proposal 后另行 `approve-amendment` |
 | `$product-discovery-roadmap approve-amendment CR-0007；应用已审阅 proposal；actor/date/evidence 如当前消息` | 人类明确批准 byte-identical proposal 与完整 named canonical edit set，并提供 actor/date/evidence | proposal/hash；仅受影响 canonical files | `.specify/decisions/...yaml` durable receipt | proposal 保持 byte-identical；只应用 reviewed canonical edits；在决定前 re-record 同一 `product_amendment` proposal role 和每个 changed canonical role，再执行带三项 provenance 的 generic `decide` | `approved` | 未批准或已变更 proposal 不能 promotion；报告 receipt path/hash 后停 |
 | `$architecture-baseline amend CR-0007；评估对 AC-003/ADR-0002 的影响` | 产品边界已获批准；人类选择 architecture route | pointer/index；accepted baseline/ADR；CR/新 PR 的必要 sections | `doc/architecture-amendments/CR-0007.md`（role `architecture_amendment`）与 exact proposed `adr-*` role set | 不改 accepted baseline/ADR | `ready_for_review` | 原 ADR 仍有效；人类另行 approve |
@@ -523,7 +526,7 @@ implementation、post-sync、独立 acceptance 与专用决定循环；F001 的�
 
 | 操作/明确命令 | 执行前 | 精确最小读取 | 创建 | 修改 | 最大结束状态 | 停止与下一次人类动作 |
 |---|---|---|---|---|---|---|
-| `python flow-state/scripts/flow_state.py --root . start --expect-revision N --kind release --work-id REL-2026.09 --stage release_readiness` | scope 已由人类明确；included features 已 accepted | pointer | 无 | pointer | `in_progress` | 收集 release evidence |
+| `python flow-state/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind release --work-id REL-2026.09 --stage release_readiness` | scope 已由人类明确；included features 已 accepted | pointer | 无 | pointer | `in_progress` | 收集 release evidence |
 | “按风险生成 build provenance，并收集 fixed revision/diff 的 code-review evidence；运行 release CI/dependency/security/migration/compatibility/rollback/ops/docs gates” | release scope 固定 | build/CI configs；included revisions/diffs；适用 runbooks 与 risk inputs | pipeline/review reports、run IDs、artifacts | 无领域 truth | pass/fail/N/A evidence | 缺证据则停；N/A 必须说明 absent signal 与 scope |
 | `$delivery-gates release REL-2026.09；scope F001-F004` | 每个 feature 有 human acceptance；evidence 可定位 | pointer/index；acceptance decisions；build provenance、CI、适用 code/dependency/security/migration/compatibility/rollback/observability/ops/docs evidence；已 disposition 的 bug/debt | `doc/releases/REL-2026.09-readiness.md` | ready/conditional 以 role `release_readiness` 登记；not_ready 以 concrete blockers 执行 `block`；不改代码、tag、deploy 或 accepted history | `ready_for_release` 或 `blocked` | 停 |
 | `$delivery-gates authorize-release REL-2026.09；authorizer/date/evidence 如当前消息` | 人类已审阅 `ready_for_release` artifact；其 review status 为 `ready`/`conditional` 且无 unresolved blocker；当前消息明确授权该固定 scope/revision | pointer/index；readiness artifact/hash；scope、blocker 与 provenance | indexed、content-hashed authorization receipt | 确定性命令只替换四个授权字段；回执绑定 readiness pre/post hash；更新 pointer/index | `release_authorized` | 报告 receipt path/hash 后停；不 tag、不 publish、不调用项目 automation |

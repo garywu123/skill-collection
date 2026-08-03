@@ -7,8 +7,8 @@ description: Inspect and maintain the small human-gated workflow pointer and gen
 
 Maintain workflow state without becoming a workflow orchestrator. Keep product,
 architecture, design, and acceptance truth in their owning artifacts; store only
-paths, IDs, gate state, hashed evidence pointers, blockers, and allowed next commands in
-the pointer.
+paths, IDs, gate state, hashed evidence pointers, blockers, and allowed next
+commands in the pointer.
 
 ## Files
 
@@ -25,73 +25,57 @@ Git history preserves change history. Do not grow an event log in the pointer.
 The fixed `canonical_status` map retains project-level approvals, while
 `active_artifacts` retains only the current work item's artifact roles, paths,
 and gate states. Starting a different work item clears that bounded list.
+
 Treat one pointer as a single-writer worktree/session cursor, not a portfolio
 database. Parallel features need separate worktrees/cursors or an external work
 tracker; never merge two agents' pointer updates by guessing.
-The script rejects unknown pointer fields and caps the pointer file at 32 KiB,
-current-work artifacts at 24, context IDs at 32, evidence paths
-at 24, blockers at 20, and allowed next actions at 8. Put details in owning
-artifacts; never work around these bounds by packing summaries into one field.
+
+The script rejects unknown pointer fields and caps the pointer file and its
+lists. Put details in owning artifacts; never work around a bound by packing
+summaries into one field.
 
 ## Operations and authority
 
 | Operation | Authority | Effect |
 |---|---|---|
 | `status`, `validate`, `resolve` | May run for an explicit status/check request | Read only; `resolve` returns one small index slice |
+| `sync-bundle` | Current authorized operation, for a split root it owns | Rewrites that root's Approved Bundle hash table; touches no pointer state |
 | `rebuild-index` | May run after non-canonical indexed artifact changes when pointer integrity still passes | Rebuild derived index only; never re-baseline changed approved truth |
 | `init`, `start`, `confirm-profile` | Explicit user authorization | Create/select work or confirm Full/Lite after sizing |
 | `block` | Current authorized operation found a concrete blocker | Record the blocker; no approval decision |
 | `record-output` | Current authorized lifecycle skill | Record candidate output and set a pending human gate |
 | `decide` | Explicit approval/rejection plus actor, date, and evidence in the current turn | Resolve only a generic `ready_for_review` gate and create a hashed indexed receipt |
-| `record-feature-decision` | Explicit accepted/rejected/changes-requested decision | Verify reviewed hash, replace only decision fields, create a content-hashed receipt binding pre/post artifact hashes, then set `accepted` or `rejected` |
-| `authorize-release` | Explicit human authorization after readiness review | Verify reviewed hash, replace only authorization fields, create a content-hashed pre/post receipt, and set `release_authorized`; never run tooling |
-| `record-release-result` | Explicit confirmation after separately authorized tooling and a repository-contained structured execution receipt | Preserve reviewed content, bind the external receipt and prior authorization into a content-hashed result receipt, replace only result fields, and set `released` only for success |
+| `record-feature-decision` | Explicit accepted/rejected/changes-requested decision | Verify reviewed hash, replace only decision fields, create a content-hashed receipt, then set `accepted` or `rejected` |
+| `authorize-release` | Explicit human authorization after readiness review | Verify reviewed hash, replace only authorization fields, create a receipt, and set `release_authorized`; never run tooling |
+| `record-release-result` | Explicit confirmation after separately authorized tooling and a repository-contained structured execution receipt | Bind the external receipt and prior authorization into a result receipt, replace only result fields, and set `released` only for success |
 
-`ready_for_review`, `ready_for_acceptance`, and `ready_for_release` are
-candidate states. Generic `decide` maps only `ready_for_review` to `approved` or
-`rejected`, refuses changed candidate hashes, and requires `--decided-by`,
-`--decision-date`, and `--decision-evidence`. Its receipt preserves the reviewed
-role/path/hash set after the bounded pointer moves on; its full content hash is
-embedded in the filename, so index rebuild rejects edited receipts. If an approval operation adds
-approval fields to a candidate, run `record-output` again for the same role/path
-to snapshot the reviewed version before `decide`.
-The current contract reserves `ready_for_acceptance` for `kind: feature` and
-`ready_for_release` for `kind: release`; other work kinds use their explicitly
-defined `ready_for_review` gate unless a dedicated gate is added.
+`ready_for_review`, `ready_for_acceptance`, and `ready_for_release` are candidate
+states. Generic `decide` maps only `ready_for_review` to `approved` or
+`rejected`; feature acceptance and release use their dedicated commands with
+human-provided decision, actor, date, and evidence. Release is deliberately
+two-step: `ready_for_release` -> `authorize-release` -> `release_authorized` ->
+external tooling -> `record-release-result` -> `released` or `rejected`.
 
 `confirm-profile` requires an approved, unchanged roadmap whose concrete
-`Profile sizing` field matches the requested profile and whose `Sizing
-evidence` field records the evaluated feature/deployable/datastore/team/risk
-conditions. Roadmap approval alone is not sizing evidence.
-
-Feature acceptance and release cannot use generic `decide`. Dedicated commands require human-provided
-decision, actor, date, and evidence values and write only their fixed fields in
-the registered artifact. Each command also writes an indexed content-hashed
-receipt under `.specify/decisions/`; accepted features remain bound to the
-post-decision acceptance hash, and release result receipts chain to the prior
-authorization hash plus the external execution receipt. Release is deliberately two-step:
-`ready_for_release` -> `authorize-release` -> `release_authorized` -> external
-tooling -> `record-release-result` -> `released` or `rejected`.
+`Profile sizing` field matches the requested profile and whose `Sizing evidence`
+field records the evaluated feature/deployable/datastore/team/risk conditions.
+Roadmap approval alone is not sizing evidence.
 
 An approved product/architecture semantic canonical cannot be overwritten by
 ordinary `record-output`. A change-request operation must first register its
 reviewed owning `product_amendment` or `architecture_amendment` proposal, plus
-proposed `adr-*` roles when applicable. The owning proposal remains
-byte-identical during promotion. A later explicit approval may re-record that
-exact amendment-role set plus the unchanged canonical path after applying the
-reviewed edit; only then can generic `decide` approve the new canonical
-revision. Approved canonical content is hash-bound; `start`, `resolve`,
+proposed `adr-*` roles when applicable. The owning proposal stays byte-identical
+during promotion. Approved canonical content is hash-bound; `start`, `resolve`,
 validation, and explicit index rebuild refuse unreviewed drift.
+
 Discovery, requirements, roadmap, architecture, and product-UI canonical roots
-must declare `Artifact bundle: single|split`. A split root contains an exact
-`Approved Bundle` Path/SHA-256 table; a single root omits that section.
-Candidate recording, approval, validation, and later starts reject a missing
-declaration or stale members. Agent guidance remains a single canonical file
-with optional thin adapters and is not a semantic bundle.
-Agent guidance and an explicitly revised UI structure may enter a new review
-at the same canonical path through their `refresh`/revision operation;
-redirection to a different canonical path still requires an explicit migration
-policy.
+must declare `Artifact bundle: single|split`. A split root carries an exact
+`Approved Bundle` Path/SHA-256 table written by `sync-bundle`. Agent guidance
+remains a single canonical file with optional thin adapters and is not a
+semantic bundle. Agent guidance and an explicitly revised UI structure may enter
+a new review at the same canonical path through their `refresh`/revision
+operation; redirection to a different canonical path still requires an explicit
+migration policy.
 
 ## Run the deterministic command
 
@@ -101,10 +85,16 @@ Resolve `<skill-dir>` to this skill directory and run:
 python <skill-dir>/scripts/flow_state.py --root . <operation> [options]
 ```
 
-Use `--help` on the command or subcommand before constructing an unfamiliar
-call. The script requires PyYAML and fails without changing files when the
-dependency, pointer, expected revision, transition, or referenced path is
-invalid.
+Other skills reach the same entry as a deployed sibling
+(`<their-skill-dir>/../flow-state/scripts/flow_state.py`). Use `--help` on the
+command or subcommand before constructing an unfamiliar call. The script
+requires PyYAML and fails without changing files when the dependency, pointer,
+expected revision, transition, or referenced path is invalid.
+
+**Revision rule.** Use `<revision-from-status>` for the first write in a context,
+then the revision returned by the preceding command. On `stale revision`, stop
+and report the conflict; never refresh and retry. Never calculate or guess a
+revision.
 
 Typical sequence:
 
@@ -121,24 +111,32 @@ Typical sequence:
 ... validate --check-paths
 ```
 
+Two mechanical helpers keep hashes and retries out of model context:
+
+```text
+... sync-bundle --artifact <split-root-path> --member <member-path> [--member ...] --role <role>
+... record-output --expect-revision <revision> ... --check-only
+```
+
+`sync-bundle` computes and writes a split root's complete Approved Bundle table,
+so no caller ever transcribes a SHA-256; it is a file operation and never moves
+the pointer. `--check-only` runs every `record-output` validation and reports
+the result without writing state or consuming a revision — use it to pre-flight
+a complex transition instead of writing, failing, and rewriting.
+
 An exact duplicate `start` for the same in-progress kind/work/stage is an
 idempotent no-op; this lets a Skill continue after a human pre-started that
-exact operation. Any different stage or work item is rejected. Always use the
-exact current/returned revision; never calculate or guess it.
+exact operation. Any different stage or work item is rejected.
 
 An architecture spike uses `kind: spike`, stage `spike_result`, and exactly role
 `spike_result`. Its generic approval closes the investigation only; applying a
 consequence to architecture or an ADR still requires a separate amendment.
 
 Run `resolve --id F003` or `resolve --path specs/003-` instead of placing the
-whole YAML in model context. `resolve` validates the generated index digest,
-structure, and every returned match; emits compact path/hash plus up to 12
-line/heading occurrences per artifact; caps output at 16 KiB; and returns at
-most 20 artifacts by default. Full repository/index agreement belongs to
-explicit `validate --check-paths`. If either artifact or occurrence result is
-truncated, refine by both ID and path and then read bounded target sections
-rather than raising limits speculatively. Use `rebuild-index`, then retry a
-stale index.
+whole YAML in model context. Full repository/index agreement belongs to explicit
+`validate --check-paths`. If either artifact or occurrence result is truncated,
+refine by both ID and path and then read bounded target sections rather than
+raising limits speculatively. Use `rebuild-index`, then retry a stale index.
 
 ## State contract
 
@@ -148,8 +146,7 @@ For a lifecycle skill:
    active work, stage, and gate.
 2. Query the artifact index with `resolve`, then read only the canonical
    artifacts and IDs required for the authorized stage. Never load the entire
-   index into semantic context; use deterministic `validate --check-paths` for
-   full repository/index agreement.
+   index into semantic context.
 3. Write only the lifecycle skill's owned semantic artifacts.
 4. Run `record-output` with paths and evidence; never edit shared YAML freehand
    when the command is available.
@@ -165,6 +162,13 @@ deterministic state update, not one skill invoking another skill.
 The user's explicit request for a named lifecycle operation also authorizes
 that operation to run `start` for its exact stage after checking prerequisites;
 it never authorizes a different stage or recommended next command.
+
+One named lifecycle authorization may span turns. A context that creates or
+resolves a human gate, or emits a blocked/terminal handoff, must stop after
+read-only reporting. Any gate decision, downstream lifecycle operation, or
+independent review must begin in a new minimal context explicitly authorized by
+the user and rebuilt from canonical state; a fork or worker does not grant new
+authorization.
 
 ## Failure handling
 

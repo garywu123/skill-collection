@@ -14,9 +14,12 @@ specifications, or lifecycle state.
 - Require explicit authorization in the current user request for `create`,
   `refresh`, or `audit`. A pointer that says this work is allowed is not
   authorization.
-- Use a fresh conversation, fork, or worker for this operation. Reconstruct
-  truth from the pointer/index and owning artifacts; do not rely on another
-  Skill body, an old pointer, or excerpts inherited across a gate.
+- One named lifecycle authorization may span turns. A context that creates or
+  resolves a human gate, or emits a blocked/terminal handoff, must stop after
+  read-only reporting. Any gate decision, downstream lifecycle operation, or
+  independent review must begin in a new minimal context explicitly authorized
+  by the user and rebuilt from canonical state; a fork or worker does not grant
+  new authorization.
 - Never invoke another lifecycle skill, approve a gate, or advance another
   phase.
 - Write only agent guidance files. Do not modify domain artifacts, code,
@@ -25,33 +28,10 @@ specifications, or lifecycle state.
   or governance only when its owning artifact is approved. For an existing
   repository audit, distinguish repository evidence from desired product truth.
 
-Map an already-authorized state-changing operation to deterministic `start`
-exactly as follows:
-
-| Operation and scope | `kind` | `work-id` | `stage` |
-|---|---|---|---|
-| `create` | `project` | `pointer.project.id` | `agent_guidance` |
-| project-wide `refresh` | `project` | `pointer.project.id` | `agent_guidance` |
-| CR-scoped `refresh` | `change_request` | the explicitly authorized `CR-ID` | `agent_guidance` |
-
-These mappings do not grant authority. Run `start` only when the current user
-explicitly requests `create` or `refresh`, the scope selects exactly one table
-row, and prerequisites pass; never infer it from the pointer or a recommendation.
-For a CR-scoped refresh, require the current request to identify the CR-ID;
-never allocate or guess one. Read the expected revision immediately before each
-state-changing command and use the revision returned by the preceding command;
-never hard-code or calculate it. `audit` is read-only and never starts or
-changes lifecycle state.
-
-## State and source contract
-
-When present, read `.specify/flow-state.yaml` first. Use it only to verify the
-active scope, current revision, approvals, and canonical paths. Query the
-artifact index next through the deterministic `resolve` command by ID or path.
-Never load the complete `.specify/artifact-index.yaml` into semantic context;
-full agreement belongs to deterministic `validate --check-paths`. If
-state, the resolved index slice, the user's request, and an artifact conflict,
-stop and report the conflict.
+Read `.specify/flow-state.yaml` first to verify active scope, revision,
+approvals, and canonical paths. Query the index only through `resolve --id` or
+`resolve --path`. If state, the resolved slice, the user's request, and an
+artifact conflict, stop and report the conflict.
 
 Then read only the sources needed for the requested targets:
 
@@ -66,11 +46,11 @@ Use headings, IDs, and repository search before opening full documents. Root
 guidance needs the roadmap's canonical path and status conventions, not every
 feature body; never load all feature specifications to generate `AGENTS.md`.
 
-Keep each opened semantic slice at or below 8 KiB and the initial target payload
-at or below 24 KiB. If evidence exceeds that budget, inspect path/command batches
-in fresh worker contexts and merge only verified facts, citations, conflicts, and
-a coverage ledger. Never claim a complete audit while a required batch is
-uncovered or truncated.
+Keep each opened slice at or below 8 KiB and the initial target payload at or
+below 24 KiB. Beyond that, inspect path/command batches in fresh workers and
+merge only verified facts, citations, conflicts, and a coverage ledger
+(`| Batch | Stable IDs / paths | Result | Evidence |`). Never claim a complete
+audit while a required batch is uncovered or truncated.
 
 Select at most one runtime reference. Read
 [artifact contract](references/artifact-contract.md) for a canonical-guidance
@@ -85,6 +65,41 @@ Classify candidate statements as `Approved`, `Verified`, `Legacy reference`,
 `Unknown`, or `Conflict`. Omit `Unknown`; surface `Conflict`. Never turn current
 implementation or legacy behavior into desired behavior without an approved
 source.
+
+## Deterministic state command
+
+```text
+python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . <operation> [options]
+```
+
+`flow-state/` deploys as this directory's sibling. Use `--help` for options;
+never hand-edit state, index, or bundle tables. Use `<revision-from-status>`
+for the first write in a context, then the revision each command returns; on
+`stale revision` stop and report the conflict rather than retrying.
+
+```text
+start --expect-revision <revision-from-status> \
+  --kind project --work-id <project-id> --stage agent_guidance
+
+record-output --expect-revision <revision-returned-by-start> \
+  --stage agent_guidance --artifact agent_guidance=AGENTS.md \
+  --next "bootstrap-agent-guidance review"
+```
+
+Add `--check-only` to `record-output` to validate before writing. This skill
+never runs `decide`: a later explicit generic approval supplies actor, date, and
+evidence and creates the indexed decision receipt.
+
+| Operation and scope | `kind` | `work-id` | `stage` |
+|---|---|---|---|
+| `create` | `project` | `pointer.project.id` | `agent_guidance` |
+| project-wide `refresh` | `project` | `pointer.project.id` | `agent_guidance` |
+| CR-scoped `refresh` | `change_request` | the authorized `CR-ID` | `agent_guidance` |
+
+Run `start` only when the request explicitly asks for `create` or `refresh`, the
+scope selects exactly one row, and prerequisites pass. Require an explicit
+CR-ID for a CR-scoped refresh; never allocate or guess one. `audit` is read-only
+and never starts or changes lifecycle state.
 
 ## Owned outputs
 
@@ -113,12 +128,12 @@ remain derived evidence, not competing canonical roles.
    universal rules.
 5. Validate, record the result, report, and stop.
 
-## Validation and state recording
+## Validation
 
 Run the bundled validator against generated guidance:
 
 ```powershell
-pwsh -NoProfile -File <skill-dir>/scripts/Test-AgentGuidance.ps1 -ProjectRoot <project-root>
+pwsh -NoProfile -File <this-skill-dir>/scripts/Test-AgentGuidance.ps1 -ProjectRoot <project-root>
 ```
 
 Use `powershell.exe` if `pwsh` is unavailable. Add `-RequireClaude` or
@@ -126,16 +141,7 @@ Use `powershell.exe` if `pwsh` is unavailable. Add `-RequireClaude` or
 and path has evidence, wrappers do not conflict, and feature work routes to one
 feature rather than absorbing the whole roadmap.
 
-For `create` or `refresh`, if the project provides a deterministic lifecycle
-command, use it to validate state, register changed artifact paths/hashes in the
-artifact index, and record this operation as `ready_for_review` with a
-recommended next human action. Do not edit shared YAML directly or record
-`approved`. If no command exists, leave the YAML unchanged and include the
-proposed record in the report. An `audit` leaves lifecycle state unchanged.
-
-A later explicit generic approval supplies actor, date, and evidence and is
-preserved in an indexed decision receipt. This Skill never infers or records
-that decision.
+An `audit` leaves lifecycle state unchanged.
 
 Report targets changed, canonical versus derived status, approved and verified
 sources used, conflicts or omitted unknowns, validation results, and the next

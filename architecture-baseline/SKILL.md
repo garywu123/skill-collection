@@ -11,75 +11,77 @@ trade-offs without deciding feature-internal design.
 ## Lifecycle Contract
 
 - Require the current user request to authorize one named operation. Pointer
-  readiness, a recommended next action, or completion of a prerequisite is not
+  readiness, a recommended next action, or a completed prerequisite is not
   authorization.
-- Perform one operation at a time. At each review or approval boundary, report
-  allowed next human commands and stop.
-- Use a fresh conversation, fork, or worker for this operation. Reconstruct
-  truth from the pointer/index and owning artifacts; do not rely on another
-  Skill body, an old pointer, or excerpts inherited across a gate.
+- One named lifecycle authorization may span turns. A context that creates or
+  resolves a human gate, or emits a blocked/terminal handoff, must stop after
+  read-only reporting. Any gate decision, downstream lifecycle operation, or
+  independent review must begin in a new minimal context explicitly authorized
+  by the user and rebuilt from canonical state; a fork or worker does not grant
+  new authorization.
 - Never invoke another lifecycle skill, Spec Kit command, planning workflow, or
   implementation workflow.
-- Never write production code, product requirements, roadmap semantics,
-  feature specifications, wireframes, plans, tasks, tests, or agent guidance.
+- Never write production code, product requirements, roadmap semantics, feature
+  specifications, wireframes, plans, tasks, tests, or agent guidance.
 
-When present, read `.specify/flow-state.yaml` first. Use it only to verify the
-active scope, current revision, profile, gates, and canonical paths; it does not
-contain architecture truth or grant permission. Query the artifact index next
-through the deterministic `resolve` command by ID or path. Never load the
-complete `.specify/artifact-index.yaml` into semantic context; full agreement
-belongs to the deterministic `validate --check-paths` operation. If state,
-the resolved index slice, and an approved artifact disagree, stop and report
-the conflict.
+Read `.specify/flow-state.yaml` first to verify active scope, revision, profile,
+gates, and canonical paths; it holds no architecture truth and grants no
+permission. Query the index only through `resolve --id` or `resolve --path`. If
+state, the resolved slice, and an approved artifact disagree, stop and report.
 
-Do not hand-edit shared state or index YAML. After validation, use the
-repository's deterministic state/index command when configured; otherwise
-report the proposed transition for the human to record.
+## Deterministic state command
 
-Map an already-authorized operation to deterministic `start` exactly as follows:
+```text
+python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . <operation> [options]
+```
+
+`flow-state/` deploys as this directory's sibling. Use `--help` for options;
+never hand-edit state, index, or bundle tables. Use `<revision-from-status>`
+for the first write in a context, then the revision each command returns; on
+`stale revision` stop and report the conflict rather than retrying.
+
+```text
+start --expect-revision <revision-from-status> \
+  --kind project --work-id <project-id> --stage architecture
+
+sync-bundle --artifact doc/architecture-baseline.md \
+  --member <domain-or-adr-path> [--member ...] --role architecture
+
+record-output --expect-revision <revision-returned-by-start> \
+  --stage architecture --artifact architecture=doc/architecture-baseline.md \
+  --next "architecture-baseline approve"
+
+decide --expect-revision <revision-returned-by-record-output> \
+  --decision approved --decided-by <actor> --decision-date YYYY-MM-DD \
+  --decision-evidence <statement-or-reference>
+```
+
+`sync-bundle` computes and writes every member hash; never type a SHA-256 by
+hand. Add `--check-only` to `record-output` to validate a complex transition
+before writing. Substitute the authorized CR-ID or SPK-ID and its stage for
+`amend` and `resolve-spike`.
 
 | Operation | `kind` | `work-id` | `stage` |
 |---|---|---|---|
-| `full` | `project` | `pointer.project.id` | `architecture` |
-| `lite` | `project` | `pointer.project.id` | `architecture` |
-| `recover` | `project` | `pointer.project.id` | `architecture` |
-| `amend` | `change_request` | the explicitly authorized `CR-ID` | `architecture` |
-| `resolve-spike` | `spike` | the explicitly authorized `SPK-ID` | `spike_result` |
+| `full`, `lite`, `recover` | `project` | `pointer.project.id` | `architecture` |
+| `amend` | `change_request` | the authorized `CR-ID` | `architecture` |
+| `resolve-spike` | `spike` | the authorized `SPK-ID` | `spike_result` |
 
-These mappings do not grant authority. Run `start` only when the current user
-explicitly names that operation and its prerequisites pass; never infer it from
-the pointer or a recommendation. For `amend` or `resolve-spike`, require the
-current request to identify the CR-ID or SPK-ID; never allocate or guess one. Read the expected revision
-immediately before each state-changing command and use the revision returned by
-the preceding command; never hard-code or calculate it.
+Require the current request to identify a CR-ID or SPK-ID; never allocate or
+guess one. Before `full` or `lite`, require `profile_status: confirmed` and a
+`profile` equal to the requested mode; that request never authorizes
+`confirm-profile`.
 
-Before `full` or `lite`, require `pointer.project.profile_status` to be
-`confirmed` and `pointer.project.profile` to equal the requested mode. A
-`full` or `lite` request does not authorize `confirm-profile`. On a provisional
-or mismatched profile, stop and report the separate human authorization needed.
+`approve` never runs `start`. Record the human's approval fields in the reviewed
+artifact, re-run `sync-bundle` for a split root, `record-output` the complete
+approval set, then `decide` with actor, date, and evidence. If no bytes changed,
+call `decide` directly. Generic `decide` resolves only `ready_for_review`.
 
-`approve` never runs `start`. Require a pending `ready_for_review` gate for the
-named roles and paths. If recording approval fields or supersession evidence
-changes any candidate artifact, validate the edited files. For a split root,
-then recompute every member hash, replace its complete `## Approved Bundle`
-table, and verify the table before running `record-output` again for the
-complete approval set. Never refresh only changed-member rows. Use the revision
-returned by that command for generic `decide` with explicit human actor, date,
-and decision evidence; it writes an indexed receipt. If no bytes changed, verify
-the existing gate hashes and every split-bundle member before calling `decide`
-directly. Generic `decide` handles only `ready_for_review`; never use it for
-acceptance or release candidates.
-
-`amend` first creates only
-`doc/architecture-amendments/<CR-ID>.md` under role
-`architecture_amendment`, plus proposed ADR files when needed. It does not edit
-the accepted baseline or ADRs. On a later explicit `approve`, apply only the
-reviewed proposal while keeping that proposal byte-identical. When the root is
-split, recompute and validate its complete bundle. Then re-run `record-output`
-with the amendment role, every proposed/changed ADR role, and canonical
-`architecture` before generic `decide` with actor, date, and decision evidence.
-The state command rejects canonical
-promotion without the prior reviewed amendment candidate.
+`amend` creates only `doc/architecture-amendments/<CR-ID>.md` under role
+`architecture_amendment`, plus proposed ADR files when needed; accepted truth
+stays unchanged. A later explicit `approve` applies only the reviewed proposal,
+keeps that proposal byte-identical, and re-records the amendment role, every
+proposed ADR role, and canonical `architecture` before `decide`.
 
 ## Ownership and Default Paths
 
@@ -91,88 +93,73 @@ This skill may create or modify only:
 - spike result: `doc/architecture/spikes/<SPK-ID>.md`;
 - reviewed amendment proposal: `doc/architecture-amendments/<CR-ID>.md`.
 
-Register the baseline under fixed state role `architecture`; register a
-proposed ADR under a bounded active role such as `adr-0001`, and an amendment
-proposal as `architecture_amendment`. Register a spike result only as active
-role `spike_result`; it is not part of the canonical architecture bundle.
+Register the baseline under fixed role `architecture`, a proposed ADR under a
+bounded role such as `adr-0001`, an amendment as `architecture_amendment`, and a
+spike result only as `spike_result` (never part of the canonical bundle).
 
-The canonical baseline declares exactly one machine-readable field:
-`**Artifact bundle**: single` or `**Artifact bundle**: split`. A `single` root
-has no `## Approved Bundle` section. A `split` root has that exact heading and a
-complete `Path`/`SHA-256` table containing every owned domain-detail and ADR
-member exactly once, excluding the root itself and source artifacts. Member
-files never repeat the field or table. Registry paths and bundle paths must be
-identical as sets. Compute hashes only after member bytes are final, and verify
-existence, uniqueness, and current hashes before every review, approval, or
-amendment promotion.
+The baseline root declares `**Artifact bundle**: single` or `split`. A split root
+also owns a `## Approved Bundle` table covering every domain-detail and ADR
+member exactly once; `sync-bundle` writes it.
 
 Honor explicit user paths, then indexed canonical paths, then exact defaults.
 Update the canonical artifact rather than creating a competing source of truth.
 
 ## Operations
 
-| Operation | Required before execution | Reads | Creates or modifies | End state |
-|---|---|---|---|---|
-| `full` | Explicit request; approved PRD and roadmap; confirmed `full` pointer profile | Canonical requirement registry/drivers, roadmap summary/dependencies, constitution and relevant existing decisions | Full baseline and proposed ADRs | `ready_for_review`; stop |
-| `lite` | Same approval gate; sizing result recorded; confirmed `lite` pointer profile | Same minimal product sources | One-page baseline; no ADRs | `ready_for_review`; stop |
-| `recover` | Explicit request and repository access | Repository evidence plus approved product sources when present | Evidence-labelled baseline | `ready_for_review`; stop |
-| `resolve-spike` | Explicit SPK-ID; approved unchanged baseline contains one question, time box, and blocked owner | Only that spike definition and evidence needed to answer it | One investigation result; canonical architecture unchanged | `ready_for_review`; stop |
-| `amend` | Explicit challenged decision, CR-ID, and trigger | Accepted baseline, affected ADRs, trigger and necessary context | Architecture amendment proposal and proposed ADRs; accepted truth is unchanged | `ready_for_review`; stop |
-| `approve` | Explicit human approval of named reviewed artifacts | Reviewed baseline/ADRs and validation evidence | Approval statuses; supersession links for an approved amendment | `approved`; stop |
+| Operation | Required before execution | Creates or modifies | End state |
+|---|---|---|---|
+| `full` | Approved PRD and roadmap; confirmed `full` profile | Full baseline and proposed ADRs | `ready_for_review` |
+| `lite` | Same approval gate; confirmed `lite` profile | One-page baseline; no ADRs | `ready_for_review` |
+| `recover` | Repository access | Evidence-labelled baseline | `ready_for_review` |
+| `resolve-spike` | Approved unchanged baseline holds one question, time box, and blocked owner | One investigation result; architecture unchanged | `ready_for_review` |
+| `amend` | Explicit challenged decision, CR-ID, and trigger | Amendment proposal and proposed ADRs; accepted truth unchanged | `ready_for_review` |
+| `approve` | Explicit human approval of named reviewed artifacts | Approval statuses; supersession links | `approved` |
 
-Approval records only the decision explicitly approved. It does not begin agent
-bootstrap or feature planning in the same turn.
+Every operation stops at its end state. Approval records only the decision
+explicitly given; it does not begin agent bootstrap or feature planning.
 
 ## Context Discipline
 
-- For `full` and `lite`, read the PRD registry before cited requirement text;
-  read roadmap summary, dependencies, coverage, and boundaries rather than
-  handoff prompts or delivery history.
-- For split requirements, select relevant domain files and the cross-cutting
-  area from the index; never load all areas speculatively.
+- For `full`/`lite`, read the PRD registry before cited requirement text, and
+  roadmap summary, dependencies, coverage, and boundaries — not handoff prompts
+  or delivery history. For split requirements, select only the relevant domain
+  files plus the cross-cutting area.
 - Exclude discovery history, wireframes, feature specs, plans, tasks, and source
   by default. For `amend`, add only the named trigger artifact.
 - For `recover`, inspect manifests, build/CI configuration, and directory
   boundaries before a representative source sample. Search before opening large
   files; never scan the repository into context.
-- Keep each opened semantic slice at or below 8 KiB and the initial target
-  payload at or below 24 KiB. If complete coverage requires more, use stable-ID
-  batches in fresh worker contexts and merge only citations, decisions, and a
-  coverage ledger. Never claim completeness while a required batch or resolver
-  result is truncated.
-- The concise `Decision Altitude` section below is the runtime rule. The longer
-  `references/decision-altitude.md` is maintainership background; do not load it
-  in addition to the operation playbook.
+- Keep each opened slice at or below 8 KiB and the initial target payload at or
+  below 24 KiB. Beyond that, batch by stable ID in fresh workers and merge only
+  citations, decisions, and a coverage ledger
+  (`| Batch | Stable IDs / paths | Result | Evidence |`). Never claim
+  completeness while a required batch or resolver result is truncated.
+- `Decision Altitude` below is the runtime rule; `references/decision-altitude.md`
+  is maintainership background and is not loaded alongside a playbook.
 - Cite canonical paths and stable IDs; never copy architecture into the pointer.
 
 ## Modes
 
-Use `lite` only with at most eight features, one deployable unit, at most one
-datastore, one owning team, and no regulatory, audit, or contractual
-architecture constraint.
-
-Otherwise use `full`. The state command rejects `lite` profile confirmation
-when any condition fails or is unknown; a `lite` architecture request cannot
-override that result. Stop and report that the human must separately authorize
-`full`. If an already-confirmed Lite project later exceeds a threshold, a
-human-authorized `full` operation carries the Lite decisions forward.
-
-Keep the Full baseline root below roughly 200 lines and, before the first
-feature, normally no more than 12 active ADRs. When growth exceeds either
-budget, keep the root as the cross-domain driver/boundary/constraint registry
-and move domain-specific decision detail into indexed domain files. The root
-owns routing and cross-domain rules; a domain member owns its decision and
-constraint text; an ADR owns rationale and history. Never copy normative text
-between them. Resolve only the domain and ADR IDs needed by the current
-operation. Lite should remain a one-page baseline.
+The confirmed pointer profile selects the mode. This skill never re-derives
+sizing: `confirm-profile` owns those thresholds and rejects an ineligible
+`lite`. If a confirmed Lite project later outgrows it, a human-authorized `full`
+operation carries the Lite decisions forward.
 
 `lite` compresses artifact count, not guarantees: retain evidence, boundaries,
 Plan Constraints, approval, and validation. If a one-way door appears, compare
-alternatives and record reversal cost inline even though no separate ADR is
-created.
+alternatives and record reversal cost inline even though no separate ADR exists.
+Lite stays a one-page baseline.
+
+Keep the Full root below roughly 200 lines and, before the first feature,
+normally at most 12 active ADRs. Past either budget, keep the root as the
+cross-domain driver/boundary/constraint registry and move domain-specific
+detail into indexed domain files. The root owns routing and cross-domain rules;
+a domain member owns its decision and constraint text; an ADR owns rationale and
+history. Never copy normative text between them, and resolve only the domain and
+ADR IDs the current operation needs.
 
 `recover` and `amend` do not require a newly approved roadmap, but use approved
-product sources when they exist and report any contradiction without rewriting
+product sources when they exist and report contradictions without rewriting
 either side.
 
 ## Decision Altitude
@@ -191,35 +178,31 @@ with one answerable question, time box, blocked feature, and disposable output.
 
 ## Conditional Operation Playbooks
 
-After the current request selects an operation, load only its playbook:
+Load only the playbook for the selected operation, never several:
 
-- `full` or `lite`: [baseline playbook](./references/baseline-operations.md);
-- `recover`: the recovery section in that same playbook;
+- `full`, `lite`, or `recover`: [baseline playbook](./references/baseline-operations.md);
 - `resolve-spike`: [spike result playbook](./references/spike-result-operation.md);
 - `amend` or amendment `approve`: [amendment playbook](./references/architecture-amendment-operation.md).
 
-An ordinary baseline/ADR `approve` uses the approval/hash contract in this file
-and does not load an execution playbook. Never load multiple playbooks speculatively.
+An ordinary baseline/ADR `approve` loads no playbook.
 
 ## Validation
 
-Before presenting output, verify:
+The state command fails closed on stage/role/status validity, bundle coverage,
+and hash freshness; read its error instead of pre-checking those rules. Before
+presenting output, verify the judgments it cannot make:
 
 - every decision passes the altitude test and cites an approved requirement,
   principle, repository fact, or external constraint;
 - one-way decisions compare alternatives and have proposed ADRs in `full`;
-  deferred decisions and spikes contain their required trigger/evidence fields;
+  deferred decisions and spikes carry their trigger/evidence fields;
 - Plan Constraints are testable; product behavior, feature-internal design,
   tasks, code shapes, and unjustified version pins are absent;
 - `recover` claims are `Verified` or `Inferred`, and amendments leave accepted
   decisions in force until approval;
 - a spike result answers exactly one approved question, preserves raw evidence,
-  and routes any architecture consequence to a separate amendment;
-- the `Artifact bundle` value matches the root form and every split root has
-  exact registry coverage plus current hashes for all members;
-- only current outputs become `Ready for Review`; nothing becomes `Approved`,
-  `Accepted`, or `Superseded` without explicit human authorization.
+  and routes any architecture consequence to a separate amendment.
 
 Report mode, sizing result, paths, created versus modified files, decisions,
-deferred items, spikes, contradictions, validation results, proposed pointer
+deferred items, spikes, contradictions, validation results, the proposed pointer
 transition, and allowed next human commands. Stop without invoking them.

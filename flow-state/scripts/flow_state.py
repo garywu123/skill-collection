@@ -2648,10 +2648,81 @@ def command_record_output(args: argparse.Namespace, root: Path) -> None:
     if context_ids:
         state["context_ids"] = sorted(context_ids)
     state["blockers"] = list(args.blocker)
+    if args.check_only:
+        print("check-only: candidate is valid; no state was written")
+        print(f"stage={args.stage} status={args.status} roles={','.join(sorted(output_roles))}")
+        print(f"current revision remains {state['revision']}")
+        return
     transition(state, "record-output")
     write_valid_state(path, state, root)
     rebuild_index(root)
     print(state["revision"])
+
+
+def replace_bundle_table(text: str, table: str) -> str | None:
+    """Replace only the Path/SHA-256 table inside the Approved Bundle section."""
+    heading = re.search(r"(?m)^## Approved Bundle[ \t]*\r?$", text)
+    if not heading:
+        return None
+    following = re.search(r"(?m)^## ", text[heading.end():])
+    end = heading.end() + following.start() if following else len(text)
+    section = text[heading.end():end]
+    existing = re.search(r"(?m)^\|.*(?:\r?\n\|.*)*\r?\n?", section)
+    if existing:
+        section = section[:existing.start()] + table + section[existing.end():]
+    else:
+        section = section.rstrip() + "\n\n" + table
+    return text[:heading.end()] + section + text[end:]
+
+
+def command_sync_bundle(args: argparse.Namespace, root: Path) -> None:
+    """Compute and write a split root's complete Approved Bundle table.
+
+    This is a file operation only: it never reads or moves the pointer, so a
+    caller never has to transcribe a SHA-256 by hand. Drift on an already
+    approved root still fails at record-output, decide, and validate, because
+    those bind the root's own hash.
+    """
+    normalized_root = require_repo_file(root, args.artifact, "bundle root")
+    root_file = root / normalized_root
+    original = root_file.read_bytes().decode("utf-8")
+    modes = [
+        match.group(1).strip().lower()
+        for match in re.finditer(r"(?m)^\*\*Artifact bundle\*\*:[ \t]*(.*?)[ \t]*\r?$", original)
+    ]
+    if len(modes) != 1:
+        fail("bundle root must declare **Artifact bundle** exactly once")
+    if modes[0] != "split":
+        fail(
+            f"sync-bundle applies only to a split root; {normalized_root} declares {modes[0]}"
+        )
+    if not args.member:
+        fail("at least one --member is required")
+    members: list[str] = []
+    for raw in args.member:
+        normalized = require_repo_file(root, raw, "bundle member")
+        if normalized == normalized_root:
+            fail("a split root cannot list itself as a bundle member")
+        if normalized in members:
+            fail(f"duplicate bundle member: {normalized}")
+        members.append(normalized)
+    line_ending = "\r\n" if "\r\n" in original else "\n"
+    rows = "".join(
+        f"| `{member}` | `{sha256_file(root / member)}` |{line_ending}"
+        for member in sorted(members)
+    )
+    table = f"| Path | SHA-256 |{line_ending}|---|---|{line_ending}{rows}"
+    updated = replace_bundle_table(original, table)
+    if updated is None:
+        fail("split root is missing the '## Approved Bundle' heading")
+    root_file.write_bytes(updated.encode("utf-8"))
+    errors = validate_approved_bundle(root_file, root, role=args.role, require_declaration=True)
+    if errors:
+        root_file.write_bytes(original.encode("utf-8"))
+        fail(f"bundle still invalid, root restored unchanged: {'; '.join(errors[:3])}")
+    for member in sorted(members):
+        print(f"{member} {sha256_file(root / member)}")
+    print(f"{normalized_root} {sha256_file(root_file)}")
 
 
 def command_block(args: argparse.Namespace, root: Path) -> None:
@@ -3379,7 +3450,26 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--context-id", action="append", default=[])
     record.add_argument("--next", action="append", default=[])
     record.add_argument("--blocker", action="append", default=[])
+    record.add_argument(
+        "--check-only",
+        action="store_true",
+        help="run every validation and report the result without writing state",
+    )
     record.set_defaults(handler=command_record_output)
+
+    sync_bundle = subparsers.add_parser(
+        "sync-bundle", help="write a split root's complete Approved Bundle hash table"
+    )
+    sync_bundle.add_argument("--artifact", required=True, help="the split canonical root path")
+    sync_bundle.add_argument(
+        "--member", action="append", required=True,
+        help="repeatable; the complete owned member set, excluding the root",
+    )
+    sync_bundle.add_argument(
+        "--role", choices=sorted(BUNDLE_DECLARATION_ROLES),
+        help="cross-check the root's domain/decision registries against the members",
+    )
+    sync_bundle.set_defaults(handler=command_sync_bundle)
 
     block = subparsers.add_parser("block", help="record concrete blockers without a gate decision")
     block.add_argument("--expect-revision", type=int, required=True)

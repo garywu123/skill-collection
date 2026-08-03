@@ -14,9 +14,12 @@ between lifecycle phases.
 - Require explicit authorization in the current user request. Infer `product`
   or `feature` only when the request itself makes the scope unambiguous; never
   infer authorization from repository state.
-- Use a fresh conversation, fork, or worker for this operation. Reconstruct
-  truth from the pointer/index and owning artifacts; do not rely on another
-  Skill body, an old pointer, or excerpts inherited across a gate.
+- One named lifecycle authorization may span turns. A context that creates or
+  resolves a human gate, or emits a blocked/terminal handoff, must stop after
+  read-only reporting. Any gate decision, downstream lifecycle operation, or
+  independent review must begin in a new minimal context explicitly authorized
+  by the user and rebuilt from canonical state; a fork or worker does not grant
+  new authorization.
 - Never invoke another lifecycle skill, run a later phase, approve an artifact,
   or advance another phase.
 - Never write code, tasks, product requirements, roadmap entries, architecture,
@@ -24,39 +27,57 @@ between lifecycle phases.
 - Treat an approved roadmap `UI Surface` value as a prerequisite and scope
   signal, not as an invocation trigger.
 
-Map an already-authorized design operation to deterministic `start` exactly as
-follows:
+Read `.specify/flow-state.yaml` first to verify active scope, revision,
+approvals, and canonical paths. Query the index only through `resolve --id` or
+`resolve --path`. Stop when state, the resolved slice, and an approved artifact
+conflict; do not repair shared state by guessing.
+
+Keep each opened slice at or below 8 KiB and the initial target payload at or
+below 24 KiB. Beyond that, batch by stable ID in fresh workers and merge only
+screen ownership, citations, decisions, and a coverage ledger
+(`| Batch | Stable IDs / paths | Result | Evidence |`). Never claim a complete
+product map while a required domain or resolver result is truncated.
+
+## Deterministic state command
+
+```text
+python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . <operation> [options]
+```
+
+`flow-state/` deploys as this directory's sibling. Use `--help` for options;
+never hand-edit state, index, or bundle tables. Use `<revision-from-status>`
+for the first write in a context, then the revision each command returns; on
+`stale revision` stop and report the conflict rather than retrying.
+
+```text
+start --expect-revision <revision-from-status> \
+  --kind project --work-id <project-id> --stage product_ui
+
+sync-bundle --artifact doc/ui-structure.md \
+  --member <domain-path> [--member ...] --role ui_structure
+
+record-output --expect-revision <revision-returned-by-start> \
+  --stage product_ui --artifact ui_structure=doc/ui-structure.md \
+  --next "ui-wireframe-spec review"
+```
+
+`sync-bundle` computes and writes every member hash; never type a SHA-256 by
+hand. Add `--check-only` to `record-output` to validate before writing. This
+skill never runs `decide`: a later explicit generic approval supplies actor,
+date, and evidence and creates the indexed decision receipt.
 
 | Operation and scope | `kind` | `work-id` | `stage` |
 |---|---|---|---|
 | project-scope `product` | `project` | `pointer.project.id` | `product_ui` |
-| CR-scoped `product` revision | `change_request` | the explicitly authorized `CR-ID` | `product_ui` |
-| `feature` | `feature` | the explicitly authorized roadmap feature ID | `feature_ui` |
+| CR-scoped `product` revision | `change_request` | the authorized `CR-ID` | `product_ui` |
+| `feature` | `feature` | the authorized roadmap feature ID | `feature_ui` |
 
-These mappings do not grant authority. Run `start` only when the current user
-explicitly requests `product` or `feature`, the scope selects exactly one table
-row, and prerequisites pass; never infer it from repository state. Require an
-explicit CR-ID for a CR-scoped revision and an explicit feature ID for feature
-mode; never allocate or guess either. Read the expected revision immediately
-before each state-changing command and use the revision returned by the
-preceding command; never hard-code or calculate it. The request does not
-authorize product planning or any later phase.
+Run `start` only when the request explicitly names `product` or `feature`, the
+scope selects exactly one row, and prerequisites pass. Require an explicit CR-ID
+or feature ID; never allocate or guess either. Feature output registers under
+active role `wireframes`.
 
-## State and source contract
-
-When present, read `.specify/flow-state.yaml` first. Use it only to verify the
-active scope, current revision, approvals, and canonical paths. Query the
-artifact index next through the deterministic `resolve` command by ID or path.
-Never load the complete `.specify/artifact-index.yaml` into semantic context;
-full agreement belongs to deterministic `validate --check-paths`. Stop
-when state, the resolved index slice, and an approved artifact conflict; do not
-repair shared state by guessing.
-
-Keep each opened semantic slice at or below 8 KiB and the initial target payload
-at or below 24 KiB. If product/domain coverage requires more, use stable-ID
-batches in fresh worker contexts and merge only screen ownership, citations,
-decisions, and a coverage ledger. Never claim a complete product map while a
-required domain or resolver result is truncated.
+## Source contract
 
 | Mode | Required before execution | Read | Creates or modifies |
 |---|---|---|---|
@@ -76,16 +97,9 @@ replace the product UI structure prerequisite, but it never overrides
 from code. Update an existing canonical output rather than creating a competing
 copy.
 
-Register product output under fixed state role `ui_structure` and feature
-output under active role `wireframes`.
-
-Every canonical UI root declares exactly one machine-readable field:
-`**Artifact bundle**: single` or `**Artifact bundle**: split`. A single root has
-no `## Approved Bundle` section. A split product-UI root has that exact heading
-and a complete `Path`/`SHA-256` table containing every owned domain-detail file
-exactly once, excluding the root and source artifacts. Detail members never
-repeat the field or table. Its domain registry and bundle paths must be
-identical as sets.
+Every canonical UI root declares `**Artifact bundle**: single` or `split`. A
+split product-UI root also owns a `## Approved Bundle` table covering every
+domain-detail file exactly once; `sync-bundle` writes it.
 
 ## Fidelity contract
 
@@ -149,9 +163,11 @@ and stop for review rather than loading the entire product into one context.
 Ask at most five decision-changing questions per round. Prefer a recommended
 answer with its consequence. Do not ask styling questions.
 
-## Validation and state recording
+## Validation
 
-Before writing `ready_for_review`, verify:
+The state command fails closed on stage/role/status validity, bundle coverage,
+and hash freshness; read its error instead of pre-checking those rules. Before
+recording a candidate, verify the judgments it cannot make:
 
 - each screen and diagram satisfies the fidelity contract;
 - every applicable acceptance scenario is reachable through represented screens
@@ -161,25 +177,9 @@ Before writing `ready_for_review`, verify:
 - no styling, component, framework, or invented product decision appears;
 - feature output references its owning feature, roadmap entry, and either the
   approved UI structure or the approved product-UI N/A rationale.
-- every UI root's `Artifact bundle` value matches its form; for a split root,
-  finalize all member bytes, compute every current member hash including
-  unchanged members, replace the complete bundle table, and verify exact domain
-  registry coverage.
 
-Run repository-provided deterministic validators when available. Then use the
-shared lifecycle command, when present, to register the output path/hash in the
-artifact index and record `ready_for_review` plus a recommended next human
-action. Never edit shared YAML directly or record approval. If no command
-exists, leave state unchanged and report the proposed record.
-
-A later explicit generic approval supplies actor, date, and evidence to the
-state command, which creates an indexed decision receipt. This Skill never
-fills that authority or runs the decision itself.
-
-For a CR-scoped revision, recompute and validate the same complete bundle before
-re-registering the root. The lifecycle owner must repeat that validation
-immediately before later approval; a changed or missing member invalidates the
-reviewed root hash.
+Run repository-provided deterministic validators when available. For a CR-scoped
+revision, re-run `sync-bundle` before re-registering the root.
 
 Report mode, artifact path, screen count, deliberately omitted screens,
 unresolved gaps, deviations, validation results, and the next recommended human

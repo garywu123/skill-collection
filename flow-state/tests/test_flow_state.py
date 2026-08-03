@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -40,6 +42,8 @@ class FlowStateIntegrationTests(unittest.TestCase):
             text=True,
             capture_output=True,
             check=False,
+            # Windows raises WinError 6 when an invalid parent stdin is inherited.
+            stdin=subprocess.DEVNULL,
         )
         if succeeds and result.returncode != 0:
             self.fail(f"command failed: {args}\nstdout={result.stdout}\nstderr={result.stderr}")
@@ -1770,6 +1774,223 @@ class FlowStateIntegrationTests(unittest.TestCase):
         self.assertIn("schema_version", boolean_index.stderr)
         self.assertIn("artifact_count", boolean_index.stderr)
         self.assertNotIn("Traceback", boolean_index.stderr)
+
+    # ------------------------------------------------------------------
+    # Contract tests for the stable CLI entry that every SKILL.md cites.
+    # These pin the behaviour the compressed skill bodies now rely on.
+    # ------------------------------------------------------------------
+
+    def run_entry(
+        self, script: Path, *args: str, cwd: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        """Invoke a script path directly with no inherited PYTHONPATH."""
+        environment = dict(os.environ)
+        environment.pop("PYTHONPATH", None)
+        return subprocess.run(
+            [sys.executable, "-B", str(script), "--root", str(self.root), *args],
+            text=True,
+            capture_output=True,
+            check=False,
+            cwd=cwd,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+        )
+
+    def test_entry_runs_standalone_from_any_cwd_without_pythonpath(self) -> None:
+        """Skills call the absolute script path. Nothing may depend on the
+        repository root, the caller's working directory, or PYTHONPATH."""
+        self.run_flow("init", "--project-id", "standalone", "--profile", "lite")
+        neutral = tempfile.TemporaryDirectory()
+        self.addCleanup(neutral.cleanup)
+        result = self.run_entry(SCRIPT, "status", cwd=neutral.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("standalone", result.stdout)
+
+    def test_deployed_skill_directory_invocation_is_self_contained(self) -> None:
+        """Deploy-Skills.ps1 copies each skill folder recursively into a tool
+        skills directory. The copied tree must run without the repository."""
+        deployed_parent = tempfile.TemporaryDirectory()
+        self.addCleanup(deployed_parent.cleanup)
+        deployed_skill = Path(deployed_parent.name) / "flow-state"
+        shutil.copytree(
+            SCRIPT.resolve().parents[1],
+            deployed_skill,
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
+        deployed_script = deployed_skill / "scripts" / "flow_state.py"
+        self.assertTrue(deployed_script.is_file())
+        result = self.run_entry(
+            deployed_script, "init", "--project-id", "deployed", "--profile", "lite",
+            cwd=deployed_parent.name,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.root / ".specify" / "flow-state.yaml").is_file())
+
+    def test_stale_revision_reports_current_value_and_writes_nothing(self) -> None:
+        """The revision placeholder contract depends on compare-and-swap
+        rejecting a guessed revision with an actionable current value."""
+        self.run_flow("init", "--project-id", "cas", "--profile", "lite")
+        self.run_flow(
+            "start", "--expect-revision", "0", "--kind", "project",
+            "--work-id", "cas", "--stage", "discovery",
+        )
+        self.write("doc/discovery.md", "# Discovery\n\n**Artifact bundle**: single\n\nPR-001\n")
+        before = self.state()
+        stale = self.run_flow(
+            "record-output", "--expect-revision", "7", "--stage", "discovery",
+            "--artifact", "discovery=doc/discovery.md", succeeds=False,
+        )
+        self.assertIn("stale revision: expected 7, current 1", stale.stderr)
+        self.assertEqual(self.state(), before)
+        # A rejected call must not consume the revision it failed against.
+        self.run_flow(
+            "record-output", "--expect-revision", "1", "--stage", "discovery",
+            "--artifact", "discovery=doc/discovery.md",
+        )
+        self.assertEqual(self.state()["revision"], 2)
+
+    def test_check_only_validates_without_writing_state(self) -> None:
+        """--check-only pre-flights a transition so a skill avoids the
+        write/fail/rewrite loop. It must never consume a revision."""
+        self.run_flow("init", "--project-id", "preflight", "--profile", "lite")
+        self.run_flow(
+            "start", "--expect-revision", "0", "--kind", "project",
+            "--work-id", "preflight", "--stage", "discovery",
+        )
+        self.write("doc/discovery.md", "# Discovery\n\n**Artifact bundle**: single\n\nPR-001\n")
+        before = self.state()
+
+        accepted = self.run_flow(
+            "record-output", "--expect-revision", "1", "--stage", "discovery",
+            "--artifact", "discovery=doc/discovery.md", "--check-only",
+        )
+        self.assertIn("check-only", accepted.stdout)
+        self.assertIn("discovery", accepted.stdout)
+        # Must not look like a completed write that returned a new revision.
+        self.assertNotEqual(accepted.stdout.strip(), "2")
+        self.assertEqual(self.state(), before)
+
+        self.write("doc/undeclared.md", "# Discovery\n\nPR-001\n")
+        rejected = self.run_flow(
+            "record-output", "--expect-revision", "1", "--stage", "discovery",
+            "--artifact", "discovery=doc/undeclared.md", "--check-only", succeeds=False,
+        )
+        self.assertIn("declare single or split", rejected.stderr)
+        self.assertEqual(self.state(), before)
+
+        # The real write still succeeds at the revision the check used.
+        self.run_flow(
+            "record-output", "--expect-revision", "1", "--stage", "discovery",
+            "--artifact", "discovery=doc/discovery.md",
+        )
+        self.assertEqual(self.state()["revision"], 2)
+        self.assertEqual(self.state()["human_gate"]["status"], "pending")
+
+    def test_sync_bundle_writes_current_member_hashes(self) -> None:
+        """A skill must never transcribe a SHA-256 by hand: sync-bundle owns
+        the Approved Bundle table end to end and preserves section prose."""
+        self.run_flow("init", "--project-id", "bundle-sync", "--profile", "lite")
+        self.run_flow(
+            "start", "--expect-revision", "0", "--kind", "project",
+            "--work-id", "bundle-sync", "--stage", "prd",
+        )
+        self.write("doc/requirements/core.md", "# Core Requirements\n\nPR-001\n")
+        self.write(
+            "doc/requirements.md",
+            "# Requirements Index\n\n"
+            "**Artifact bundle**: split\n\n"
+            "## Domain Registry\n\n"
+            "| Domain key | Detail path | Purpose |\n"
+            "|---|---|---|\n"
+            "| core | `doc/requirements/core.md` | Core requirements |\n\n"
+            "## Approved Bundle\n\n"
+            "This table is the complete set of external files owned by this root.\n\n"
+            "| Path | SHA-256 |\n"
+            "|---|---|\n"
+            f"| `doc/requirements/core.md` | `{'0' * 64}` |\n",
+        )
+        stale = self.run_flow(
+            "record-output", "--expect-revision", "1", "--stage", "prd",
+            "--artifact", "requirements=doc/requirements.md", succeeds=False,
+        )
+        self.assertIn("stale", stale.stderr.lower())
+
+        self.run_flow(
+            "sync-bundle", "--artifact", "doc/requirements.md",
+            "--member", "doc/requirements/core.md", "--role", "requirements",
+        )
+        synced = (self.root / "doc" / "requirements.md").read_text("utf-8")
+        expected = hashlib.sha256(
+            (self.root / "doc" / "requirements" / "core.md").read_bytes()
+        ).hexdigest()
+        self.assertIn(expected, synced)
+        self.assertNotIn("0" * 64, synced)
+        self.assertIn("This table is the complete set", synced)
+        self.assertIn("## Domain Registry", synced)
+        # sync-bundle is a file operation only; it never moves the pointer.
+        self.assertEqual(self.state()["revision"], 1)
+
+        self.run_flow(
+            "record-output", "--expect-revision", "1", "--stage", "prd",
+            "--artifact", "requirements=doc/requirements.md",
+        )
+
+        # A changed member re-syncs without the caller handling digests.
+        self.write("doc/requirements/core.md", "# Core Requirements\n\nPR-001 revised\n")
+        self.run_flow(
+            "sync-bundle", "--artifact", "doc/requirements.md",
+            "--member", "doc/requirements/core.md", "--role", "requirements",
+        )
+        resynced = (self.root / "doc" / "requirements.md").read_text("utf-8")
+        self.assertIn(
+            hashlib.sha256(
+                (self.root / "doc" / "requirements" / "core.md").read_bytes()
+            ).hexdigest(),
+            resynced,
+        )
+
+        # Guard rails: single roots have no table, and the root is not a member.
+        self.write("doc/discovery.md", "# Discovery\n\n**Artifact bundle**: single\n\nPR-001\n")
+        single = self.run_flow(
+            "sync-bundle", "--artifact", "doc/discovery.md",
+            "--member", "doc/requirements/core.md", succeeds=False,
+        )
+        self.assertIn("split", single.stderr)
+        self_member = self.run_flow(
+            "sync-bundle", "--artifact", "doc/requirements.md",
+            "--member", "doc/requirements.md", succeeds=False,
+        )
+        self.assertIn("root", self_member.stderr.lower())
+
+    def test_sync_bundle_restores_the_root_when_the_result_is_invalid(self) -> None:
+        """A registry/bundle disagreement must leave the root byte-identical
+        rather than half-written."""
+        self.run_flow("init", "--project-id", "bundle-guard", "--profile", "lite")
+        self.write("doc/requirements/core.md", "# Core Requirements\n\nPR-001\n")
+        self.write("doc/requirements/extra.md", "# Extra Requirements\n\nPR-002\n")
+        self.write(
+            "doc/requirements.md",
+            "# Requirements Index\n\n"
+            "**Artifact bundle**: split\n\n"
+            "## Domain Registry\n\n"
+            "| Domain key | Detail path | Purpose |\n"
+            "|---|---|---|\n"
+            "| core | `doc/requirements/core.md` | Core requirements |\n\n"
+            "## Approved Bundle\n\n"
+            "| Path | SHA-256 |\n"
+            "|---|---|\n"
+            f"| `doc/requirements/core.md` | `{'0' * 64}` |\n",
+        )
+        before = (self.root / "doc" / "requirements.md").read_text("utf-8")
+        mismatch = self.run_flow(
+            "sync-bundle", "--artifact", "doc/requirements.md",
+            "--member", "doc/requirements/core.md",
+            "--member", "doc/requirements/extra.md",
+            "--role", "requirements", succeeds=False,
+        )
+        self.assertIn("registr", mismatch.stderr.lower())
+        self.assertIn("restored unchanged", mismatch.stderr)
+        self.assertEqual((self.root / "doc" / "requirements.md").read_text("utf-8"), before)
 
 
 if __name__ == "__main__":

@@ -86,21 +86,27 @@ python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <
 | `flow-state start ... --stage discovery` | 当前消息明确选择 discovery，并满足 initial `start_discovery` gate；使用刚读取的实际 revision | pointer | 只改 pointer | `in_progress`，profile 仍 provisional | 报告返回 revision 后停；人类再明确调用 discovery Skill |
 | `flow-state rebuild-index` | noncanonical indexed artifact 绕过 `record-output`/决定命令发生 out-of-band 变化；pointer integrity 仍通过；approved canonical hash 未漂移 | pointer integrity、受索引目录与 stable IDs | 重建 `.specify/artifact-index.yaml` 与 `.specify/artifact-index.sha256` | 状态不前进 | 随后执行 `validate --check-paths`；approved canonical 漂移必须走 amendment |
 
-后续每个有状态命令都先读取 pointer；若人类明确请求 `status`，使用其实际 revision。
-同一已授权 operation 内，后续写命令使用前一条命令返回的 revision，绝不猜测或计算 `N`。
+后续每个有状态命令都先读取 pointer；一个上下文里的第一次写入用
+`<revision-from-status>`，同一已授权 operation 内的后续写命令使用前一条命令返回的
+revision，绝不猜测或计算。遇到 `stale revision` 必须停止并报告冲突，不得刷新重试。
 当前消息已经授权的生命周期 operation 可运行 `record-output` 登记自己的候选输出；这不是 artifact approval。
 只有后续当前消息明确批准/拒绝时，才能运行决定命令：
 
 ```text
-... record-output --expect-revision N --stage <stage> --artifact <key>=<path> --next "<human command>"
+... record-output --expect-revision <revision-from-status> --stage <stage> --artifact <key>=<path> --next "<human command>"
 ... validate --check-paths
 ```
+
+两个机械辅助命令让 hash 与重试都不进入模型上下文：`record-output ... --check-only`
+完整校验一次 transition 但不写状态、不消耗 revision；`sync-bundle --artifact
+<split-root> --member <path> ... --role <role>` 计算并写入该 root 的完整
+`## Approved Bundle` 表，因此模型永远不需要手写 SHA-256。
 
 `record-output` 和决定命令会自动保持 index 及其 SHA-256 sidecar；只有非 canonical indexed artifact 绕过
 这些命令发生变化时才单独运行 `rebuild-index`。不得用它重新基线化 approved canonical。
 
 ```text
-python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
+python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
 ```
 
 该 generic 命令只把当前 `ready_for_review` gate 决定为 `approved`/`rejected`，不会
@@ -166,7 +172,7 @@ anchor。五项全过，且脚本会复核 root 中恰有 5 个唯一 F-ID。roa
 gate 后，由人类显式记录确认；不要手改 YAML：
 
 ```text
-python <flow-state-dir>/scripts/flow_state.py --root . confirm-profile --expect-revision N --profile lite
+python <flow-state-dir>/scripts/flow_state.py --root . confirm-profile --expect-revision <revision-from-status> --profile lite
 ```
 
 若 roadmap **批准前**任一项失败或未知，应先在 roadmap 写入 `Profile sizing: full` 与
@@ -196,7 +202,7 @@ architecture 只是为了让首版 `AGENTS.md` 一次指向已批准约束。两
 | Operation | Requires | Reads | Creates / modifies | 最大结束状态 | Stop |
 |---|---|---|---|---|---|
 | `$bootstrap-agent-guidance create` | 人类授权；PRD、roadmap、baseline 已批准 | pointer/index、批准工件、可验证的 manifest/CI 命令 | 根 `AGENTS.md`；仅当当前请求点名 consumer/adapter 时才创建对应薄 adapter | `ready_for_review` | 校验并停；未知命令只报告为 omitted |
-| `$flow-state decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（guidance） | 人类审阅并明确批准 | 当前 guidance gate/revision、guidance hash/validation、当前人类决定 | `.specify/decisions/...yaml` durable receipt；更新 pointer/index | `approved` | 报告 receipt path/hash 后停；不自动选择 feature |
+| `$flow-state decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（guidance） | 人类审阅并明确批准 | 当前 guidance gate/revision、guidance hash/validation、当前人类决定 | `.specify/decisions/...yaml` durable receipt；更新 pointer/index | `approved` | 报告 receipt path/hash 后停；不自动选择 feature |
 | `$ui-wireframe-spec product` | 产品有全局 UI 且人类授权 | 产品 experience constraints、roadmap UI inventory | `doc/ui-structure.md` | `ready_for_review` | landrop 不满足前置，故不运行 |
 
 landrop 是 CLI，没有导航与全局 shell，所以产品级 UI 被**正确跳过**，不是 gate 被省略。
@@ -210,7 +216,7 @@ F004 的 `UI Surface: new screens` 则引用 approved `PR-102` 作为“无需 p
 人类先选中 committed feature：
 
 ```text
-python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F001 --stage specify
+python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F001 --stage specify
 ```
 
 | 阶段/命令 | Requires | Reads | Creates / modifies | 最大结束状态 | Stop |
@@ -218,13 +224,13 @@ python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N
 | `/speckit.specify F001 Single File Transfer；只覆盖 Roadmap F001` | 人类授权；F001 committed | pointer/index；F001 roadmap entry、owned `PR-###` | `specs/001-single-file-transfer/spec.md` | draft/review candidate | 不吸收 F002+；停 |
 | `/speckit.clarify 001-single-file-transfer` | spec 已存在 | spec 的高影响歧义、必要 owned PR anchors | 更新 spec/clarifications | clarified | 未决行为会阻塞 plan；停 |
 | UI route for F001 | spec 已批准；approved Roadmap 中 F001 `UI Surface: none` | approved F001 roadmap entry | 无；Roadmap entry 本身是持久 N/A，不新增 artifact/role | unchanged | 报告 N/A 来源并停；不得调用 wireframe Skill |
-| `python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F001 --stage plan` | spec 已批准；wireframe 已批准或 approved Roadmap N/A；baseline 已批准；人类选择 plan | pointer/current revision | pointer stage | `in_progress` | 报告 revision 并停；不自动执行 plan |
+| `python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F001 --stage plan` | spec 已批准；wireframe 已批准或 approved Roadmap N/A；baseline 已批准；人类选择 plan | pointer/current revision | pointer stage | `in_progress` | 报告 revision 并停；不自动执行 plan |
 | `/speckit.plan 001-single-file-transfer` | spec 已批准；feature wireframe 已批准，或 approved Roadmap 的 `UI Surface: none` 是持久 N/A；baseline 已批准 | approved spec、适用 `AC-###`、approved wireframe 或 Roadmap N/A entry、必要 repo evidence | `specs/001-single-file-transfer/plan.md` | review candidate | 跨-feature 冲突先停；否则报告 plan 并停 |
 | `/speckit.checklist 001-single-file-transfer requirements` | spec 已批准且可审查 | approved spec、clarifications、acceptance scenarios | `specs/001-single-file-transfer/checklists/requirements.md`（固定 role `requirements_checklist`） | checklist evidence | 报告 blocker 并停；不自动运行 tasks |
 | `/speckit.tasks 001-single-file-transfer` | spec/plan 已由人类 review；requirements checklist 无 blocker | reviewed spec、reviewed plan、`requirements_checklist` | `specs/001-single-file-transfer/tasks.md` | ordered tasks | 报告任务边界并停；不自动运行 analyze |
 | `/speckit.analyze 001-single-file-transfer` | spec/plan/tasks 齐全 | exact `spec.md`、`plan.md`、`tasks.md` 与 applicable constitution rules | 默认只输出 findings | `pass` 或 `blocked` | 不修纵向 truth；报告 findings 并停 |
 | `$spec-sync pre-implement F001 feature` | approved spec/plan/tasks 齐全；requirements checklist nonblocking；wireframe approved 或 approved Roadmap N/A | pointer/index；F001 entry；相关 roadmap/PR/AC/UI sections；spec/plan/tasks/checklist | `specs/001-single-file-transfer/pre-implementation-review.md`，Pass 时以 role `pre_implementation` 登记 | Blocking 时 `blocked`；Pass 时 `ready_for_review` | Blocking 就停；Pass 后 `record-output` 并停等 generic `decide` |
-| `python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F001 --stage implementation` | role `pre_implementation` 已由 generic `decide` 批准；人类另行选择实现 | pointer/current revision | pointer stage | `in_progress` | 报告 exact stage/revision 并停；不自动实现 |
+| `python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F001 --stage implementation` | role `pre_implementation` 已由 generic `decide` 批准；人类另行选择实现 | pointer/current revision | pointer stage | `in_progress` | 报告 exact stage/revision 并停；不自动实现 |
 | `/speckit.implement 001-single-file-transfer` | exact implementation start 已完成；人类授权 | 当前 tasks、最小 spec/plan、相关代码 | 代码、测试、task evidence | implementation candidate | 每个 bounded batch 报告并停；不宣称交付 |
 | “收敛 F001 implementation；只处理 tasks/checks 已指出的 scope drift” | 实现 task 已完成；人类授权处理剩余漂移 | 当前 diff、tasks、checks | 只修当前 scope 内漂移并补齐证据 | converged candidate | 进入证据门禁前停 |
 
@@ -264,7 +270,7 @@ F004 必须先成为 active work，并完整解决 spec gate；不能从已接�
 
 ```text
 # 当前消息：人类选择 F004 specify；执行后停止
-python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F004 --stage specify
+python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F004 --stage specify
 
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
 
@@ -277,13 +283,13 @@ python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
 
 # clarify bundle 完成后机械登记 candidate；使用上一条状态命令返回的 revision
-python <flow-state-dir>/scripts/flow_state.py --root . record-output --expect-revision N --stage specify --artifact spec=specs/004-progress-view/spec.md --next "review F004 spec"
+python <flow-state-dir>/scripts/flow_state.py --root . record-output --expect-revision <revision-from-status> --stage specify --artifact spec=specs/004-progress-view/spec.md --next "review F004 spec"
 # Agent validate、报告并停止
 
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
 
 # 后续当前消息明确批准时才解决 spec gate；生成持久 decision receipt 后停止
-python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
+python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
 ```
 
 只有 role `spec` 已 approved 且 hash 仍匹配后，roadmap 的 `new screens` 才允许人类
@@ -300,7 +306,7 @@ loading/transferring/reconnecting/verifying/success/failure/cancelled state tabl
 L0 导航，也没有无分支的 L3 图。后续每一步仍由人类分别输入 exact target：
 
 ```text
-python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F004 --stage plan
+python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F004 --stage plan
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
 /speckit.plan 004-progress-view
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
@@ -310,18 +316,18 @@ python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
 /speckit.analyze 004-progress-view
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
-python <flow-state-dir>/scripts/flow_state.py --root . record-output --expect-revision N --stage plan --artifact plan=specs/004-progress-view/plan.md --artifact requirements_checklist=specs/004-progress-view/checklists/requirements.md --artifact tasks=specs/004-progress-view/tasks.md --next "review F004 plan bundle"
+python <flow-state-dir>/scripts/flow_state.py --root . record-output --expect-revision <revision-from-status> --stage plan --artifact plan=specs/004-progress-view/plan.md --artifact requirements_checklist=specs/004-progress-view/checklists/requirements.md --artifact tasks=specs/004-progress-view/tasks.md --next "review F004 plan bundle"
 # 报告 ready_for_review 与返回 revision 后停止
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
-python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
+python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
 # 报告自动登记到 index 的 .specify/decisions/...yaml receipt path/hash 后停止
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
 $spec-sync pre-implement F004 feature
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
-python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
+python <flow-state-dir>/scripts/flow_state.py --root . decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>
 # 报告自动登记到 index 的 .specify/decisions/...yaml receipt path/hash 后停止
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
-python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N --kind feature --work-id F004 --stage implementation
+python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind feature --work-id F004 --stage implementation
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
 /speckit.implement 004-progress-view
 # --- STOP / NEW USER MESSAGE / FRESH CONTEXT ---
@@ -360,7 +366,7 @@ blocker，并在当前消息提供 decider/date/evidence 时，才可另行执�
 | Operation | Requires | Reads | Creates / modifies | 最大结束状态 | Stop |
 |---|---|---|---|---|---|
 | `$spec-sync change-request CR-0002；materialize doc/change-requests/CR-0002.md` | 人类授权；原始请求文本；durable path 已明确 | pointer/index、受影响 IDs、最小 owning artifacts | `doc/change-requests/CR-0002.md` | pointer `ready_for_review` | 列出最高影响层和建议 prompts，不执行 |
-| `$flow-state decide --expect-revision N --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（CR-0002 intake） | 人类审阅 materialized CR 并明确批准为路由输入 | pointer、CR/hash、当前人类决定 | `.specify/decisions/...yaml` durable receipt；更新 pointer/index | `approved` | 报告 receipt path/hash 后停；pending gate 未解决时不得进入 owner amend |
+| `$flow-state decide --expect-revision <revision-from-status> --decision approved --decided-by <human-name-or-role> --decision-date YYYY-MM-DD --decision-evidence <exact-current-user-statement-or-reference>`（CR-0002 intake） | 人类审阅 materialized CR 并明确批准为路由输入 | pointer、CR/hash、当前人类决定 | `.specify/decisions/...yaml` durable receipt；更新 pointer/index | `approved` | 报告 receipt path/hash 后停；pending gate 未解决时不得进入 owner amend |
 | `$product-discovery-roadmap amend CR-0002` | CR intake 已 approved；人类另行授权 product route | CR；受影响的 approved product sections | `doc/product-amendments/CR-0002.md`；candidate 只登记 role `product_amendment`，不改 canonical PRD/Roadmap | `ready_for_review` | 报告 proposal/hash 后停；旧 product truth 仍有效 |
 | `$product-discovery-roadmap approve-amendment CR-0002；actor/date/evidence 如当前消息` | 人类明确批准 byte-identical proposal 与完整 named canonical edit set，并提供 actor/date/evidence | proposal/hash；仅受影响 canonical files | 只应用 reviewed canonical edits；在决定前 re-record 同一 `product_amendment` proposal role 和每个 changed canonical role，再执行带三项 provenance 的 generic `decide`，生成 indexed durable receipt | `approved` | proposal 改变或 role set 不完整就停；否则报告 receipt path/hash 后停 |
 | `$architecture-baseline amend CR-0002` | CR intake 及必要产品边界已 approved；人类另行授权 architecture route | CR；accepted baseline/ADR；必要的新 product sections | `doc/architecture-amendments/CR-0002.md`（role `architecture_amendment`）与 exact proposed `adr-*` role set；不改 approved baseline/ADR | `ready_for_review` | 报告 exact proposal/ADR set 后停；旧 architecture truth 仍有效 |
@@ -404,7 +410,7 @@ hash 仍匹配且 checklist 无 blocker，才可另行授权
 
 | Operation | Requires | Reads | Creates / modifies | 最大结束状态 | Stop |
 |---|---|---|---|---|---|
-| `python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision N --kind release --work-id REL-0.1.0 --stage release_readiness` | release scope F001,F004 已明确；included features 已 accepted | pointer/current revision | pointer stage | `in_progress` | 报告 revision 并停；再收集 release evidence |
+| `python <flow-state-dir>/scripts/flow_state.py --root . start --expect-revision <revision-from-status> --kind release --work-id REL-0.1.0 --stage release_readiness` | release scope F001,F004 已明确；included features 已 accepted | pointer/current revision | pointer stage | `in_progress` | 报告 revision 并停；再收集 release evidence |
 | “为 REL-0.1.0 scope F001,F004 的 fixed revision/diff 生成 build provenance、收集独立 code-review evidence，并运行已验证的 CI/dependency/security/migration/compatibility/rollback/observability/ops/docs gates” | release scope 与 included revisions/diffs 已固定 | build/CI config、included revisions/diffs、适用 runbook 与 risk inputs | reports/run IDs/artifacts，包括用户/运维文档证据 | pass/fail/N/A evidence | 缺证据就停；N/A 必须记录 absent signal 与 scope |
 | `$delivery-gates release REL-0.1.0 F001,F004` | 人类明确授权该 scope；feature acceptance/provenance 已知 | acceptance decisions、build provenance、CI、适用 code/dependency/security/migration/compatibility/rollback/observability/ops/docs evidence、known issues | `doc/releases/REL-0.1.0-readiness.md`；ready/conditional 登记 gate，not_ready 用 concrete blockers 执行 `block` | `ready_for_release` 或 `blocked` | 不 tag、不 publish |
 | `$delivery-gates authorize-release REL-0.1.0；authorizer/date/evidence 如当前消息` | 人类已审阅 `ready_for_release` artifact；review status 为 `ready`/`conditional` 且无 unresolved blocker；当前消息明确授权固定 scope/revision | pointer/index、readiness artifact/hash、blockers/provenance | 只替换四个授权字段；生成绑定 readiness pre/post hash 的 indexed、content-hashed authorization receipt；更新 pointer/index | `release_authorized` | 报告 receipt path/hash 后停；不运行项目 release automation |

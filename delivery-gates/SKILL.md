@@ -14,10 +14,13 @@ exactly five operations:
 - `authorize-release <release-id>`
 - `record-release-result <release-id> <Succeeded|Failed|Held|Cancelled>`
 
-Use a fresh conversation, fork, or worker for each operation. Reconstruct truth
-from the pointer/index and owning artifacts; do not rely on another Skill body,
-an old pointer, or excerpts inherited across a gate. Fresh review workers may
-batch one already-authorized review, but cannot select another operation.
+One named lifecycle authorization may span turns. A context that creates or
+resolves a human gate, or emits a blocked/terminal handoff, must stop after
+read-only reporting. Any gate decision, downstream lifecycle operation, or
+independent review must begin in a new minimal context explicitly authorized by
+the user and rebuilt from canonical state; a fork or worker does not grant new
+authorization. These are independent review gates: the reviewing context must
+never be the implementing context.
 
 ## Shared contract
 
@@ -25,21 +28,20 @@ Before an operation:
 
 1. Require the current user to name one operation and target. State and recommendations
    are never authority.
-2. Read `.specify/flow-state.yaml`. Query the generated index with deterministic
-   `resolve --id` or `resolve --path`; never load the complete index into semantic
-   context. Full agreement belongs to deterministic `validate --check-paths`.
+2. Read `.specify/flow-state.yaml`. Query the index only through `resolve --id`
+   or `resolve --path`.
 3. Read only the scoped IDs, artifacts, changed implementation, and evidence required by
    this operation. Classify missing evidence as `missing`, `not_run`, or
    `not_applicable` with a reason.
 4. Review operations write only their gate artifact. Decision operations pass
-   human-provided values to the exact deterministic command so it updates only
-   permitted fields. Report the result and stop.
+   human-provided values to the exact command below. Report and stop.
 
-Keep each opened semantic or evidence slice at or below 8 KiB and the initial
-target payload at or below 24 KiB. For a large diff, scenario set, or release
-scope, review stable-ID/path batches in fresh independent worker contexts and
-merge only citations, results, blockers, and a coverage ledger. A truncated or
-uncovered required batch prevents `ready` and release authorization.
+Keep each opened slice at or below 8 KiB and the initial target payload at or
+below 24 KiB. For a large diff, scenario set, or release scope, review
+stable-ID/path batches in fresh independent workers and merge only citations,
+results, blockers, and a coverage ledger
+(`| Batch | Stable IDs / paths | Result | Evidence |`). A truncated or uncovered
+required batch prevents `ready` and release authorization.
 
 Every review artifact records `Reviewed by`, `Reviewed on`, and
 `Independence: non-implementer`. Every gate row states whether it is applicable;
@@ -54,12 +56,21 @@ reviews apply, load the
 [review applicability matrix](references/review-applicability.md). It routes
 evidence only; it does not invoke code, security, or migration review.
 
-## Operation-to-start mapping
+## Deterministic state command
 
-| Operation | Deterministic start |
-|---|---|
-| `release` | May run `start --expect-revision N --kind release --work-id <release-id> --stage release_readiness` after prerequisites pass and no gate is pending. |
-| Other four operations | Never run `start`; they extend the exact active gate named by the user. |
+```text
+python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . <operation> [options]
+```
+
+`flow-state/` deploys as this directory's sibling. Use `--help` for options;
+never hand-edit state, index, or bundle tables. Use `<revision-from-status>`
+for the first write in a context, then the revision each command returns; on
+`stale revision` stop and report the conflict rather than retrying. Add `--check-only` to
+`record-output` to validate a transition before writing.
+
+Only `release` may run `start` (`--kind release --stage release_readiness`,
+after prerequisites pass and no gate is pending). The other four operations
+extend the exact active gate named by the user.
 
 ## `accept-feature`
 
@@ -79,12 +90,15 @@ status:
 - `not_ready`: a scenario failed, required evidence is missing, or truth conflicts.
 
 The spec must define stable `SC-###` IDs. `Scenario Evidence` must cover that
-exact set once each, with no missing, extra, or duplicate row. Tests /
-deterministic verification is always `required`; the other quality gates use
-project policy and the applicability matrix.
+exact set once each. Tests / deterministic verification is always `required`;
+the other quality gates use project policy and the applicability matrix.
 
-Register the artifact with `record-output --expect-revision N --stage acceptance
---status ready_for_acceptance --artifact acceptance=<path>` plus exact evidence paths.
+```text
+record-output --expect-revision <revision-from-status> --stage acceptance \
+  --status ready_for_acceptance --artifact acceptance=<path> \
+  --evidence <exact-evidence-path> [--evidence ...]
+```
+
 Leave the human gate pending and stop. Do not accept the feature.
 
 Route bugs, implementation debt, future ideas, and cross-feature design debt to their
@@ -98,23 +112,19 @@ artifact/hash to match, and an unambiguous current-user decision. Read its refer
 blockers, but do not alter review findings or evidence.
 
 `Accepted` requires review status `ready` or `conditional` and no unresolved
-blocker; otherwise stop and report the conflict. Do not edit the artifact first.
-Run only the deterministic command below; it verifies the reviewed hash and
-replaces exactly the four decision fields while preserving every review byte:
+blocker; otherwise stop and report the conflict. Do not edit the artifact first —
+run only the command below, which writes the decision fields for you:
 
 ```text
-record-feature-decision --expect-revision N \
+record-feature-decision --expect-revision <revision-from-status> \
   --decision accepted|rejected|changes_requested --artifact <acceptance-path> \
   --decided-by <human-name-or-role> --decision-date YYYY-MM-DD \
   --decision-evidence <exact-current-user-statement-or-reference>
 ```
 
-Never use generic `decide` for feature acceptance. Stop after the durable artifact and
-state result. The command also creates an indexed, content-hashed
-`.specify/decisions/*.yaml` receipt binding the reviewed acceptance hash to the
-post-decision hash. Report the receipt path/hash; future release checks require
-the latest receipt to be `accepted` and the acceptance artifact to remain
-hash-matching.
+Never use generic `decide` for feature acceptance. The command also writes an
+indexed, content-hashed `.specify/decisions/*.yaml` receipt. Report its
+path/hash and stop.
 
 ## `release`
 
@@ -131,25 +141,21 @@ resolves and verifies the latest receipt separately.
 Create or update `doc/releases/<release-id>-readiness.md` from
 [the readiness template](assets/release-readiness.template.md). Use `ready`,
 `conditional`, or `not_ready` with the same evidence discipline as acceptance.
-For `ready` or `conditional`, register it with `record-output --expect-revision
-N --stage release_readiness --status ready_for_release --artifact
-release_readiness=<path>` and stop. For `not_ready`, use `block --expect-revision
-N --stage release_readiness --artifact release_readiness=<path>` with every
-concrete blocker; the result is `blocked`, not a pending release gate. It may be
-retried by a later explicit `release` operation. This operation never authorizes
-or executes a release.
+For `ready` or `conditional`, `record-output` role `release_readiness` at status
+`ready_for_release` and stop. For `not_ready`, `block` with every concrete
+blocker; the result is `blocked`, not a pending release gate, and a later
+explicit `release` operation may retry. This operation never authorizes or
+executes a release.
 
 ## `authorize-release`
 
 Require active release work for the named ID in `ready_for_release`, a matching readiness
 artifact/hash, review status `ready` or `conditional`, no unresolved blocker, and an
-explicit current-user `Authorized` decision. Do not edit the artifact first. Run
-only the command below; it verifies the reviewed hash and deterministically
-replaces `Human readiness decision`, `Authorized by`, `Authorized on`, and
-`Authorization evidence`:
+explicit current-user `Authorized` decision. Do not edit the artifact first —
+run only the command below, which writes the authorization fields for you:
 
 ```text
-authorize-release --expect-revision N --artifact <readiness-path> \
+authorize-release --expect-revision <revision-from-status> --artifact <readiness-path> \
   --authorized-by <human-name-or-role> --authorized-on YYYY-MM-DD \
   --authorization-evidence <exact-current-user-statement-or-reference>
 ```
@@ -157,8 +163,7 @@ authorize-release --expect-revision N --artifact <readiness-path> \
 The maximum result is `release_authorized`. Do not run, trigger, simulate, or claim a
 release. Report the separately authorized project release command as a possible next
 human action and stop. The command creates an indexed, content-hashed
-`release_authorization` receipt that binds the reviewed readiness hash to the
-authorized artifact hash; report its path/hash.
+`release_authorization` receipt; report its path/hash.
 
 ## `record-release-result`
 
@@ -167,31 +172,22 @@ finished with a terminal result, an explicit current-user confirmation, and exac
 execution evidence. A readiness recommendation or authorization alone is not execution.
 The evidence must be a repository-contained YAML receipt produced by the external
 CI/deployment/release mechanism from
-[the receipt schema](assets/release-result-receipt.template.yaml). It binds schema
-version, release ID, terminal result, producer, run ID, UTC completion time, and—on
-success—the released artifact SHA-256. A chat string or bare run ID is insufficient.
+[the receipt schema](assets/release-result-receipt.template.yaml). A chat string
+or bare run ID is insufficient.
 
-Do not edit the readiness artifact first. Run only the deterministic command
-below; it preserves the authorized review and replaces exactly `Execution`,
-`Execution evidence`, `Execution evidence SHA-256`, `Confirmed by`, and
-`Confirmed on`:
+Do not edit the readiness artifact first — run only the command below, which
+writes the execution fields for you:
 
 ```text
-record-release-result --expect-revision N \
+record-release-result --expect-revision <revision-from-status> \
   --result succeeded|failed|held|cancelled --artifact <readiness-path> \
   --execution-evidence <repository-relative-receipt.yaml> \
   --confirmed-by <human-name-or-role> --confirmed-on YYYY-MM-DD
 ```
 
-The deterministic command validates the external execution receipt target/result,
-hashes it into pointer evidence, and writes its path and SHA-256 into the
-readiness artifact. It also creates an indexed, content-hashed `release_result`
-decision receipt chained to the prior authorization hash. Future index rebuilds
-validate both the decision chain and external receipt binding even after the
-pointer moves to another work item. Only
-`succeeded` may produce `released`; every other result remains non-released.
-Never run release tooling in this operation. Report the release ID, terminal
-result, both receipt paths/hashes, and state, then stop.
+Only `succeeded` may produce `released`. Never run release tooling in this
+operation. Report the release ID, terminal result, both receipt paths/hashes,
+and state, then stop.
 
 ## Review report
 
