@@ -1,0 +1,21 @@
+﻿{
+    "SourceRoots":  [
+                        {
+                            "Ref":  "1",
+                            "Path":  "D:\\code\\personal-projects\\skill-collection\\doc"
+                        }
+                    ],
+    "TargetRoots":  [
+                        {
+                            "Ref":  "1",
+                            "Path":  "C:\\Users\\garyw\\OneDrive\\Laptop Backup\\ThinkPad\\Document\\MarkdownNotes\\Crown_Work\\Crown_Work\\DevTools\\AI Dev Flow"
+                        }
+                    ],
+    "Mappings":  [
+                     {
+                         "SourceDir":  "--1",
+                         "DestinationDir":  "--1",
+                         "IncludeSubfolders":  true
+                     }
+                 ]
+}

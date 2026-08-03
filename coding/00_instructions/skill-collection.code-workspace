@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../lib-projects/dev-tools"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "skill-collection"
+	}
+}
