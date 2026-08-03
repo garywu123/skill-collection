@@ -1,10 +1,10 @@
 {
 	"folders": [
 		{
-			"path": "../.."
+			"path": "../../lib-projects/dev-tools"
 		},
 		{
-			"path": "../../../../lib-projects/dev-tools"
+			"path": "."
 		}
 	],
 	"settings": {

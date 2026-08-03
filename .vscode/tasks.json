@@ -1,78 +1,124 @@
 {
-    "version": "2.0.0",
-    // -----------------------------------------------------------------------
-    // Target paths are NOT defined here.
-    // Edit scripts/deploy-paths.json (gitignored, copy from .example.json)
-    // to set machine-specific paths.  Falls back to $env:USERPROFILE defaults
-    // when the file is absent or a key is empty.
-    // -----------------------------------------------------------------------
-    "tasks": [
-        {
-            "label": "Skills: Deploy All",
-            "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-ExecutionPolicy", "Bypass",
-                "-File", "${workspaceFolder}/scripts/Deploy-Skills.ps1"
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            },
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
-        },
-        {
-            "label": "Skills: Deploy → Copilot",
-            "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-ExecutionPolicy", "Bypass",
-                "-File", "${workspaceFolder}/scripts/Deploy-Skills.ps1",
-                "-Target", "copilot"
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Skills: Deploy → Claude",
-            "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-ExecutionPolicy", "Bypass",
-                "-File", "${workspaceFolder}/scripts/Deploy-Skills.ps1",
-                "-Target", "claude"
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Skills: Deploy → Agents",
-            "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-ExecutionPolicy", "Bypass",
-                "-File", "${workspaceFolder}/scripts/Deploy-Skills.ps1",
-                "-Target", "agents"
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            },
-            "problemMatcher": []
-        }
-    ]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Skills: Deploy All",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/Deploy-Skills.ps1"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Skills: Deploy â†’ Copilot",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/Deploy-Skills.ps1",
+        "-Target",
+        "copilot"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Skills: Deploy â†’ Claude",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/Deploy-Skills.ps1",
+        "-Target",
+        "claude"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Skills: Deploy â†’ Agents",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/Deploy-Skills.ps1",
+        "-Target",
+        "agents"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Doc Sync: Sync docs to Obsidian",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\code\\lib-projects\\dev-tools\\doc-sync\\Sync-DocWorkspace.ps1",
+        "-ConfigPath",
+        "${workspaceFolder}\\doc-sync.config.json",
+        "-RepoRoot",
+        "${workspaceFolder}"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Doc Sync: Preview (WhatIf)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\code\\lib-projects\\dev-tools\\doc-sync\\Sync-DocWorkspace.ps1",
+        "-ConfigPath",
+        "${workspaceFolder}\\doc-sync.config.json",
+        "-RepoRoot",
+        "${workspaceFolder}",
+        "-WhatIf"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
 }
