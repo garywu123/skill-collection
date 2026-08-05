@@ -19,9 +19,10 @@ bounded targeted artifact/code/evidence slices.
 
 ## Operator instructions
 
-- [WMS SPEC Drive Instruction](wms-spec-drive-instruction.md): start an enterprise WMS and deliver one feature at a time.
-- [WMS Change Playbook](wms-change-playbook.md): add, change, fix, or migrate an existing WMS repository without losing approved history.
-- [Flow State Command Reference](flow-state-command-reference.md): when to use every `flow_state.py` command and its prerequisites.
+- [SPEC Driven Overview](00_instructions/spec-driven-overview.md): understand the roles, order, and boundaries of the whole collection.
+- [WMS SPEC Drive Instruction](00_instructions/wms-spec-drive-instruction.md): start an enterprise WMS and deliver one feature at a time.
+- [WMS Change Playbook](00_instructions/wms-change-playbook.md): add, change, fix, or migrate an existing WMS repository without losing approved history.
+- [Flow State Command Reference](00_instructions/flow-state-command-reference.md): when to use every `flow_state.py` command and its prerequisites.
 
 ## Operating model
 
