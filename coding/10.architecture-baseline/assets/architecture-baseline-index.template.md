@@ -65,12 +65,13 @@ flowchart LR
 |---|---|---|
 | [Risk] | [Observable signal] | [Mitigation or acceptance] |
 
-## Approved Bundle
+## Member Registry
 
-This is the complete set of domain-detail and ADR members owned by this root.
-List each member exactly once; do not list this root or cited source artifacts.
+The complete set of domain-detail and ADR members owned by this root. List each
+member exactly once; do not list this root or cited source artifacts. No hashes
+are recorded — Git detects member drift.
 
-| Path | SHA-256 |
+| Path | Owns |
 |---|---|
-| `{{DOMAIN_1_PATH}}` | `{{DOMAIN_1_SHA256}}` |
-| `{{ADR_0001_PATH}}` | `{{ADR_0001_SHA256}}` |
+| `{{DOMAIN_1_PATH}}` | `{{DOMAIN_1_SCOPE}}` |
+| `{{ADR_0001_PATH}}` | `{{ADR_0001_TITLE}}` |

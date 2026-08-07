@@ -1,0 +1,41 @@
+# Project state. One file per repository, at the repository root.
+# Field reference: roadmap-spec.md
+# Domain truth lives in the routed documents. History lives in Git.
+# Never append a change log to this file.
+
+project: PROJECT-ID
+profile: lite                 # lite | full - intent marker only
+stage: discovery              # discovery | prd | roadmap | architecture | implementation | done
+
+docs: {}
+
+# Add a route only after that document exists, for example:
+# docs:
+#   discovery: doc/product-discovery-notes.md
+#   prd: doc/general-product-requirement.md
+#   roadmap: doc/feature-roadmap.md
+#   architecture: doc/architecture-baseline.md
+
+functions: []
+
+# Once the roadmap stage is approved, replace the empty list with entries:
+#
+# functions:
+#   - id: F001
+#     name: Short function name
+#     status: accepted        # planned | as-built | specified | implementing | verifying | accepted
+#     spec: specs/F001/spec.md
+#     checklist: specs/F001/checklist.md
+#     verified: 2026-08-06 by Gary Wu
+#
+#   - id: F002
+#     name: Another function
+#     status: implementing
+#     spec: specs/F002/spec.md
+#     checklist: specs/F002/checklist.md
+#
+#   # Adopted from an existing codebase: implementation observed, not accepted here.
+#   - id: F003
+#     name: Pre-existing function
+#     status: as-built
+#     notes: code in src/legacy-module/, no spec

@@ -2,7 +2,7 @@
 
 **Status**: Ready for Review
 **Trigger**: {{REQUEST_OR_EVIDENCE_PATH}}
-**Base baseline / ADR hashes**: {{PATHS_AND_HASHES}}
+**Base baseline / ADR revisions**: {{PATHS_AND_REVISIONS}}
 
 ## Challenged Decision
 
@@ -38,5 +38,6 @@ recomputes the complete table for a split root.
 |---|---|---|
 | `{{BASELINE_PATH}}` | `{{REPO_RELATIVE_PATH}}` | {{add | modify | remove | none}} |
 
-This proposal remains byte-identical during promotion. The later canonical
-review plus content-hashed generic decision receipt is the durable approval record.
+Keep this proposal unchanged while it is under review. The explicit human
+approval fields in the updated baseline or ADR and Git history are the durable
+decision record.

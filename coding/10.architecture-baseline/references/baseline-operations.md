@@ -18,12 +18,12 @@
 5. Produce short, testable Plan Constraints last. Set every output only to
    `Ready for Review`.
 
-Single roots declare `**Artifact bundle**: single` and omit an Approved Bundle
-table. Split roots declare `**Artifact bundle**: split`; after every domain and
-ADR member is final, compute every current member hash and write the complete
-set under the exact `## Approved Bundle` heading. The root itself and product
-sources are not members. Verify that domain/ADR registries and bundle paths are
-the same set before `record-output`.
+Single roots declare `**Artifact bundle**: single` and omit a Member Registry.
+Split roots declare `**Artifact bundle**: split`; after every domain and
+ADR member is final, list every member path under the root's registry. The root
+itself and product sources are not members. Verify that the domain and ADR
+registries name the same set of files that exist on disk before reporting. No
+member hashes are maintained — Git detects drift.
 
 ## Recover
 

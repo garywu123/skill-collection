@@ -46,8 +46,8 @@ then read only its root rows plus its domain file. Roadmap never mirrors mutable
 delivery state.
 
 For either split artifact, set `**Artifact bundle**: split` on the root and add a
-complete `## Approved Bundle` `Path`/`SHA-256` table. The table contains every
-owned detail file exactly once; it excludes the root and cited source files.
-Finalize all members, hash all members (including unchanged ones), update the
-table, and verify that its paths exactly equal the root registry before
-`record-output`. Single-file templates declare `single` and omit the table.
+complete `## Member Registry`. It lists every owned detail file exactly once; it
+excludes the root and cited source files.
+Finalize all members and verify that the registry paths all resolve before
+reporting. No member hashes are maintained — Git detects drift. Single-file
+templates declare `single` and omit the registry.

@@ -1,6 +1,6 @@
 ---
 name: ui-wireframe-spec
-description: Create or revise low-fidelity product UI structure or feature wireframes from approved requirements and a clarified feature. Use only when the current user explicitly requests this semantic design work; never infer authorization from a roadmap UI Surface value, lifecycle pointer, or another skill.
+description: Create or revise low-fidelity product UI structure or feature wireframes from approved requirements and a clarified feature. Use only when the current user explicitly requests this semantic design work; never infer authorization from a roadmap UI Surface value, a recorded stage in roadmap.yaml, or another skill.
 ---
 
 # UI Wireframe Spec
@@ -14,9 +14,9 @@ between lifecycle phases.
 - Require explicit authorization in the current user request. Infer `product`
   or `feature` only when the request itself makes the scope unambiguous; never
   infer authorization from repository state.
-- One named lifecycle authorization may span turns. A context that creates or
-  resolves a human gate, or emits a blocked/terminal handoff, must stop after
-  read-only reporting. Any gate decision, downstream lifecycle operation, or
+- One named lifecycle authorization may span turns. A context that reaches a
+  human decision point, or emits a blocked/terminal handoff, must stop after
+  read-only reporting. Any human decision, downstream lifecycle operation, or
   independent review must begin in a new minimal context explicitly authorized
   by the user and rebuilt from canonical state; a fork or worker does not grant
   new authorization.
@@ -27,10 +27,9 @@ between lifecycle phases.
 - Treat an approved roadmap `UI Surface` value as a prerequisite and scope
   signal, not as an invocation trigger.
 
-Read `.specify/flow-state.yaml` first to verify active scope, revision,
-approvals, and canonical paths. Query the index only through `resolve --id` or
-`resolve --path`. Stop when state, the resolved slice, and an approved artifact
-conflict; do not repair shared state by guessing.
+Read `roadmap.yaml` at the repository root first to learn the current stage and
+canonical document paths. Stop when it, an approved artifact, and the current
+request conflict; do not repair shared state by guessing.
 
 Keep each opened slice at or below 8 KiB and the initial target payload at or
 below 24 KiB. Beyond that, batch by stable ID in fresh workers and merge only
@@ -38,44 +37,22 @@ screen ownership, citations, decisions, and a coverage ledger
 (`| Batch | Stable IDs / paths | Result | Evidence |`). Never claim a complete
 product map while a required domain or resolver result is truncated.
 
-## Deterministic state command
+## Recording state
 
-```text
-python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . <operation> [options]
-```
+After writing an artifact, update `roadmap.yaml` in the same turn. Record only;
+never gate, approve, or set a function to `accepted`.
 
-`flow-state/` deploys as this directory's sibling. Use `--help` for options;
-never hand-edit state, index, or bundle tables. Use `<revision-from-status>`
-for the first write in a context, then the revision each command returns; on
-`stale revision` stop and report the conflict rather than retrying.
+| Scope | `roadmap.yaml` effect |
+|---|---|
+| `product` | Set `docs.ui` |
+| CR-scoped `product` revision | None beyond `docs.ui` if the path changed |
+| `feature` | None; wireframes are routed by the function's spec, not by a `docs` role |
 
-```text
-start --expect-revision <revision-from-status> \
-  --kind project --work-id <project-id> --stage product_ui
-
-sync-bundle --artifact doc/ui-structure.md \
-  --member <domain-path> [--member ...] --role ui_structure
-
-record-output --expect-revision <revision-returned-by-start> \
-  --stage product_ui --artifact ui_structure=doc/ui-structure.md \
-  --next "ui-wireframe-spec review"
-```
-
-`sync-bundle` computes and writes every member hash; never type a SHA-256 by
-hand. Add `--check-only` to `record-output` to validate before writing. This
-skill never runs `decide`: a later explicit generic approval supplies actor,
-date, and evidence and creates the indexed decision receipt.
-
-| Operation and scope | `kind` | `work-id` | `stage` |
-|---|---|---|---|
-| project-scope `product` | `project` | `pointer.project.id` | `product_ui` |
-| CR-scoped `product` revision | `change_request` | the authorized `CR-ID` | `product_ui` |
-| `feature` | `feature` | the authorized roadmap feature ID | `feature_ui` |
-
-Run `start` only when the request explicitly names `product` or `feature`, the
-scope selects exactly one row, and prerequisites pass. Require an explicit CR-ID
-or feature ID; never allocate or guess either. Feature output registers under
-active role `wireframes`.
+Act only when the request explicitly names `product` or `feature`, the scope is
+unambiguous, and prerequisites pass. Require an explicit CR-ID or feature ID;
+never allocate or guess either. This skill never approves its own output: a
+later explicit human approval supplies actor, date, and evidence inside the
+reviewed artifact.
 
 ## Source contract
 
@@ -98,8 +75,8 @@ from code. Update an existing canonical output rather than creating a competing
 copy.
 
 Every canonical UI root declares `**Artifact bundle**: single` or `split`. A
-split product-UI root also owns a `## Approved Bundle` table covering every
-domain-detail file exactly once; `sync-bundle` writes it.
+split product-UI root lists every domain-detail file in its registry exactly
+once. No hash table is maintained — Git detects member drift.
 
 ## Fidelity contract
 
@@ -165,9 +142,7 @@ answer with its consequence. Do not ask styling questions.
 
 ## Validation
 
-The state command fails closed on stage/role/status validity, bundle coverage,
-and hash freshness; read its error instead of pre-checking those rules. Before
-recording a candidate, verify the judgments it cannot make:
+Nothing validates these mechanically. Before reporting, check them yourself:
 
 - each screen and diagram satisfies the fidelity contract;
 - every applicable acceptance scenario is reachable through represented screens
@@ -179,7 +154,7 @@ recording a candidate, verify the judgments it cannot make:
   approved UI structure or the approved product-UI N/A rationale.
 
 Run repository-provided deterministic validators when available. For a CR-scoped
-revision, re-run `sync-bundle` before re-registering the root.
+revision, verify the root registry still names every member that exists.
 
 Report mode, artifact path, screen count, deliberately omitted screens,
 unresolved gaps, deviations, validation results, and the next recommended human

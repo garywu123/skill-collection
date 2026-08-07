@@ -11,10 +11,10 @@ Use only for an explicitly requested `resolve-spike SPK-###` operation.
 3. Stop when the time box expires. Preserve commands/activities, revision,
    results, and evidence paths; mark the outcome `answered` or `inconclusive`.
 4. Create `doc/architecture/spikes/<SPK-ID>.md` from the
-   [spike result template](../assets/spike-result.template.md). Register exactly
-   role `spike_result` at `ready_for_review`, report the pending human gate, and
-   stop.
-5. Generic approval closes only the investigation. If the answer would change
+   [spike result template](../assets/spike-result.template.md). Leave
+   `roadmap.yaml` unchanged — a spike closes an investigation, not a decision.
+   Report the pending human review and stop.
+5. Human approval closes only the investigation. If the answer would change
    an approved baseline, ADR, or Plan Constraint, route a separate CR and wait
    for an explicitly authorized architecture amendment. Never edit canonical
    architecture during this operation.

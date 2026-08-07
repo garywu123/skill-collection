@@ -1,2 +1,7 @@
 # Machine-local skill deployment config (contains personal directory paths)
 scripts/deploy-paths.json
+
+# Generated Python artifacts are never source or historical documentation.
+__pycache__/
+*.py[cod]
+.pytest_cache/

@@ -38,7 +38,7 @@ neither side.
 | C2 | `plan` | Applicable Plan Constraints/ADRs | Every applicable `AC-###` is honored or superseded by an accepted ADR | Blocking |
 | C3 | `tasks` | `spec` and `plan` | Every required proof has work; no task exceeds scope | Blocking |
 | C4 | `requirements_checklist` | `spec` | No unresolved requirement-quality blocker remains | Blocking |
-| C5 | All registered inputs | Pointer/index | Paths, roles, IDs, approvals, and hashes match the active item | Blocking |
+| C5 | All inputs | `roadmap.yaml` | Paths and IDs resolve, and the entry's status matches the operation being run | Blocking |
 | C6 | Project guidance | Repository | Cited commands and paths resolve | Advisory |
 
 Apply exactly one selected row from the work-kind table after these common checks.
@@ -63,13 +63,13 @@ Style preferences and uncited suspicions are out of scope.
 
 ## Work-kind applicability
 
-All kinds require approved, hash-matching `spec`, `plan`, `tasks`, and
-`requirements_checklist` roles. Read and apply only the row for the explicitly named
-kind.
+All kinds require approved, mutually consistent `spec`, `plan`, `tasks`, and
+`checklist` files at the paths recorded for the work item. Read and apply only
+the row for the explicitly named kind.
 
 | Kind | Higher truth and required pre-checks | Must not claim |
 |---|---|---|
-| `feature` | Owning roadmap entry and PR IDs; scope/non-goals; dependencies; applicable architecture and UI truth | Acceptance before the independent gate |
+| `feature` | Owning roadmap entry and PR IDs; scope/non-goals; dependencies; applicable architecture and UI truth | Acceptance before fresh-context checklist verification |
 | `bug` | Approved expected behavior and affected feature/requirement anchors when applicable; regression boundary; architecture constraints | New product behavior or feature acceptance |
 | `maintenance` | Explicit non-behavioral scope; repository/guidance facts; architecture constraints | Product-scope or architecture change |
 | `migration` | Migration/compatibility contract; data or protocol invariants; rollback/recovery plan; applicable architecture decisions | Successful production migration or release |
@@ -77,7 +77,7 @@ kind.
 
 If the proposed work changes a higher source of truth, block and route a change request.
 A work-kind label never authorizes skipping an applicable later code, security,
-migration, compatibility, acceptance, or release gate.
+migration, compatibility, acceptance, or release review required by project policy.
 
 ## Missing inputs
 
@@ -91,7 +91,7 @@ skipped checks:
 | Approved UI structure | Block feature checks 5-6 unless an approved product-UI N/A rationale applies; otherwise skip only check 9 |
 | Roadmap `UI Surface` | Block feature checks 5-6; do not infer it from implementation |
 | Project guidance | Skip C6 |
-| Pointer or generated index missing, stale, or inconsistent | Block; a state-changing review cannot prove active identity, approved roles, or hashes |
+| `roadmap.yaml` missing, or its entry contradicts the files on disk | Block; a review cannot establish which function it is reviewing |
 
 A skipped check is never reported as passed.
 

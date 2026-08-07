@@ -1,6 +1,6 @@
 ---
 name: spec-sync
-description: Perform one explicitly requested vertical alignment review for a named implementation work item before implementation, record post-implementation evidence without accepting or approving delivery, or propose the highest-impact route for a change request. Never infer authority from state, invoke another lifecycle skill, or edit another owner's artifacts.
+description: Perform one explicitly requested vertical alignment review for a named implementation work item before implementation, record post-implementation evidence into that work item's delivery checklist without accepting it, or propose the highest-impact route for a change request. Never infer authority from state, invoke another skill, or edit another owner's artifacts.
 ---
 
 # Spec Sync
@@ -8,170 +8,125 @@ description: Perform one explicitly requested vertical alignment review for a na
 ## Contract and routing
 
 Require the current user to name exactly one operation and target:
-`pre-implement`, `post-implement`, or `change-request`. Pointer readiness is not
-authority. Never implement code, run Spec Kit, perform code/security/acceptance/release
-review, approve a gate, invoke another lifecycle skill, or continue into a suggested
-operation.
+`pre-implement`, `post-implement`, or `change-request`. Never implement code,
+run Spec Kit, perform code/security/acceptance review, approve anything, invoke
+another skill, or continue into a suggested operation.
 
-One named lifecycle authorization may span turns. A context that creates or
-resolves a human gate, or emits a blocked/terminal handoff, must stop after
-read-only reporting. Any gate decision, downstream lifecycle operation, or
-independent review must begin in a new minimal context explicitly authorized by
-the user and rebuilt from canonical state; a fork or worker does not grant new
-authorization.
+A context that reaches a human decision point, or emits a blocked handoff, stops
+after read-only reporting. The decision itself, and any downstream operation,
+begins in a new conversation the user explicitly authorizes.
 
-Read `.specify/flow-state.yaml` first. Query the index only through
-`resolve --id` or `resolve --path`, and read only target IDs and relevant
-sections. Stop on conflicting IDs, paths, revisions, or truth sources.
+Read `roadmap.yaml` at the repository root first to find the target function's
+status and its `spec` and `checklist` paths. Read only the target IDs and the
+relevant sections. Stop on conflicting IDs, paths, or truth sources.
 
 Keep each opened slice at or below 8 KiB and the initial target payload at or
-below 24 KiB. Beyond that, process stable-ID batches in fresh workers and merge
-only citations, findings, and a coverage ledger
+below 24 KiB. Beyond that, process stable-ID batches separately and merge only
+citations, findings, and a coverage ledger
 (`| Batch | Stable IDs / paths | Result | Evidence |`) into the owned output. A
-truncated query or uncovered required batch can never produce `Pass` or a ready
-result.
+truncated query or an uncovered required batch can never produce `Pass` or a
+ready result.
 
-## Deterministic state command
+## Recording state
 
-```text
-python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . <operation> [options]
-```
+After writing its owned output, update `roadmap.yaml` in the same turn. Record
+only; never approve, and never set a function to `accepted`.
 
-`flow-state/` deploys as this directory's sibling. Use `--help` for options;
-never hand-edit state, index, or bundle tables. Use `<revision-from-status>`
-for the first write in a context, then the revision each command returns; on
-`stale revision` stop and report the conflict rather than retrying.
-
-```text
-start --expect-revision <revision-from-status> \
-  --kind <kind> --work-id <work-id> --stage pre_implement
-
-record-output --expect-revision <revision-returned-by-start> \
-  --stage pre_implement --status ready_for_review \
-  --artifact pre_implementation=<path>
-
-block --expect-revision <revision-from-status> --stage <stage> \
-  --artifact <role>=<path> --blocker "<concrete blocker>"
-```
-
-Add `--check-only` to `record-output` to validate a transition before writing.
-
-| Operation | Deterministic start |
-|---|---|
-| `pre-implement <work-id> <kind>` | For `feature`, `bug`, `maintenance`, `migration`, or `security`, may run `start` at stage `pre_implement` after prerequisites pass and no gate is pending. Never infer kind from an ID. |
-| `change-request <request-id>` | If a durable CR path is configured, may run `start --kind change_request --stage change_request`. If output is response-only, do not start or mutate pointer state. |
-| `post-implement <work-id> <kind>` | Never starts work; it must match the already authorized active work item/kind and records stage `post_implement`. |
-
-Product, roadmap, architecture, UI, and guidance changes belong to their owning Skills.
-Spec Kit owns horizontal `spec.md`/`plan.md`/`tasks.md` analysis. This Skill owns only the
-pre-implementation review, vertical verification record, and proposed change route.
-
-## Spec Kit upstream handoff
-
-`pre-implement` requires approved, hash-matching `spec`, `plan`, `tasks`, and
-`requirements_checklist` roles for the same work item. Spec Kit and the human
-register them; this skill never does:
-
-```text
-start --expect-revision <revision-from-status> \
-  --kind <kind> --work-id <work-id> --stage specify
-record-output --expect-revision <revision-returned-by-start> --stage specify \
-  --artifact spec=specs/NNN-slug/spec.md
-decide --expect-revision <revision-returned-by-record-output> --decision approved \
-  --decided-by <actor> --decision-date YYYY-MM-DD --decision-evidence <statement>
-
-start --expect-revision <revision-from-status> \
-  --kind <kind> --work-id <work-id> --stage plan
-record-output --expect-revision <revision-returned-by-start> --stage plan \
-  --artifact plan=specs/NNN-slug/plan.md \
-  --artifact requirements_checklist=specs/NNN-slug/checklists/requirements.md \
-  --artifact tasks=specs/NNN-slug/tasks.md
-decide --expect-revision <revision-returned-by-record-output> --decision approved \
-  --decided-by <actor> --decision-date YYYY-MM-DD --decision-evidence <statement>
-```
-
-Upstream handoff contract only. `spec-sync` must not run Spec Kit, register
-missing upstream artifacts, or approve them. When a required role is missing,
-stale, or unapproved, block and report the exact command its owner must run.
-
-## Operation I/O
-
-| Operation | Prerequisites | Owned output | Maximum outcome |
+| Operation | Prerequisites | Owned output | `roadmap.yaml` effect |
 |---|---|---|---|
-| `pre-implement` | Approved `spec`, `plan`, `tasks`, and `requirements_checklist` roles for one supported kind | Work-item `pre-implementation-review.md` | `ready_for_review` or `blocked` |
-| `post-implement` | Approved `pre_implementation`; converged implementation and named evidence | Work-item `verification.md` | Feature: `ready_for_acceptance`; other supported kinds: `ready_for_review` |
-| `change-request` | Source request text | Configured CR or response | `proposed`; `ready_for_review` when materialized |
+| `pre-implement <id> <kind>` | Function at `specified`, with spec, plan, tasks, and checklist present | `pre-implementation-review.md` in the work-item directory | None on `Pass`; record the blocker in `notes` on `Blocked` |
+| `post-implement <id> <kind>` | An approved pre-implementation review; converged implementation and named evidence | Evidence rows and check results inside that function's `checklist.md` | `status: verifying` when no blocker remains |
+| `change-request <CR-ID>` | Source request text | `doc/change-requests/<CR-ID>.md`, or a response when the project keeps no CR records | None |
 
-State an owned output path before writing and preserve an existing record unless the user
-authorized updating it.
+`pre-implement` never moves a function to `implementing`; the human does that
+when authorizing implementation. `post-implement` never moves a function to
+`accepted`; only a human verifying the checklist in a fresh conversation does.
+
+Supported kinds: `feature`, `bug`, `maintenance`, `migration`, `security`. Never
+infer the kind from an ID.
+
+Product, roadmap, architecture, UI, and project-map changes belong to their
+owning skills. Spec Kit owns horizontal `spec.md`/`plan.md`/`tasks.md` analysis.
+This skill owns only the pre-implementation review, the verification evidence it
+writes into the checklist, and the proposed change route.
+
+## Upstream prerequisites
+
+`pre-implement` requires, for the same function: `spec.md`, `plan.md`,
+`tasks.md`, and `checklist.md` all present, and a `roadmap.yaml` status of
+`specified`. Spec Kit and the human produce those; this skill never writes them
+and never marks them approved.
+
+When a required file is missing or the status does not match, block and report
+exactly which file its owner must produce. Do not proceed on a partial set.
 
 ## `pre-implement`
 
-Read only [the pre-implementation contract](./references/alignment-matrix.md); it includes
-the common matrix and the selected kind's applicability row. Apply feature-only
-roadmap/UI checks only to `feature`; use the kind-specific constraints for all other
-supported kinds. Cite both sides by ID, anchor, or line. Classify findings as
-`Blocking`, `Advisory`, or `Skipped`; a skipped required check prevents `Pass`.
+Read only [the pre-implementation contract](./references/alignment-matrix.md);
+it includes the common matrix and the selected kind's applicability row. Apply
+feature-only roadmap/UI checks only to `feature`; use the kind-specific
+constraints for every other supported kind. Cite both sides by ID, anchor, or
+line. Classify findings as `Blocking`, `Advisory`, or `Skipped`; a skipped
+required check prevents `Pass`.
 
 Create or update the work item's `pre-implementation-review.md` from
-[the pre-implementation template](./assets/pre-implementation-review.template.md) with one
-concrete result: `Pass` or `Blocked`.
+[the template](./assets/pre-implementation-review.template.md) with one concrete
+result: `Pass` or `Blocked`.
 
-- For `Pass`, `record-output` role `pre_implementation` at `ready_for_review`,
-  report the pending human review, and stop. Only a later explicit human
-  `decide --decision approved` makes that role `approved` and writes a durable
-  indexed receipt.
-- For `Blocked`, run `block` with every concrete blocker, report the required
-  owner action, and stop.
-
-Implementation may start only when the exact `pre_implementation` artifact role is
-`approved`, its recorded hash still matches, and its work ID/revision matches the
-implementation target. `Pass` or `ready_for_review` alone is insufficient.
+- For `Pass`, report the pending human review and stop. Implementation starts
+  only after the human explicitly approves this review; `Pass` alone is not
+  approval.
+- For `Blocked`, list every concrete blocker in the review, note it in the
+  function's `roadmap.yaml` entry, report the required owner action, and stop.
 
 ## `post-implement`
 
-First enforce the approved `pre_implementation` prerequisite above and read only
-[the post-implementation contract](./references/post-implementation-contract.md).
+First confirm the pre-implementation review exists and was approved, then read
+only [the post-implementation contract](./references/post-implementation-contract.md).
 Then:
 
-1. Confirm every task/check is complete or has an explicit deferred-work destination.
-2. Trace every applicable requirement, scenario, regression, migration invariant, or
-   security control to named implementation evidence; a green build alone does not
-   demonstrate behavior.
-3. Check only vertical drift: out-of-scope behavior, violated constraints, or undeclared
-   cross-feature decisions; do not review general code style.
-4. Create or update [verification.md](./assets/verification-report.template.md) with
-   commands, results, links, blockers, and skips. Never manufacture proof.
-5. `record-output` role `verification` at stage `post_implement`, using status
-   `ready_for_acceptance` for `kind: feature` and `ready_for_review` for `bug`,
-   `maintenance`, `migration`, or `security`. A later explicit generic human
-   decision approves or rejects that evidence, with a durable receipt, without
-   pretending it is feature acceptance. If blocking drift remains, `block` with
-   each concrete blocker instead.
+1. Confirm every task and check is complete, or has an explicit deferred-work
+   destination.
+2. Trace every applicable requirement, scenario, regression, migration
+   invariant, or security control to named implementation evidence. A green
+   build alone does not demonstrate behavior.
+3. Check only vertical drift: out-of-scope behavior, violated constraints, or
+   undeclared cross-function decisions. Do not review general code style.
+4. Write the results into the function's `checklist.md`:
+   - add one row per traced requirement to the **Evidence** table, recording the
+     command or method actually run and its real result;
+   - record blockers and skips explicitly;
+   - never manufacture proof.
+5. Set `status: verifying` in `roadmap.yaml`. If a blocking drift remains,
+   record the blocker in `notes` instead and leave the status where it was.
 
-Never put mutable delivery state or acceptance fields in the roadmap. Feature
-work stops at `ready_for_acceptance`; a separate explicit acceptance operation
-owns delivery. Other supported implementation kinds stop at `ready_for_review`
-and never use the feature-decision command.
+**Fill in evidence; do not grade.** Leave the checklist's acceptance-criteria
+boxes unticked and its `Decision` section empty. Those belong to the fresh
+conversation that verifies the work — the context that produced the evidence
+does not judge whether the evidence is sufficient.
 
 ## `change-request`
 
-Use [the routing rules](./references/change-routing.md). Determine the highest affected
-layer and IDs with evidence, preserve approved IDs/history, and order proposed actions
-top-down with one owner/output each. Create a pending record from
-[the CR template](./assets/change-request.template.md) when configured; otherwise return
-the same fields. When materialized, `record-output` role `change_request` at
-`ready_for_review`.
+Use [the routing rules](./references/change-routing.md). Determine the highest
+affected layer and the affected IDs with evidence, preserve approved IDs and
+history, and order the proposed actions top-down with one owner and one output
+each.
 
-The human must resolve that generic review gate before a routed owner can start
-the same CR for amendment. A response-only proposal leaves pointer state
-unchanged and therefore has no gate to resolve.
-List exact suggested human prompts but run none. Do not edit routed artifacts; stop with
-every action pending.
+Create a pending record from
+[the CR template](./assets/change-request.template.md) when the project keeps
+change-request records; otherwise return the same fields in the response. List
+the exact suggested human prompts but run none of them. Do not edit routed
+artifacts. Stop with every action pending.
+
+For a change to a function already at `accepted`, state which route applies and
+why. The default is editing in place: reset it to `specified`, remove
+`verified`, and clear old checklist boxes, Evidence, Decision, reviewer, and
+date. Use a successor only when the old and new capabilities need independent
+deployment, support, acceptance, migration, or long-term tracking.
 
 ## Completion check
 
-Report operation/target, prerequisites, sections read, files changed, validation,
-findings/skips, state before/candidate after, and the next allowed human action. Confirm
-that only owned output changed, every state write used the shared command, and no Skill or
-gate was inferred. Then stop.
+Report operation and target, prerequisites, sections read, files changed,
+validation, findings and skips, the `roadmap.yaml` lines you changed, and the
+next allowed human action. Confirm that only owned output changed and that no
+skill, approval, or acceptance was inferred. Then stop.

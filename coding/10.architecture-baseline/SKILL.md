@@ -1,6 +1,6 @@
 ---
 name: architecture-baseline
-description: "Use only when the current user explicitly authorizes architecture-baseline work: create a full or lite cross-feature baseline, recover demonstrated architecture, resolve one approved technical spike, amend a challenged decision, or approve reviewed baseline/ADR artifacts. Do not select this skill merely because a workflow pointer recommends it or another phase completed."
+description: "Use only when the current user explicitly authorizes architecture-baseline work: create a full or lite cross-feature baseline, recover the architecture an existing repository demonstrates, resolve one approved technical spike, amend a challenged decision, or approve reviewed baseline/ADR artifacts. Do not select this skill merely because roadmap.yaml shows an architecture stage or another phase completed."
 ---
 
 # Architecture Baseline
@@ -10,12 +10,12 @@ trade-offs without deciding feature-internal design.
 
 ## Lifecycle Contract
 
-- Require the current user request to authorize one named operation. Pointer
-  readiness, a recommended next action, or a completed prerequisite is not
+- Require the current user request to authorize one named operation. A recorded
+  stage, a recommended next action, or a completed prerequisite is not
   authorization.
-- One named lifecycle authorization may span turns. A context that creates or
-  resolves a human gate, or emits a blocked/terminal handoff, must stop after
-  read-only reporting. Any gate decision, downstream lifecycle operation, or
+- One named lifecycle authorization may span turns. A context that reaches a
+  human decision point, or emits a blocked/terminal handoff, must stop after
+  read-only reporting. Any human decision, downstream lifecycle operation, or
   independent review must begin in a new minimal context explicitly authorized
   by the user and rebuilt from canonical state; a fork or worker does not grant
   new authorization.
@@ -24,64 +24,32 @@ trade-offs without deciding feature-internal design.
 - Never write production code, product requirements, roadmap semantics, feature
   specifications, wireframes, plans, tasks, tests, or agent guidance.
 
-Read `.specify/flow-state.yaml` first to verify active scope, revision, profile,
-gates, and canonical paths; it holds no architecture truth and grants no
-permission. Query the index only through `resolve --id` or `resolve --path`. If
-state, the resolved slice, and an approved artifact disagree, stop and report.
+Read `roadmap.yaml` at the repository root first to learn the current stage,
+profile, and canonical document paths. It holds no architecture truth and grants
+no permission. If it, an approved artifact, and the current request disagree,
+stop and report.
 
-## Deterministic state command
+## Recording state
 
-```text
-python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . <operation> [options]
-```
+After writing an artifact, update `roadmap.yaml` in the same turn. Record only;
+never gate, approve, or set a function to `accepted`.
 
-`flow-state/` deploys as this directory's sibling. Use `--help` for options;
-never hand-edit state, index, or bundle tables. Use `<revision-from-status>`
-for the first write in a context, then the revision each command returns; on
-`stale revision` stop and report the conflict rather than retrying.
-
-```text
-start --expect-revision <revision-from-status> \
-  --kind project --work-id <project-id> --stage architecture
-
-sync-bundle --artifact doc/architecture-baseline.md \
-  --member <domain-or-adr-path> [--member ...] --role architecture
-
-record-output --expect-revision <revision-returned-by-start> \
-  --stage architecture --artifact architecture=doc/architecture-baseline.md \
-  --next "architecture-baseline approve"
-
-decide --expect-revision <revision-returned-by-record-output> \
-  --decision approved --decided-by <actor> --decision-date YYYY-MM-DD \
-  --decision-evidence <statement-or-reference>
-```
-
-`sync-bundle` computes and writes every member hash; never type a SHA-256 by
-hand. Add `--check-only` to `record-output` to validate a complex transition
-before writing. Substitute the authorized CR-ID or SPK-ID and its stage for
-`amend` and `resolve-spike`.
-
-| Operation | `kind` | `work-id` | `stage` |
-|---|---|---|---|
-| `full`, `lite`, `recover` | `project` | `pointer.project.id` | `architecture` |
-| `amend` | `change_request` | the authorized `CR-ID` | `architecture` |
-| `resolve-spike` | `spike` | the authorized `SPK-ID` | `spike_result` |
+| Operation | `roadmap.yaml` effect |
+|---|---|
+| `full`, `lite`, `recover` | Set `docs.architecture` |
+| `amend` | None; a proposal is not canonical truth |
+| `resolve-spike` | None; a spike closes an investigation, not a decision |
 
 Require the current request to identify a CR-ID or SPK-ID; never allocate or
-guess one. Before `full` or `lite`, require `profile_status: confirmed` and a
-`profile` equal to the requested mode; that request never authorizes
-`confirm-profile`.
+guess one. `full` and `lite` follow the mode the current request names; see
+**Modes** below.
 
-`approve` never runs `start`. Record the human's approval fields in the reviewed
-artifact, re-run `sync-bundle` for a split root, `record-output` the complete
-approval set, then `decide` with actor, date, and evidence. If no bytes changed,
-call `decide` directly. Generic `decide` resolves only `ready_for_review`.
+`approve` records the human's approval fields — actor, date, and evidence —
+inside the reviewed artifact itself, and changes nothing else.
 
-`amend` creates only `doc/architecture-amendments/<CR-ID>.md` under role
-`architecture_amendment`, plus proposed ADR files when needed; accepted truth
-stays unchanged. A later explicit `approve` applies only the reviewed proposal,
-keeps that proposal byte-identical, and re-records the amendment role, every
-proposed ADR role, and canonical `architecture` before `decide`.
+`amend` creates only `doc/architecture-amendments/<CR-ID>.md`, plus proposed ADR
+files when needed; accepted truth stays unchanged. A later explicit `approve`
+keeps that proposal byte-identical and applies only its reviewed changes.
 
 ## Ownership and Default Paths
 
@@ -93,27 +61,32 @@ This skill may create or modify only:
 - spike result: `doc/architecture/spikes/<SPK-ID>.md`;
 - reviewed amendment proposal: `doc/architecture-amendments/<CR-ID>.md`.
 
-Register the baseline under fixed role `architecture`, a proposed ADR under a
-bounded role such as `adr-0001`, an amendment as `architecture_amendment`, and a
-spike result only as `spike_result` (never part of the canonical bundle).
+Record the baseline in `roadmap.yaml` as `docs.architecture`. ADRs, amendment
+proposals, and spike results are not `docs` roles; the baseline's own registry
+routes to them.
 
 The baseline root declares `**Artifact bundle**: single` or `split`. A split root
-also owns a `## Approved Bundle` table covering every domain-detail and ADR
-member exactly once; `sync-bundle` writes it.
+lists every domain-detail and ADR member path in its registry exactly once. No
+hash table is maintained — Git detects member drift.
 
-Honor explicit user paths, then indexed canonical paths, then exact defaults.
+Honor explicit user paths, then canonical paths recorded in `roadmap.yaml`, then
+exact defaults.
 Update the canonical artifact rather than creating a competing source of truth.
 
 ## Operations
 
-| Operation | Required before execution | Creates or modifies | End state |
+| Operation | Required before execution | Creates or modifies | Stops at |
 |---|---|---|---|
-| `full` | Approved PRD and roadmap; confirmed `full` profile | Full baseline and proposed ADRs | `ready_for_review` |
-| `lite` | Same approval gate; confirmed `lite` profile | One-page baseline; no ADRs | `ready_for_review` |
-| `recover` | Repository access | Evidence-labelled baseline | `ready_for_review` |
-| `resolve-spike` | Approved unchanged baseline holds one question, time box, and blocked owner | One investigation result; architecture unchanged | `ready_for_review` |
-| `amend` | Explicit challenged decision, CR-ID, and trigger | Amendment proposal and proposed ADRs; accepted truth unchanged | `ready_for_review` |
-| `approve` | Explicit human approval of named reviewed artifacts | Approval statuses; supersession links | `approved` |
+| `full` | Approved PRD and roadmap; the request names `full` | Full baseline and proposed ADRs | Awaiting review |
+| `lite` | Same approval prerequisite; the request names `lite` | One-page baseline; no ADRs | Awaiting review |
+| `recover` | Repository access | Evidence-labelled baseline | Awaiting review |
+| `resolve-spike` | Approved unchanged baseline holds one question, time box, and blocked owner | One investigation result; architecture unchanged | Awaiting review |
+| `amend` | Explicit challenged decision, CR-ID, and trigger | Amendment proposal and proposed ADRs; accepted truth unchanged | Awaiting review |
+| `approve` | Explicit human approval of named reviewed artifacts | Approval statuses; supersession links | Approved |
+
+`recover` is the operation for adopting an existing codebase: it documents the
+architecture the repository demonstrates, labelling each claim `Verified` or
+`Inferred`, and never promotes an accident into an intended constraint.
 
 Every operation stops at its end state. Approval records only the decision
 explicitly given; it does not begin agent bootstrap or feature planning.
@@ -136,14 +109,17 @@ explicitly given; it does not begin agent bootstrap or feature planning.
   completeness while a required batch or resolver result is truncated.
 - `Decision Altitude` below is the runtime rule; `references/decision-altitude.md`
   is maintainership background and is not loaded alongside a playbook.
-- Cite canonical paths and stable IDs; never copy architecture into the pointer.
+- Cite canonical paths and stable IDs; never copy architecture into
+  `roadmap.yaml`.
 
 ## Modes
 
-The confirmed pointer profile selects the mode. This skill never re-derives
-sizing: `confirm-profile` owns those thresholds and rejects an ineligible
-`lite`. If a confirmed Lite project later outgrows it, a human-authorized `full`
-operation carries the Lite decisions forward.
+The current request names the mode. Cross-check it against the roadmap's
+`Profile sizing` recommendation and `roadmap.yaml`'s `profile` marker: if the
+request asks for `lite` where the roadmap's sizing evidence says `full`, report
+the mismatch and ask, rather than proceeding or silently upgrading. If a Lite
+project later outgrows it, a `full` operation carries the Lite decisions
+forward.
 
 `lite` compresses artifact count, not guarantees: retain evidence, boundaries,
 Plan Constraints, approval, and validation. If a one-way door appears, compare
@@ -153,7 +129,7 @@ Lite stays a one-page baseline.
 Keep the Full root below roughly 200 lines and, before the first feature,
 normally at most 12 active ADRs. Past either budget, keep the root as the
 cross-domain driver/boundary/constraint registry and move domain-specific
-detail into indexed domain files. The root owns routing and cross-domain rules;
+detail into routed domain files. The root owns routing and cross-domain rules;
 a domain member owns its decision and constraint text; an ADR owns rationale and
 history. Never copy normative text between them, and resolve only the domain and
 ADR IDs the current operation needs.
@@ -188,9 +164,8 @@ An ordinary baseline/ADR `approve` loads no playbook.
 
 ## Validation
 
-The state command fails closed on stage/role/status validity, bundle coverage,
-and hash freshness; read its error instead of pre-checking those rules. Before
-presenting output, verify the judgments it cannot make:
+Nothing validates these mechanically. Before presenting output, check them
+yourself:
 
 - every decision passes the altitude test and cites an approved requirement,
   principle, repository fact, or external constraint;
@@ -204,5 +179,5 @@ presenting output, verify the judgments it cannot make:
   and routes any architecture consequence to a separate amendment.
 
 Report mode, sizing result, paths, created versus modified files, decisions,
-deferred items, spikes, contradictions, validation results, the proposed pointer
-transition, and allowed next human commands. Stop without invoking them.
+deferred items, spikes, contradictions, validation results, the `roadmap.yaml`
+lines you changed, and allowed next human commands. Stop without invoking them.

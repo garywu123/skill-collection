@@ -5,8 +5,7 @@
 **Human decision**: Pending
 **Highest impact**: {{HIGHEST_IMPACT_LAYER}}
 **Horizon**: {{HORIZON}}
-**Flow-state revision read**: [revision or not present]
-**Artifact-index query**: [ID/path query or not present]
+**Target function**: [F### and its `roadmap.yaml` status, or not applicable]
 
 > This record is a routing proposal. It does not authorize or execute any action below.
 
@@ -19,7 +18,7 @@
 | Layer/artifact | ID/path | Current state | Evidence anchor | Effect |
 |---|---|---|---|---|
 | Product requirement | PR-0XX | Approved | [section/link] | Proposed successor PR-0YY |
-| Feature | FNNN | Accepted | [acceptance record] | Preserve; propose successor FMMM |
+| Feature | FNNN | Accepted | [spec and checklist] | Reset in place or propose successor FMMM |
 | Plan constraint | AC-00X | Active | [baseline section] | Possible superseding ADR |
 
 Delete unused example rows. List only cited impact.
@@ -46,12 +45,11 @@ Order actions from the highest source of truth downward. Assign one owner per ac
 [Exact prompt or command the human may choose to authorize next. Do not run it.]
 ```
 
-## Decision Receipt
+## Human decision
 
-Do not fill decision fields in this proposal. An explicit generic gate decision
-creates a content-hashed `.specify/decisions/*.yaml` receipt containing outcome,
-actor, date, evidence, and the reviewed role/path/hash set. Resolve that receipt
-by this CR ID through the generated artifact index.
+Do not fill decision fields in this proposal. The human records their decision —
+outcome, actor, date, and evidence — in the artifact each routed owner updates,
+and Git records when it happened. This proposal stays a proposal.
 
 ## Notes
 

@@ -13,20 +13,18 @@ an already-authorized implementation task but never authorizes or advances it.
 - Confirm the current task and who writes tests, core logic, and boilerplate.
   Default to the agent writing failing tests/fixtures and the user writing core
   logic; honor changes at any step.
-- In a spec-driven repository, read `.specify/flow-state.yaml`, then locate the
-  active feature/task with
-  `python <this-skill-dir>/../flow-state/scripts/flow_state.py --root . resolve --id <ID>`.
-  Never load the complete index into semantic context. Read that task, the
-  smallest applicable spec section, existing code, and the targeted tests; do
-  not load the whole roadmap or unrelated feature artifacts.
+- In a spec-driven repository, read `roadmap.yaml` at the repository root to
+  find the active function's `spec` path. Read that task, the smallest
+  applicable spec section, existing code, and the targeted tests; do not load
+  the whole roadmap or unrelated function artifacts.
 - Keep each opened semantic/code slice at or below 8 KiB and the initial target
   payload at or below 24 KiB. Narrow large changes by task and path. This
   interactive context may span several red/green loops for the same authorized
-  implementation, but it must stop before any lifecycle review or gate; that
-  gate begins in a new minimal context the user explicitly authorizes.
+  implementation, but it must stop before any lifecycle review or acceptance;
+  that review begins in a new minimal context the user explicitly authorizes.
 - Write only files the user assigns within the already-authorized implementation
-  scope. Do not create or modify lifecycle artifacts, pointer/index YAML,
-  approvals, roadmap status, or release state.
+  scope. Do not create or modify lifecycle artifacts, `roadmap.yaml`, delivery
+  checklists, or approvals.
 - Never invoke another skill or phase. Report a missing prerequisite or scope
   conflict and wait for the user.
 
@@ -51,5 +49,5 @@ default division.
 ## Completion
 
 Report behaviors completed, files changed by each participant, focused and
-broader test results, and remaining implementation work. Leave lifecycle state
+broader test results, and remaining implementation work. Leave `roadmap.yaml`
 unchanged and return control to the user.

@@ -47,6 +47,8 @@ function Read-RequiredFile {
 
 $agentsPath = Join-Path $resolvedRoot 'AGENTS.md'
 $agentsContent = Read-RequiredFile -Path $agentsPath -Label 'Canonical AGENTS.md'
+$roadmapPath = Join-Path $resolvedRoot 'roadmap.yaml'
+$roadmapContent = Read-RequiredFile -Path $roadmapPath -Label 'Project roadmap.yaml'
 
 if ($null -ne $agentsContent) {
     $lineCount = @(Get-Content -LiteralPath $agentsPath -Encoding UTF8).Count
@@ -71,6 +73,22 @@ if ($null -ne $agentsContent) {
             if (-not (Test-Path -LiteralPath $candidate)) {
                 Add-ValidationError "Referenced Markdown path does not exist: $reference"
             }
+        }
+    }
+
+    if ($agentsContent -notmatch '(?i)roadmap\.yaml') {
+        Add-ValidationError 'AGENTS.md must route readers to roadmap.yaml.'
+    }
+
+    if ($agentsContent -notmatch '(?is)(same turn|before (the )?final response|结束前|同一回合).{0,240}roadmap\.yaml|roadmap\.yaml.{0,240}(same turn|before (the )?final response|结束前|同一回合)') {
+        Add-ValidationError 'AGENTS.md must include a roadmap.yaml write-back/reconciliation rule.'
+    }
+}
+
+if ($null -ne $roadmapContent) {
+    foreach ($field in @('project', 'stage', 'docs', 'functions')) {
+        if ($roadmapContent -notmatch "(?m)^$([regex]::Escape($field)):\s*") {
+            Add-ValidationError "roadmap.yaml is missing top-level field: $field"
         }
     }
 }

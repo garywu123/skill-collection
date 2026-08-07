@@ -84,12 +84,13 @@ registry is the sole ID-to-member mapping.
 |---|---|---|---|
 | YYYY-MM-DD | [Decision] | [Reason] | PR-001 |
 
-## Approved Bundle
+## Member Registry
 
-This table is the complete set of external files owned by this root. List each
-member exactly once; do not list this root or cited source artifacts.
+The complete set of external files owned by this root. List each member exactly
+once; do not list this root or cited source artifacts. No hashes are recorded —
+Git detects member drift.
 
-| Path | SHA-256 |
+| Path | Owns |
 |---|---|
-| `{{AREA_1_PATH}}` | `{{AREA_1_SHA256}}` |
-| `{{CROSS_CUTTING_PATH}}` | `{{CROSS_CUTTING_SHA256}}` |
+| `{{AREA_1_PATH}}` | `{{AREA_1_SCOPE}}` |
+| `{{CROSS_CUTTING_PATH}}` | Cross-cutting rules constraining every area |

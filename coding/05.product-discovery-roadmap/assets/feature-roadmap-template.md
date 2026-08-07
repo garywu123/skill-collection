@@ -21,9 +21,9 @@
 ## Lifecycle Boundary
 
 This roadmap owns product outcome, horizon, sequence, dependencies, and release
-boundary. It does not mirror mutable delivery state. Resolve the active item in
-`.specify/flow-state.yaml` and historical verification, acceptance, or release
-records by feature ID through `.specify/artifact-index.yaml`.
+boundary. It does not mirror mutable delivery state. Current status per feature
+lives in `roadmap.yaml`; delivery evidence lives in each feature's
+`checklist.md`; history lives in Git.
 
 ## Domain Registry
 

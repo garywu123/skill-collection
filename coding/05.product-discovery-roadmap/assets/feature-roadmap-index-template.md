@@ -62,11 +62,12 @@ flowchart LR
 - **Circular dependencies**: None
 - **Boundary concerns**: None
 
-## Approved Bundle
+## Member Registry
 
-This table is the complete set of external files owned by this root. List each
-member exactly once; do not list this root or cited source artifacts.
+The complete set of external files owned by this root. List each member exactly
+once; do not list this root or cited source artifacts. No hashes are recorded —
+Git detects member drift.
 
-| Path | SHA-256 |
+| Path | Owns |
 |---|---|
-| `{{DOMAIN_1_PATH}}` | `{{DOMAIN_1_SHA256}}` |
+| `{{DOMAIN_1_PATH}}` | `{{DOMAIN_1_SCOPE}}` |

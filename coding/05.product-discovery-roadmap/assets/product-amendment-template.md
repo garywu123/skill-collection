@@ -2,7 +2,7 @@
 
 **Status**: Ready for Review
 **Trigger**: {{REQUEST_OR_EVIDENCE_PATH}}
-**Base artifacts**: {{CANONICAL_PATHS_AND_HASHES}}
+**Base artifacts**: {{CANONICAL_PATHS_AND_REVISIONS}}
 
 ## Proposed Product Change
 
@@ -34,8 +34,10 @@ replace that verification.
 
 - [ ] Scope and non-goals remain explicit.
 - [ ] Requirement ownership and dependency graph remain valid.
-- [ ] Approved history is preserved by successor IDs.
+- [ ] Stable IDs are never reused; successors exist only where both records
+      require independent meaning or tracking.
 - [ ] Split-root membership changes are complete and unambiguous.
 
-This proposal remains byte-identical during promotion. The later canonical
-review plus content-hashed generic decision receipt is the durable approval record.
+Keep this proposal unchanged while it is under review. The explicit human
+approval fields in the updated canonical artifact and Git history are the
+durable decision record.

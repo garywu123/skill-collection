@@ -3,8 +3,9 @@
     Deploy all skills in this repository to AI tool skill directories.
 
 .DESCRIPTION
-    Scans the repository root for skill folders (any subdirectory containing
-    a SKILL.md file) and copies each one to the configured target directories.
+    Scans the active coding/ collection for skill folders (any direct
+    subdirectory containing a SKILL.md file) and copies each one to the
+    configured target directories. The _obsolete/ archive is never deployed.
     Existing folders at the destination are overwritten (Copy-Item -Force).
 
     Path resolution order (first non-empty value wins):
@@ -27,6 +28,9 @@
 .PARAMETER Target
     Restrict deployment to a single tool: copilot | claude | agents | all (default).
 
+.PARAMETER ListOnly
+    List active skill folders without writing to any deployment target.
+
 .EXAMPLE
     # Use config file / defaults — deploy to all tools
     .\Deploy-Skills.ps1
@@ -45,7 +49,8 @@ param(
     [string]$ClaudeSkillsPath  = "",
     [string]$AgentsSkillsPath  = "",
     [ValidateSet("all", "copilot", "claude", "agents")]
-    [string]$Target = "all"
+    [string]$Target = "all",
+    [switch]$ListOnly
 )
 
 Set-StrictMode -Version Latest
@@ -84,19 +89,33 @@ if ($Target -ne "all") {
 }
 
 # ---------------------------------------------------------------------------
-# Discover skill folders: any subdirectory that contains a SKILL.md
+# Discover active skill folders under coding/. Never descend into _obsolete/.
 # ---------------------------------------------------------------------------
-$skillFolders = Get-ChildItem -Path $repoRoot -Directory |
-    Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") }
+$skillsRoot = Join-Path $repoRoot 'coding'
+if (-not (Test-Path -LiteralPath $skillsRoot -PathType Container)) {
+    throw "Active skills root is missing: $skillsRoot"
+}
+
+$skillFolders = @(Get-ChildItem -LiteralPath $skillsRoot -Directory |
+    Where-Object {
+        $_.Name -ne '_obsolete' -and
+        (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md') -PathType Leaf)
+    })
 
 if ($skillFolders.Count -eq 0) {
-    Write-Host "No skill folders found (looked for subdirectories containing SKILL.md)." -ForegroundColor Yellow
+    Write-Host "No active skill folders found under $skillsRoot." -ForegroundColor Yellow
     exit 0
 }
 
 Write-Host ""
 Write-Host "Skills found:" -ForegroundColor Cyan
 $skillFolders | ForEach-Object { Write-Host "  - $($_.Name)" }
+
+if ($ListOnly) {
+    Write-Host ""
+    Write-Host "List-only mode: no files were deployed." -ForegroundColor Yellow
+    exit 0
+}
 
 # ---------------------------------------------------------------------------
 # Build target map (skip empty paths)
