@@ -70,6 +70,7 @@ Human speaks one operation
 | [`30.ui-wireframe-spec`](30.ui-wireframe-spec/SKILL.md) | `product` UI structure or one `feature` wireframe |
 | [`spec-sync`](spec-sync/SKILL.md) | `pre-implement`, `post-implement`, `change-request` |
 | [`guided-tdd-pairing`](guided-tdd-pairing/SKILL.md) | One user-controlled RED/GREEN pairing step |
+| [`skill-authoring`](skill-authoring/SKILL.md) | Create, review, update, or simplify one reusable Skill |
 
 Spec Kit remains the feature-local horizontal workflow: specify, clarify, plan,
 tasks, analyze, implement. It does not replace product definition, cross-function

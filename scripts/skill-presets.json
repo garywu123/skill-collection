@@ -1,0 +1,37 @@
+{
+    "_comment": [
+        "Presets map a name to the skill folders installed together.",
+        "Paths are relative to the repository root. Add a category folder",
+        "(writing/, data/, ...) and a matching preset as the collection grows.",
+        "",
+        "targets are project-relative directories per tool. Only 'claude' is",
+        "verified against a real tool layout; adjust the others for your setup",
+        "before using -Tool copilot or -Tool agents."
+    ],
+
+    "targets": {
+        "claude": ".claude/skills",
+        "copilot": ".github/copilot/skills",
+        "agents": ".agents/skills"
+    },
+
+    "presets": {
+        "coding": [
+            "coding/05.product-discovery-roadmap",
+            "coding/10.architecture-baseline",
+            "coding/20.project-map",
+            "coding/30.ui-wireframe-spec",
+            "coding/spec-sync",
+            "coding/guided-tdd-pairing"
+        ],
+
+        "coding-minimal": [
+            "coding/20.project-map",
+            "coding/spec-sync"
+        ],
+
+        "map-only": [
+            "coding/20.project-map"
+        ]
+    }
+}
