@@ -68,9 +68,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # ---------------------------------------------------------------------------
-# Resolve repository root (one level above this script's folder)
+# Resolve repository root (two levels above scripts/deploy-skill/)
 # ---------------------------------------------------------------------------
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 # ---------------------------------------------------------------------------
 # Load the explicit source-to-deployment-name mapping.
