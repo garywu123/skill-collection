@@ -1,0 +1,37 @@
+{
+    "_comment": [
+        "Copy this file to deploy-skills.json (which is gitignored).",
+        "Only listed skills are deployed. Source paths are repository-relative.",
+        "Each name must match the name field in that source folder's SKILL.md."
+    ],
+    "skills": [
+        {
+            "source": "coding/05.product-discovery-roadmap",
+            "name": "product-discovery-roadmap"
+        },
+        {
+            "source": "coding/10.architecture-baseline",
+            "name": "architecture-baseline"
+        },
+        {
+            "source": "coding/20.project-map",
+            "name": "project-map"
+        },
+        {
+            "source": "coding/30.ui-wireframe-spec",
+            "name": "ui-wireframe-spec"
+        },
+        {
+            "source": "coding/spec-sync",
+            "name": "spec-sync"
+        },
+        {
+            "source": "coding/guided-tdd-pairing",
+            "name": "guided-tdd-pairing"
+        },
+        {
+            "source": "coding/skill-authoring",
+            "name": "skill-authoring"
+        }
+    ]
+}

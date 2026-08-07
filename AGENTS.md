@@ -63,8 +63,9 @@ in the relevant `SKILL.md` and detailed material in that Skill's resources.
 
 ## Deployment
 
-`scripts/Deploy-Skills.ps1` currently deploys active direct child Skills under
-`coding/` to configured GitHub Copilot, Claude Code, and Codex/Agents locations.
-Run it with `-ListOnly` to inspect discovery without writing to those locations.
+`scripts/Deploy-Skills.ps1` deploys only the explicit mappings in the local,
+gitignored `scripts/deploy-skills.json` to configured GitHub Copilot, Claude
+Code, and Codex/Agents locations. Run it with `-ListOnly` to inspect the mapping
+without writing to those locations.
 Do not assume a future top-level collection is deployed until the script is
 explicitly extended and validated for that collection.

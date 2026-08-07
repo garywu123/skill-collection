@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Skills: Deploy All",
+      "label": "Skills: Deploy",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -21,63 +21,6 @@
         "kind": "build",
         "isDefault": false
       }
-    },
-    {
-      "label": "Skills: Deploy â†’ Copilot",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/Deploy-Skills.ps1",
-        "-Target",
-        "copilot"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Skills: Deploy â†’ Claude",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/Deploy-Skills.ps1",
-        "-Target",
-        "claude"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Skills: Deploy â†’ Agents",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/Deploy-Skills.ps1",
-        "-Target",
-        "agents"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "clear": true
-      },
-      "problemMatcher": []
     },
     {
       "label": "Doc Sync: Sync docs to Obsidian",

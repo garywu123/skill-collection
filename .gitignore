@@ -1,5 +1,6 @@
-# Machine-local skill deployment config (contains personal directory paths)
+# Machine-local skill deployment configs
 scripts/deploy-paths.json
+scripts/deploy-skills.json
 
 # Generated Python artifacts are never source or historical documentation.
 __pycache__/

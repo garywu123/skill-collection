@@ -10,6 +10,32 @@
 装到项目里的 skill 只在那个项目可见；装到机器上的对所有项目可见。两者可以并存，
 但同名 skill 会重复出现，选一种为主。
 
+## 整机部署配置
+
+`Deploy-Skills.ps1` 不自动扫描仓库。它只部署本机
+`deploy-skills.json` 中明确列出的 mapping：
+
+```json
+{
+  "skills": [
+    {
+      "source": "coding/20.project-map",
+      "name": "project-map"
+    }
+  ]
+}
+```
+
+从 `deploy-skills.example.json` 复制出真实配置。真实配置已被 Git
+忽略；新增 Skill 不会自动进入个人的全局环境，必须明确加入 mapping。
+`source` 是仓库相对路径，`name` 必须与对应 `SKILL.md` frontmatter
+一致，也是目标目录名。
+
+目标目录仍由 `deploy-paths.json` 控制；未配置时使用
+`~/.copilot/skills`、`~/.claude/skills` 和 `~/.agents/skills`。运行
+`Deploy-Skills.ps1 -ListOnly` 可查看最终 Skill mapping 和目标目录，且
+不会写文件。
+
 ## 项目级安装
 
 ```powershell

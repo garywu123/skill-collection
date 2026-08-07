@@ -77,7 +77,8 @@ At minimum, verify:
 - headings follow repository Markdown style;
 - the procedure has an observable output and stopping point;
 - no new content duplicates or contradicts an adjacent Skill;
-- the deployment script discovers the Skill when its collection is deployable.
+- the Skill is explicitly mapped in the deployment config when it should be
+   available machine-wide.
 
 Use the narrowest available parser, test, or deployment list command. For an
 active `coding/` Skill, run:
