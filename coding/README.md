@@ -17,7 +17,9 @@ matches your situation:
 | Existing repository | Adopting the flow into a codebase that never used it | [已有仓库接入](00_instructions/spec-drive-lite/wms-existing-repo.md) |
 
 All three use the same WMS example, so they can be read against each other.
-They are operator guides — do not load a whole guide into a normal coding turn.
+They are operator guides with one-message-at-a-time prompt examples and required
+Skill calls. Do not load a whole guide into a normal coding turn; copy only the
+next selected row.
 
 ## Operating model
 

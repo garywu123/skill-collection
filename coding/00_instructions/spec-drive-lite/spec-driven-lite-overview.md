@@ -28,6 +28,26 @@ Project Map 拥有它的 schema、初始化、整体 refresh 和 audit；当前�
 只回写本次工作直接改变的 `docs` 路径或 function entry。每个操作在最终报告前核对一次，
 没有事实变化就不制造状态 diff，也不推进无关条目。
 
+## 每条消息怎么说
+
+正常操作使用同一个句式：
+
+```text
+使用 $<skill-name> 执行 <operation + target>；
+本次只处理 <scope>；完成后回写本次实际改变的 roadmap.yaml 条目，报告并停止。
+```
+
+批准也调用拥有该工件的 Skill，并明确 actor、date 和 evidence，例如：
+
+```text
+使用 $product-discovery-roadmap approve-prd；
+我 Gary Wu 于 2026-08-07 批准当前 PRD，依据是本消息；只记录批准并停止。
+```
+
+Spec Kit 和普通实现不是本集合的 Skill，指南会明确标成“Spec Kit”或“无需 Skill”。
+checklist 验证同样无需 Skill，但必须开新对话，并由你明确作出 accepted 或 changes requested
+决定。下面三份模式指南给出了每一步可以直接改写使用的完整话术。
+
 ## 能力地图
 
 | 编号 | 类别 | Skill / 工具 | 何时使用 | 主要产物 |

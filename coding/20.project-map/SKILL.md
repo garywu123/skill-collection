@@ -101,7 +101,8 @@ report it and stop rather than loading a second reference.
    - `roadmap.yaml` from [the template](assets/roadmap.template.yaml), following
      [the specification](references/roadmap-spec.md);
    - `AGENTS.md` from [the template](assets/AGENTS.template.md), preferring
-     links and routing over summaries;
+     `roadmap.yaml` role/entry lookups over copied paths, feature lists, or
+     summaries;
    - [the delivery checklist template](assets/delivery-checklist.template.md)
      belongs to whichever skill specifies a function, not to this one. Point at
      it; do not fill it in.

@@ -27,19 +27,25 @@ AI 读代码分不出这两者，而一旦写进 PRD，意外就变成了承诺�
 
 顺序和全新项目不同：先盘点，再重建，最后才谈以后要做什么。
 
-| 顺序 | 你口述的操作 | 产物 | 关键约束 |
-|---|---|---|---|
-| 1 | `$project-map audit` | 只读盘点报告 | 不写任何文件。产出：目录结构、可运行命令、测试覆盖、明显的领域边界、缺失文档清单 |
-| 2 | `$project-map init` | `roadmap.yaml`、基于**已验证**证据的 `AGENTS.md` | 只写代码里能证实的东西：命令、路径、目录约定。不写业务规则 |
-| 3 | `$product-discovery-roadmap discover` | `doc/product-discovery-notes.md` | 输入是代码证据 + 你的口述，不是纯代码推断。逐条打标签 |
-| 4 | 你逐条裁决 `未知` 和 `冲突` | 更新 discovery | 这一步没有捷径，也不能让 AI 代劳 |
-| 5 | `$product-discovery-roadmap draft-prd` | `doc/general-product-requirement.md` | **只写 `已批准` 的条目**。`已验证` 但未确认的进「现状待确认」附录 |
-| 6 | `$product-discovery-roadmap draft-roadmap` | `doc/feature-roadmap.md` | 同时含已有能力和计划能力，见第 2 节 |
-| 7 | `$architecture-baseline recover` | `doc/architecture-baseline.md`、`doc/adr/` | 记录**现有**边界，并标出哪些是有意约束、哪些是历史包袱 |
-| 8 | `$project-map refresh` | 完整 `AGENTS.md` | 现在才有真实的路由目标 |
+下面每一行单独发送；上一行报告并停止后，先审阅证据，再发送下一行。
 
-第 2 步和第 8 步都写 `AGENTS.md`，是故意的。第 2 步那份只让 AI 认得路（命令、目录、
-禁区），第 8 步那份才带业务路由。中间那几步 AI 需要能在仓库里干活。
+| # | 必须调用 | 你可以这样说 | 产物 / 地图回写 |
+|---|---|---|---|
+| 1 | `$project-map audit` | `使用 $project-map audit，只读盘点当前 WMS 仓库的目录、manifest、CI、测试、可运行命令、领域边界和缺失文档；不要写文件。` | 只读报告；地图不存在或不变 |
+| 2 | `$project-map init` | `使用 $project-map init，为现有 WMS 建立 roadmap.yaml 和骨架 AGENTS.md；只写已验证的命令、路径和边界，不把代码行为写成产品规则。` | map/AGENTS；`stage: discovery` |
+| 3 | `$product-discovery-roadmap discover` | `使用 $product-discovery-roadmap discover，把仓库证据和我的业务说明分成已批准、已验证、遗留参考、未知、冲突；写 notes、回写 docs.discovery 后停止。` | discovery；`docs.discovery` |
+| 4 | `$product-discovery-roadmap discover` | `继续使用 $product-discovery-roadmap discover。我对未决项的裁决如下：<逐条列出>；只更新 discovery 分类，不起草 PRD。` | 更新 discovery；地图不变 |
+| 5 | `$product-discovery-roadmap approve-discovery` | `使用 $product-discovery-roadmap approve-discovery；我 <姓名> 于 <日期> 批准已裁决的 discovery 进入 PRD，依据是本消息；只记录批准。` | discovery 批准字段 |
+| 6 | `$product-discovery-roadmap draft-prd` | `使用 $product-discovery-roadmap draft-prd，只把已批准的期望行为写入 canonical PRD；已验证但未确认的行为只进待确认附录；回写 docs.prd 和 stage: prd。` | PRD；`docs.prd`、`stage: prd` |
+| 7 | `$product-discovery-roadmap approve-prd` | `使用 $product-discovery-roadmap approve-prd；我 <姓名> 于 <日期> 批准当前 PRD，依据是本消息；只记录批准。` | PRD 批准字段 |
+| 8 | `$product-discovery-roadmap draft-roadmap` | `使用 $product-discovery-roadmap draft-roadmap，把已观察实现登记为 as-built，把新能力登记为 planned；回写 docs.roadmap、functions 和 stage: roadmap。` | roadmap；mixed function states |
+| 9 | `$product-discovery-roadmap approve-roadmap` | `使用 $product-discovery-roadmap approve-roadmap；我 <姓名> 于 <日期> 批准当前能力边界和计划顺序，依据是本消息；只记录批准。` | roadmap 批准字段 |
+| 10 | `$architecture-baseline recover` | `使用 $architecture-baseline recover，从 manifest、CI、目录和代表性代码恢复现有架构；每项标 Verified 或 Inferred，不把历史包袱包装成约束；回写 docs.architecture 和 stage: architecture。` | baseline/ADR；`docs.architecture` |
+| 11 | `$architecture-baseline approve` | `使用 $architecture-baseline approve；我 <姓名> 于 <日期> 批准当前 recovered baseline 中明确列出的 intended constraints，并保留历史包袱标签；依据是本消息。` | 架构批准字段 |
+| 12 | `$project-map refresh` | `使用 $project-map refresh，按 roadmap.yaml 路由和已验证仓库命令刷新 AGENTS.md；不要复制 PRD、function 清单或 architecture 正文。` | 完整但精简的 AGENTS |
+
+第 2 步和第 12 步都写 `AGENTS.md`，是故意的。第 2 步那份只让 AI 认得路（命令、目录、
+禁区），第 12 步才补齐稳定的事实路由；具体路径仍由 `roadmap.yaml` 提供。
 
 ## 2. 已有 function 记成什么状态
 

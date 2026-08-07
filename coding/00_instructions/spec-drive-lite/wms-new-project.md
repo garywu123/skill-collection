@@ -15,20 +15,25 @@ WMS 通常有多个领域、库存一致性约束、外部集成、权限与审�
 
 ## 1. 建立已批准事实
 
-| 顺序 | 你口述的操作 | 产物 | `roadmap.yaml` 变化 | 你在下一步前要确认 |
-|---|---|---|---|---|
-| 1 | `$project-map init` | `roadmap.yaml`、骨架 `AGENTS.md` | 创建文件；`stage: discovery` | 项目 ID 正确，`docs` 只列真实存在的文件 |
-| 2 | `$product-discovery-roadmap discover` | `doc/product-discovery-notes.md` | `docs.discovery` 指向该文件 | 审阅未决问题、假设、范围；够不够写 PRD |
-| 3 | 你口述批准，并说「进入 PRD 阶段」 | 无 | `stage: prd` | 未决的业务选择不能默认为已决定 |
-| 4 | `$product-discovery-roadmap draft-prd` | `doc/general-product-requirement.md` | `docs.prd` | 逐条审库存不变量、审计、权限、失败行为 |
-| 5 | 你口述批准，并说「进入 roadmap 阶段」 | 无 | `stage: roadmap` | PRD 描述的是「要什么」，没替你决定技术实现 |
-| 6 | `$product-discovery-roadmap draft-roadmap` | `doc/feature-roadmap.md` | `docs.roadmap`；`functions[]` 全部写入，状态 `planned` | 每个 function 都能独立验收演示 |
-| 7 | `$architecture-baseline full` | `doc/architecture-baseline.md`、`doc/adr/` | `docs.architecture`；`stage: architecture` | 不可违反的技术约束、待解决的 spike |
-| 8 | `$project-map refresh` | 填好的 `AGENTS.md` | 无（只校对路径） | 它引用事实，不复制整份 WMS 文档 |
-| 9 | `$ui-wireframe-spec product`（有共享 UI 时） | `doc/ui-structure.md` | `docs.ui` | 没有共享 UI 时，PRD 里要有明确的 N/A 理由 |
+每行是一条独立消息。把姓名、日期和范围替换为真实值。
 
-第 8 步放在架构之后是有原因的：`AGENTS.md` 的路由表要指向已经存在的文件。第 1 步的
-骨架版本只够 AI 认路，不是最终版本。
+| # | 必须调用 | 你可以这样说 | 产物 / 地图回写 |
+|---|---|---|---|
+| 1 | `$project-map init` | `使用 $project-map init，为 WMS 创建 profile: full 的 roadmap.yaml 和骨架 AGENTS.md；docs 只登记真实存在的文件，完成后报告并停止。` | 创建两文件；`stage: discovery`、`docs: {}` |
+| 2 | `$product-discovery-roadmap discover` | `使用 $product-discovery-roadmap discover，围绕 WMS 用户、收货到发运流程、库存不变量、权限、审计和外部集成开展 discovery；写完 notes、回写 docs.discovery，然后停止。` | discovery notes；`docs.discovery` |
+| 3 | `$product-discovery-roadmap approve-discovery` | `使用 $product-discovery-roadmap approve-discovery；我 <姓名> 于 <日期> 批准当前 discovery notes 进入 PRD，依据是本消息；只记录批准并停止。` | notes 内批准字段；地图不变 |
+| 4 | `$product-discovery-roadmap draft-prd` | `使用 $product-discovery-roadmap draft-prd，从已批准 discovery 起草 WMS PRD；只写产品结果、规则、范围和非目标；回写 docs.prd，并将描述性 stage 记为 prd，然后停止。` | PRD；`docs.prd`、`stage: prd` |
+| 5 | `$product-discovery-roadmap approve-prd` | `使用 $product-discovery-roadmap approve-prd；我 <姓名> 于 <日期> 批准当前 PRD，依据是本消息；只记录批准并停止。` | PRD 批准字段；地图不变 |
+| 6 | `$product-discovery-roadmap draft-roadmap` | `使用 $product-discovery-roadmap draft-roadmap，从已批准 PRD 建立可独立验收的 WMS functions、依赖和 MVP 边界；回写 docs.roadmap 与 planned entries，将 stage 记为 roadmap，然后停止。` | 产品 roadmap；`docs.roadmap`、`functions[]`、`stage: roadmap` |
+| 7 | `$product-discovery-roadmap approve-roadmap` | `使用 $product-discovery-roadmap approve-roadmap；我 <姓名> 于 <日期> 批准当前 function 边界、依赖和顺序，依据是本消息；只记录批准并停止。` | roadmap 批准字段；地图不变 |
+| 8 | `$architecture-baseline full` | `使用 $architecture-baseline full，为已批准的 WMS PRD 和 roadmap 建立跨 function 架构约束、ADR、deferred decisions 和 spikes；回写 docs.architecture，将 stage 记为 architecture，然后停止。` | baseline/ADR；`docs.architecture`、`stage: architecture` |
+| 9 | `$architecture-baseline approve` | `使用 $architecture-baseline approve；我 <姓名> 于 <日期> 批准当前 architecture baseline 和列出的 ADR，依据是本消息；只记录批准并停止。` | 架构批准字段；地图不变 |
+| 10 | `$project-map refresh` | `使用 $project-map refresh，从已批准产品、roadmap、architecture 和仓库证据刷新 AGENTS.md；只保留 roadmap.yaml 路由、项目边界和已验证命令，不复制业务或架构正文。` | 精简 AGENTS；只校对地图 |
+| 11 | `$ui-wireframe-spec product`，仅适用时 | `使用 $ui-wireframe-spec product，为 WMS 共享导航、全局 shell 和跨 function UI 模式建立 ui-structure；回写 docs.ui，然后停止。` | UI structure；`docs.ui` |
+| 12 | `$ui-wireframe-spec product`，仅适用时 | `使用 $ui-wireframe-spec product；我 <姓名> 于 <日期> 批准当前 product UI structure，依据是本消息；只记录批准字段，不重画或进入 feature UI。` | UI 批准字段；地图不变 |
+
+第 10 步放在架构之后，是为了让骨架 `AGENTS.md` 升级成可靠的路由文件。它不需要复制
+具体路径：运行时先读 `roadmap.yaml`，再按 `docs.*` 找到相应事实。
 
 早期 roadmap 的一个合理形态：`F001 收货` → `F002 上架` → `F003 库存查询与调整`
 → `F004 库存预留与分配` → `F005 拣货` → `F006 发运`。以批准后的 roadmap 为准。
@@ -45,12 +50,12 @@ docs: {}
 functions: []
 ```
 
-roadmap 批准后（第 6 步）：
+roadmap 批准后（第 7 步）：
 
 ```yaml
 project: WMS
 profile: full
-stage: architecture
+stage: roadmap
 docs:
   discovery: doc/product-discovery-notes.md
   prd: doc/general-product-requirement.md
@@ -103,22 +108,23 @@ functions:
 
 每个 function 独立重复这个循环。不能用 F001 的验收替代其他 function 的验收。
 
-| 顺序 | 你口述的操作 | 产物 | `roadmap.yaml` 变化 |
+| # | 必须调用 | 你可以这样说 | 产物 / 地图回写 |
 |---|---|---|---|
-| 1 | Spec Kit `specify F001` | `spec.md`：用户场景、业务规则、负向场景、`SC-###` 验收场景 | `status: specified`，写入 `spec` 路径 |
-| 2 | 同一步：写交付 checklist | `checklist.md`，验收场景逐条成为一个 box | 写入 `checklist` 路径 |
-| 3 | Spec Kit `clarify F001` | 澄清写回 spec | 无 |
-| 4 | `$ui-wireframe-spec feature F001`（有 UI 时） | `wireframes.md` | 无 |
-| 5 | Spec Kit `plan`、`tasks` | `plan.md`、`tasks.md` | 无 |
-| 6 | `$spec-sync pre-implement F001 feature` | `pre-implementation-review.md`，Pass 或 Blocked | 无 |
-| 7 | 你审阅并口述批准，开始实施 | 代码、自动化测试、迁移证据 | `status: implementing` |
-| 8 | `$spec-sync post-implement F001 feature` | 把证据写进 `checklist.md` 的 Evidence 表 | `status: verifying` |
-| 9 | **开新对话**，核对 checklist | 勾选、填 Decision 段 | `status: accepted` + `verified` |
+| 1 | Spec Kit `specify` | `执行 Spec Kit specify F001 收货入库；只覆盖 roadmap 中的 F001 和它拥有的 PR IDs，同时创建 spec.md 与交付 checklist；回写 spec/checklist 路径并设为 specified。` | spec/checklist；`specified` |
+| 2 | Spec Kit `clarify` | `执行 Spec Kit clarify F001；只解决会改变验收场景、边界或失败行为的问题，把答案写回 spec 后停止。` | 澄清后的 spec；地图不变 |
+| 3 | `$ui-wireframe-spec feature F001`，仅适用时 | `使用 $ui-wireframe-spec feature F001，根据已澄清 spec 和 product UI structure 画低保真结构与状态；只写 F001 wireframes，然后停止。` | wireframes；地图不变 |
+| 4 | `$ui-wireframe-spec feature F001`，仅适用时 | `使用 $ui-wireframe-spec feature F001；我 <姓名> 于 <日期> 批准当前 F001 wireframes，依据是本消息；只记录批准，不进入 plan。` | UI 批准字段；地图不变 |
+| 5 | Spec Kit `plan` | `执行 Spec Kit plan F001；遵守 architecture baseline 和已批准 wireframes，只设计 F001，不吸收后续 functions。` | plan；地图不变 |
+| 6 | Spec Kit `tasks` | `执行 Spec Kit tasks F001；把 spec 场景、plan 和所需验证拆成可执行任务，不扩大范围。` | tasks；地图不变 |
+| 7 | `$spec-sync pre-implement F001 feature` | `使用 $spec-sync pre-implement F001 feature，检查 spec、plan、tasks、checklist 与上层事实的纵向一致性；只写 pre-review，报告 Pass/Blocked 后停止。` | pre-review；Blocked 时只记 notes |
+| 8 | 无；普通实现，或可选 `$guided-tdd-pairing` | `我已审阅并批准 F001 pre-implementation review。现在只实现 F001，运行约定测试，并把 roadmap.yaml 中 F001 设为 implementing、stage 记为 implementation；不要验收。` | 代码/测试；`implementing` |
+| 9 | `$spec-sync post-implement F001 feature` | `使用 $spec-sync post-implement F001 feature，把实际命令和结果写入 checklist Evidence；不要勾 acceptance boxes 或填写 Decision；无 blocker 时设为 verifying。` | Evidence；`verifying` |
+| 10 | 无；必须开新对话 | `核对 roadmap.yaml 中 F001 指向的 spec、checklist、diff 和测试证据。不要修代码；逐项判断 checklist。若全部满足，我 <姓名> 于 <日期> 明确接受 F001；否则记录 changes requested。` | checklist Decision；通过时 `accepted` + `verified` |
 
-第 2 步的时机是关键：checklist 和 spec 一起写，因为这时候你才最清楚验收标准是什么。
+第 1 步同时写 checklist 是关键：这时候你才最清楚验收标准是什么。
 交付前才补的 checklist 一定会被写成刚好能通过的样子。
 
-第 9 步必须换对话。写代码的上下文不给自己的作业打勾——这是整套流程里唯一不能省的
+第 10 步必须换对话。写代码的上下文不给自己的作业打勾——这是整套流程里唯一不能省的
 独立性要求。
 
 实现后发现的新问题不能悄悄塞回 F001：行为缺陷、技术债、未来想法、跨 function 技术

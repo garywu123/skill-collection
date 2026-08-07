@@ -1,75 +1,67 @@
 # Project Agent Instructions
 
-## Scope
+## Scope and precedence
 
-This file owns agent behavior, document routing, verified commands, and working
-boundaries. It does not own product, architecture, feature, or delivery truth;
-those live in the documents routed below.
+This file owns agent behavior, routing, verified commands, and working
+boundaries. Product, architecture, function, and delivery truth live in the
+artifacts routed by `roadmap.yaml`.
 
-## State
+Resolve conflicts in this order: current explicit user instruction, approved
+product truth, the selected roadmap entry and function spec, applicable
+architecture, repository evidence, then legacy material. Report conflicts;
+never silently promote current or legacy behavior into desired behavior.
 
-`roadmap.yaml` is the single state file. Read it first in every conversation; it
-records the current stage, every function, and where each document lives. Do not
-reconstruct state from conversation history or from a previous agent's summary.
-Its state is descriptive, not permission to start another operation.
+## Routing
 
-## Document routing
+Read `roadmap.yaml` first in every conversation. Its state is descriptive, not
+permission to start work. Follow only the route needed for the named operation.
 
-| Need | Read |
+| Need | Resolve from `roadmap.yaml` |
 |---|---|
-| Current stage, function list, document paths | `roadmap.yaml` |
-| Product outcomes, scope, rules | `[prd path]` |
-| Function boundaries and sequence | `[roadmap doc path]` |
-| Cross-function technical decisions | `[architecture path]` |
-| One function's behavior and acceptance | that function's `spec` in `roadmap.yaml` |
-| One function's delivery bar | that function's `checklist` in `roadmap.yaml` |
-| Legacy behavior | `[legacy path]`, as evidence only |
+| Product outcomes, scope, rules | `docs.prd` |
+| Function boundaries and sequence | `docs.roadmap`, then one selected entry |
+| Cross-function technical decisions | `docs.architecture` |
+| Product UI structure | `docs.ui`, when present |
+| One function's behavior or delivery bar | that entry's `spec` or `checklist` |
+| Legacy evidence | `docs.legacy`, when present; evidence only |
 
-Read only the entries the named step needs. When sources conflict, stop and
-report the evidence; never silently prefer current code over approved documents.
+Do not load unrelated function specs or reconstruct state from chat history.
 
-## The four rules
+## Working contract
 
-1. Read `roadmap.yaml` first. It is where the project is.
-2. Do exactly the one step the user named. Report the result and stop. Never
-   continue into the next stage because it looks obvious.
-3. After changing a routed artifact or a function's real delivery state, update
-   only the affected `roadmap.yaml` fields in the same turn.
-4. A function reaches `accepted` only when its checklist is verified in a fresh
-   conversation, by explicit human decision.
+1. Do exactly the one operation the user named, report, and stop.
+2. Modify only the authorized owner artifacts and directly affected map fields.
+3. Do not infer approval, acceptance, release authority, or the next Skill.
+4. Before the final response, reconcile `roadmap.yaml` entries changed by this operation.
+5. A function reaches `accepted` only after fresh-context checklist verification
+   and an explicit human decision.
 
-## Map write-back contract
+## Map write-back
 
-`project-map` owns the schema. The currently authorized operation may update
-only the route or function entry its work directly changed.
+`project-map` owns the schema. The authorized operation may update only the
+route or function entry whose underlying fact it directly changed.
 
-| Established fact | Required map write-back |
+| Established fact | Required write-back |
 |---|---|
 | A routed product, architecture, or UI document now exists | Add or correct its `docs.*` path |
-| The approved product roadmap adds a function | Add its `planned` entry |
+| The approved product roadmap adds a function | Add `planned`, or evidence-backed `as-built` during adoption |
 | A function spec and checklist now exist | Set `specified`; record both paths |
 | The human starts implementation | Set `implementing` |
 | Implementation evidence is ready for independent checking | Set `verifying` |
-| A fresh conversation verifies every box and the human accepts | Set `accepted`; add `verified` |
+| Fresh verification passes and the human accepts | Set `accepted`; add `verified` |
 | Accepted behavior changes | Reset to `specified`; remove `verified`; clear stale checklist results |
 
-Do not update the map when no routed fact changed. Before the final response,
-reconcile it with changes made in this turn; never advance unrelated entries.
+Do not change the map merely because an operation ran, and never advance
+unrelated entries.
 
 ## Function lifecycle
 
-`planned` -> `specified` -> `implementing` -> `verifying` -> `accepted`
+`planned -> specified -> implementing -> verifying -> accepted`
 
-`as-built` sits outside that line: the function exists in the repository but has
-no spec and was never verified here. Convert it to `specified` when it next
-needs to change; do not retro-specify functions nobody is touching.
-
-Specifying a function writes both its spec and its delivery checklist. The
-checklist is derived from that spec's acceptance criteria plus the standing
-quality bar below; write it while the spec is being written, not at delivery
-time. A context that implemented a function does not tick its own boxes. When
-accepted behavior changes, clear all boxes, Evidence, Decision, reviewer, and
-date before the function can be verified again.
+`as-built` means an implementation was observed but not specified or accepted
+under this process. Convert only the function being changed. When accepted
+behavior changes, clear old checklist boxes, Evidence, Decision, reviewer, and
+date before reverification.
 
 ## Verified commands
 
@@ -78,13 +70,12 @@ date before the function can be verified again.
 - Targeted test: `[verified command]`
 - Full validation: `[verified command]`
 
-Omit any command not verified by a manifest, CI configuration, or a successful
-run in this repository.
+Omit commands not verified by a manifest, CI, or a successful repository run.
 
 ## Change rules
 
-- Make the smallest change that satisfies the active function spec.
+- Make the smallest change satisfying the selected function spec.
 - Preserve explicit non-goals; avoid unrelated refactors and dependency bumps.
 - Add or update tests for changed behavior.
-- Report conflicts, unknowns, unverified assumptions, and remaining risk.
+- Report unknowns, conflicts, assumptions, and remaining risk.
 - Never commit secrets or production data.
