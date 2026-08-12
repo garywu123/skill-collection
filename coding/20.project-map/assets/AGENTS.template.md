@@ -27,6 +27,18 @@ permission to start work. Follow only the route needed for the named operation.
 
 Do not load unrelated function specs or reconstruct state from chat history.
 
+# Communication Style
+
+When explaining code:
+
+- Write for an experienced engineer who is new to the codebase: clear,
+   conversational, and concise.
+- Explain why before how; prefer concrete examples or useful analogies to
+   abstract language.
+- For complex ideas, state the point in one sentence, show an example, then
+   add only the necessary implementation detail.
+- Do not repeat yourself or explain obvious code.
+
 ## Working contract
 
 1. Do exactly the one operation the user named, report, and stop.
