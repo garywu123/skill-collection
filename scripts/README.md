@@ -39,7 +39,7 @@
 ## 项目级安装
 
 ```powershell
-# 在项目根目录，链接 coding 预设的 6 个 skill
+# 在项目根目录，链接 coding 预设的 7 个 skill
 d:\code\personal-projects\skill-collection\scripts\Install-Skills.ps1
 
 # 先看会装什么，不写任何文件
@@ -103,6 +103,6 @@ coding/05.product-discovery-roadmap  ->  .claude/skills/product-discovery-roadma
 
 ## 操作指南不参与部署
 
-`coding/00_instructions/spec-drive-lite/` 里的三份模式指南是给人看的，留在本仓库
+`coding/00_instructions/` 里的六份场景指南是给人看的，留在本仓库
 读即可。它们内部链接指向各 skill 的 reference 文件，复制进项目会断链，而且会在每个
 项目里留下一份还在演进的文档副本。

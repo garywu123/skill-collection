@@ -63,7 +63,7 @@ in the relevant `SKILL.md` and detailed material in that Skill's resources.
 
 ## Deployment
 
-`scripts/Deploy-Skills.ps1` deploys only the explicit mappings in the local,
+`scripts/deploy-skill/Deploy-Skills.ps1` deploys only the explicit mappings in the local,
 gitignored `scripts/deploy-skills.json` to configured GitHub Copilot, Claude
 Code, and Codex/Agents locations. Run it with `-ListOnly` to inspect the mapping
 without writing to those locations.

@@ -11,7 +11,7 @@ of truth.
 | Product requirements | Approved intent, jobs, journeys, requirements, safeguards, explicit exclusions, and success measures | Discovery history, technical architecture, and task lists |
 | Feature roadmap | Feature outcomes, descriptions, acceptance, dependencies, delivery boundary, UI surface, and single-direction requirement ownership | Mutable delivery status, reverse coverage tables, or implementation tasks |
 | `roadmap.yaml` | Descriptive project stage, canonical document routes, and one concise status entry per function | Domain truth, approval rationale, history, or authority to start work |
-| Function `checklist.md` | Spec-derived acceptance criteria, actual evidence, fresh-context review, and human decision | Requirements, implementation fixes, product/architecture changes, or release authorization |
+| Function `checklist.md` | Roadmap-derived acceptance gates, actual evidence, fresh-context review, and human decision | Implementation design, requirements, fixes, product/architecture changes, or release authorization |
 | UI structure | Navigation, global shell, device contexts, screen inventory, cross-screen patterns | Feature screen layout or visual style |
 | Feature `wireframes.md` | Screen skeletons, control and state tables, and flows for one feature | Component library, styling, or framework choices |
 | Constitution | Stable engineering governance and non-negotiable principles | Product scope, feature status, and named technologies |
@@ -19,7 +19,8 @@ of truth.
 | ADR | Rationale, rejected alternatives, and supersession history for one decision | The current state of the system |
 | `AGENTS.md` | Agent operating rules, source precedence, routing, verified commands, boundaries | Copies of the artifacts above |
 | Optional feature `spec.md` | Detailed flows, edge cases, and acceptance when the roadmap entry is insufficient | Later-feature responsibilities or architecture implementation |
-| `plan.md` / `tasks.md` | Technical design and implementation work for one feature | Product truth for the whole system |
+| `implementation-plan.md` | Component/type design, key functions, dependency-aware vertical slices, and planned verification for one feature | Repeated product or architecture truth, actual evidence, or generic TDD instructions |
+| Optional detailed `plan.md` / `tasks.md` | Extra technical analysis and work decomposition when the compact packet is insufficient | Product truth for the whole system |
 | Optional release evidence | Release-scope build, migration, rollback, operations, and execution evidence required by project policy | Feature acceptance, deployment logic, or rewritten feature history |
 | `TD-###` record | Concrete implementation debt, impact, owner, repayment trigger/evidence | Future product scope or cross-feature architecture truth |
 | Change request | Original request, impact, and proposed routing | Requirement text or approval; decisions live in the artifact updated by each routed owner |
@@ -41,9 +42,9 @@ with an approved requirement. Report the conflict.
 `roadmap.yaml` routes readers to canonical sources; it does not outrank or
 summarize them. Report a mismatch instead of copying domain content into it.
 
-A feature `plan.md` may refine the architecture baseline and may not contradict
-it. A feature that needs to contradict it amends the baseline first, producing a
-superseding ADR; it does not diverge quietly.
+A feature implementation plan may refine the architecture baseline and may not
+contradict it. A feature that needs to contradict it amends the baseline first,
+producing a superseding ADR; it does not diverge quietly.
 
 ## Generation timing
 

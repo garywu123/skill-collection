@@ -15,7 +15,7 @@ documents; history lives in Git. Never append a change log to this file.
 | Field | Required | Value |
 |---|---|---|
 | `project` | yes | Short project identifier |
-| `profile` | no | `lite` or `full`; an intent marker, it enforces nothing |
+| `profile` | no | `lite` or `full`; add after roadmap assessment, descriptive only |
 | `stage` | yes | `discovery`, `prd`, `roadmap`, `architecture`, `implementation`, `done`; descriptive context only |
 | `docs` | yes | Map of role to repository-relative path |
 | `functions` | yes | List of entries; empty before the roadmap stage |
@@ -29,8 +29,10 @@ never written is worse than an absent row, because it reads as done.
 |---|---|---|
 | `id` | yes | Stable identifier such as `F001`; never reused |
 | `name` | yes | One short line |
+| `domain` | after roadmap approval | Stable domain key from the feature roadmap |
 | `status` | yes | `planned`, `as-built`, `implementing`, `verifying`, `accepted` |
-| `spec` | no | Optional detailed behavior path for a feature that needs one |
+| `plan` | before implementation | Compact `implementation-plan.md` or detailed technical plan path |
+| `spec` | no | Optional detailed behavior path for an exceptional feature that needs one |
 | `checklist` | at `implementing` and beyond | Repository-relative path |
 | `verified` | at `accepted` | `YYYY-MM-DD by <name>` |
 | `notes` | no | One line; blocker, supersession, or as-built location |
@@ -47,16 +49,16 @@ needs to change that function. Record any observed test or runtime evidence in
 a concise `notes` value; the status itself never claims that the function
 works.
 
-The approved roadmap entry is the default behavior source. Add `spec` only when
-that feature needs a detailed behavior artifact. Its presence selects the
-detailed delivery route; its absence leaves the roadmap entry authoritative for
-the direct route. Do not add a route or ownership field to this state file.
+The approved roadmap entry is the default behavior source. A compact route has
+`plan` and `checklist` and no `spec`. Add `spec` only when a cohesive feature
+needs a detailed behavior artifact; its presence selects the detailed route.
+`domain` is a routing key, not copied domain truth.
 
 ## Status rules
 
 - Move forward one status at a time. State the reason when moving backward.
-- `implementing` requires a checklist. A detailed-route feature also requires
-  its optional `spec`; a direct-route feature does not.
+- `implementing` requires a plan and checklist. A detailed-route feature also
+  requires its optional `spec`; a compact-route feature does not.
 - Only a human sets `accepted`, and only after the checklist is verified in a
   fresh conversation.
 - Never record `accepted` for work that predates this process. Use `as-built`

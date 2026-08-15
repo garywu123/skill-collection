@@ -1,6 +1,13 @@
 # Baseline and Recovery Operations
 
-## Full or Lite
+## Create, Assess, Full, or Lite
+
+For `create`, determine Lite or Full before choosing a template. Use roadmap
+sizing plus actual cross-feature decision pressure; do not ask the user to pick
+a mode when the evidence is sufficient. `assess` performs steps 1–3 and reports
+the selected mode, bundle shape, evidence, and missing coverage without writing.
+Explicit `full` or `lite` is an override and requires a rationale when it
+conflicts with the evidence.
 
 1. Derive drivers only from approved `PR-###`, constitution principles, and
    external constraints; drop unsupported quality attributes.
@@ -37,3 +44,5 @@ material claim `Verified` with a path/command citation or `Inferred` with patter
 and uncertainty. Separate deliberate architecture from drift. Prefer read-only
 inspection and never execute setup/build code from an untrusted repository for
 discovery. Report product contradictions without repairing them.
+Select Lite or Full with the same decision rule used by `create`, and report the
+evidence for that selection.

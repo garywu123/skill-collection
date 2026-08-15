@@ -1,6 +1,6 @@
 ---
 name: product-discovery-roadmap
-description: "Use only when the current user request explicitly authorizes one product operation: discover, approve discovery, draft or approve a PRD/roadmap, propose an amendment, or approve a reviewed amendment. Do not select this skill merely because roadmap.yaml shows a matching stage or a prior phase is complete."
+description: "Use only when the current user request explicitly authorizes one product operation: discover, approve discovery, draft or approve a PRD/roadmap, assess an existing roadmap, propose an amendment, or approve a reviewed amendment. Do not select this skill merely because roadmap.yaml shows a matching stage or a prior phase is complete."
 ---
 
 # Product Discovery Roadmap
@@ -42,7 +42,8 @@ never gate, approve, or set a function to `accepted`.
 |---|---|
 | `discover` | Set `docs.discovery` |
 | `draft-prd` | Set `docs.prd` |
-| `draft-roadmap` | Set `docs.roadmap`; add new functions as `planned`, and evidence-backed existing implementations as `as-built` during brownfield adoption |
+| `draft-roadmap` | Set `docs.roadmap` and selected `profile`; add domain-aware functions as `planned`, and evidence-backed existing implementations as `as-built` during brownfield adoption |
+| `assess-roadmap` | None; assessment is read-only |
 | `amend` | None; a proposal is not canonical truth |
 
 Advance `stage` only when the current request asked to advance it. Leave
@@ -89,6 +90,7 @@ artifact instead of creating a competing source of truth.
 | `approve-prd` | Explicit human approval of the reviewed PRD | PRD status and approval evidence | Approved |
 | `draft-roadmap` | PRD approved | Feature roadmap | Awaiting review |
 | `approve-roadmap` | Explicit human approval of roadmap boundaries and order | Roadmap status and approval evidence | Approved |
+| `assess-roadmap` | Existing roadmap | Read-only profile, bundle, domain, and feature-cohesion findings | Assessment reported |
 | `amend` | Explicit product change, CR-ID, and affected canonical artifact | Amendment proposal; canonical truth unchanged | Awaiting review |
 | `approve-amendment` | Explicit approval of one reviewed amendment and its complete edit set | Applied reviewed edits and approval evidence | Approved |
 
@@ -127,8 +129,11 @@ user explicitly gave and does not begin the next operation.
   roadmap when it begins.
 
 A `full` or `lite` profile changes scale, splitting, and necessary domain depth,
-not the rule against duplication. Both retain staged approvals, stable IDs,
-feature-to-requirement ownership, dependencies, and observable acceptance.
+not the semantic model or the rule against duplication. Every roadmap is
+organized as domains containing independently acceptable features. In a small
+project one domain may contain one feature, but the two remain distinct fields.
+Both profiles retain staged approvals, stable IDs, feature-to-requirement
+ownership, dependencies, and observable acceptance.
 
 ## Roadmap sizing fields
 
@@ -137,21 +142,28 @@ feature-to-requirement ownership, dependencies, and observable acceptance.
 integer, and `Regulatory/audit/contractual constraint` as exactly `yes`, `no`,
 or `unknown`. `Sizing evidence` contains only stable source anchors.
 
-Recommend `Profile sizing: lite` only when feature count is at most 8,
+Select `Profile sizing: lite` only when feature count is at most 8,
 deployable count is exactly 1, datastore count is at most 1, owning team count
 is exactly 1, and the constraint value is `no`. Any unknown or failed condition
 means `full`.
 
-The recommendation is written into the roadmap for the human to accept or
-override; `roadmap.yaml`'s `profile` field is an intent marker that enforces
-nothing. Report a mismatch between the two instead of silently correcting it.
+Write the evidence-backed result into the roadmap and record the same profile in
+`roadmap.yaml`. A user may explicitly override it only with a rationale recorded
+in `Sizing evidence`. `draft-roadmap` also selects `single` or `split`
+automatically from the artifact rules. No initial mode decision is required.
+
+Before assigning feature IDs, test each candidate for one independently
+acceptable outcome. Split domain-sized candidates into cohesive features during
+drafting. During `assess-roadmap`, report over-broad features and a proposed
+temporary-label split, but do not edit approved artifacts. Route any approved
+roadmap change through `amend <CR-ID>` and `approve-amendment`.
 
 ## Conditional Operation Playbooks
 
 Load exactly one playbook after the current request selects its operation:
 
 - `discover`: [discovery playbook](./references/discovery-operation.md);
-- `draft-prd` or `draft-roadmap`: [product artifact playbook](./references/product-artifact-operations.md);
+- `draft-prd`, `draft-roadmap`, or `assess-roadmap`: [product artifact playbook](./references/product-artifact-operations.md);
 - `amend` or `approve-amendment`: [amendment playbook](./references/product-amendment-operation.md).
 
 Approving discovery, a PRD, or a roadmap loads no drafting playbook.
@@ -175,7 +187,8 @@ Before presenting any artifact, also check:
 - no product statement prescribes architecture or implementation;
 - for a roadmap: every requirement has exactly one primary owner, every
   `Also Bound By` reference resolves, dependencies resolve without cycles,
-  delivery boundaries and UI values are valid, each feature has observable
+  delivery boundaries and UI values are valid, every feature has a stable
+  domain key and one cohesive outcome, each feature has observable
   acceptance, and sizing fields match the criteria above with anchor-only
   `Sizing evidence`; perform this check without writing a reverse coverage table;
 - for a PRD, `Product UI structure applicability` is exactly `required` or

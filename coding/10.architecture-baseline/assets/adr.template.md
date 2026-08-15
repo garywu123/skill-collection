@@ -40,5 +40,5 @@ whether an external contract breaks. For a two-way door, one line is enough.
 
 ## Compliance
 
-How a reviewer checks that a `plan.md` or a change respects this decision.
+How a reviewer checks that a feature implementation plan or a change respects this decision.
 Where relevant, cite the Plan Constraint ID this ADR produced.

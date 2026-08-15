@@ -1,6 +1,6 @@
 ---
 name: architecture-baseline
-description: "Use only when the current user explicitly authorizes architecture-baseline work: create a full or lite cross-feature baseline, recover the architecture an existing repository demonstrates, resolve one approved technical spike, amend a challenged decision, or approve reviewed baseline/ADR artifacts. Do not select this skill merely because roadmap.yaml shows an architecture stage or another phase completed."
+description: "Use only when the current user explicitly authorizes architecture-baseline work: automatically size and create a cross-feature baseline, explicitly override it as full or lite, assess or recover an existing architecture, resolve one approved technical spike, amend a challenged decision, or approve reviewed baseline/ADR artifacts. Do not select this skill merely because roadmap.yaml shows an architecture stage or another phase completed."
 ---
 
 # Architecture Baseline
@@ -39,13 +39,14 @@ never gate, approve, or set a function to `accepted`.
 
 | Operation | `roadmap.yaml` effect |
 |---|---|
-| `full`, `lite`, `recover` | Set `docs.architecture` |
+| `create`, `full`, `lite`, `recover` | Set `docs.architecture` |
+| `assess` | None; assessment is read-only |
 | `amend` | None; a proposal is not canonical truth |
 | `resolve-spike` | None; a spike closes an investigation, not a decision |
 
 Require the current request to identify a CR-ID or SPK-ID; never allocate or
-guess one. `full` and `lite` follow the mode the current request names; see
-**Modes** below.
+guess one. `create` and `recover` select a mode from evidence. `full` and `lite`
+are explicit overrides; see **Modes** below.
 
 `approve` records the human's approval fields — actor, date, and evidence —
 inside the reviewed artifact itself, and changes nothing else.
@@ -80,9 +81,11 @@ Update the canonical artifact rather than creating a competing source of truth.
 
 | Operation | Required before execution | Creates or modifies | Stops at |
 |---|---|---|---|
-| `full` | Approved PRD and roadmap; the request names `full` | Full baseline and proposed ADRs | Awaiting review |
-| `lite` | Same approval prerequisite; the request names `lite` | One-page baseline; no ADRs | Awaiting review |
-| `recover` | Repository access | Evidence-labelled baseline | Awaiting review |
+| `create` | Approved PRD and roadmap | Auto-selected Lite or Full baseline and any proposed ADRs | Awaiting review |
+| `full` | Approved PRD and roadmap; explicit override rationale when sizing differs | Full baseline and proposed ADRs | Awaiting review |
+| `lite` | Same approval prerequisite and override rule | One-page baseline; no ADRs | Awaiting review |
+| `assess` | Existing roadmap and architecture evidence | Read-only sizing, bundle, and coverage findings | Assessment reported |
+| `recover` | Repository access | Auto-selected evidence-labelled baseline | Awaiting review |
 | `resolve-spike` | Approved unchanged baseline holds one question, time box, and blocked owner | One investigation result; architecture unchanged | Awaiting review |
 | `amend` | Explicit challenged decision, CR-ID, and trigger | Amendment proposal and proposed ADRs; accepted truth unchanged | Awaiting review |
 | `approve` | Explicit human approval of named reviewed artifacts | Approval statuses; supersession links | Approved |
@@ -96,7 +99,7 @@ explicitly given; it does not begin agent bootstrap or feature planning.
 
 ## Context Discipline
 
-- For `full`/`lite`, read the PRD registry before cited requirement text, and
+- For `create`/`full`/`lite`, read the PRD registry before cited requirement text, and
   roadmap feature map, dependencies, and boundaries, not delivery history. For
   split requirements, select only the relevant domain files plus the
   cross-cutting area.
@@ -117,12 +120,20 @@ explicitly given; it does not begin agent bootstrap or feature planning.
 
 ## Modes
 
-The current request names the mode. Cross-check it against the roadmap's
-`Profile sizing` recommendation and `roadmap.yaml`'s `profile` marker: if the
-request asks for `lite` where the roadmap's sizing evidence says `full`, report
-the mismatch and ask, rather than proceeding or silently upgrading. If a Lite
-project later outgrows it, a `full` operation carries the Lite decisions
-forward.
+`create` is the default for a new baseline. Select `full` when the approved
+roadmap is Full, the system has multiple deployables, teams, or domains that
+need independent detail, or cross-feature contracts, regulation, migration,
+authorization, consistency, or one-way decisions require routed detail or ADRs.
+Select `lite` only when the cross-feature baseline fits on one page, normally
+has one deployable and team, and needs no split domain detail or separate ADR.
+`recover` uses the same rule from repository evidence. `assess` reports the
+result without writing.
+
+The current request may explicitly name `full` or `lite` as an override.
+Cross-check it against the roadmap and evidence. If they disagree, require and
+record the rationale instead of silently switching modes. If a Lite project
+later outgrows it, `create` or an explicit `full` operation carries the Lite
+decisions forward.
 
 `lite` compresses artifact count, not guarantees: retain evidence, boundaries,
 Plan Constraints, approval, and validation. If a one-way door appears, compare
@@ -159,7 +170,7 @@ with one answerable question, time box, blocked feature, and disposable output.
 
 Load only the playbook for the selected operation, never several:
 
-- `full`, `lite`, or `recover`: [baseline playbook](./references/baseline-operations.md);
+- `create`, `full`, `lite`, `assess`, or `recover`: [baseline playbook](./references/baseline-operations.md);
 - `resolve-spike`: [spike result playbook](./references/spike-result-operation.md);
 - `amend` or amendment `approve`: [amendment playbook](./references/architecture-amendment-operation.md).
 

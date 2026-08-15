@@ -7,7 +7,7 @@ description: Create, refresh, or audit the project map - AGENTS.md routing, road
 
 Own the map, not the territory. `AGENTS.md` routes to domain truth, `roadmap.yaml`
 records where the project is, and neither one ever copies the PRD, roadmap,
-architecture baseline, ADRs, or feature specifications.
+architecture baseline, ADRs, or feature implementation plans.
 
 ## Owned files
 
@@ -103,9 +103,9 @@ report it and stop rather than loading a second reference.
    - `AGENTS.md` from [the template](assets/AGENTS.template.md), preferring
      `roadmap.yaml` role/entry lookups over copied paths, feature lists, or
      summaries;
-   - [the delivery checklist template](assets/delivery-checklist.template.md)
-     belongs to the operation preparing a function for implementation, not to
-     this Skill. Point at it; do not fill it in.
+   - function `domain`, `plan`, optional `spec`, and `checklist` routes come from
+     the approved roadmap and the owning feature-planning workflow. Record them;
+     do not create their content.
 4. Preserve valid human-written rules and reconcile conflicts visibly.
 5. Keep adapters derived and minimal. Never maintain a second copy of a
    universal rule.
@@ -124,8 +124,9 @@ pwsh -NoProfile -File <this-skill-dir>/scripts/Test-AgentGuidance.ps1 -ProjectRo
 Use `powershell.exe` if `pwsh` is unavailable. Add `-RequireClaude` or
 `-RequireCopilot` only for requested adapters. Then confirm by inspection that
 every command and path has evidence, that adapters do not contradict the root
-file, that `roadmap.yaml` parses, and that each function entry points at files
-that exist.
+file, that `roadmap.yaml` parses, and that each function entry has the approved
+roadmap's domain key and points at files that exist. Report profile drift,
+missing domain keys, or incomplete plan/checklist routes.
 
 Report targets changed, canonical versus derived status, sources used, conflicts
 or omitted unknowns, validation results, and the next recommended human action.

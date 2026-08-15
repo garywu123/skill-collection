@@ -35,8 +35,9 @@ Apply exactly one row for the explicitly named kind.
 
 The exact work ID and kind, a converged implementation, checklist, and named
 evidence are required. The detailed route additionally requires an approved
-`pre-implementation-review.md` and completed tasks. The direct feature route
-does not. A missing or contradictory route prerequisite, an uncovered required
+`pre-implementation-review.md` and completed tasks. The compact feature route
+instead requires all implementation-plan slices completed or explicitly
+deferred. A missing or contradictory route prerequisite, an uncovered required
 ID batch, a truncated query that was not narrowed, any concrete blocker, or any
 skipped required check prevents a ready result.
 

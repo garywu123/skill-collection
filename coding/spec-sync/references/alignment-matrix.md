@@ -6,12 +6,12 @@ behavior. A finding without specific evidence in both artifacts is not a finding
 
 ## Direction and precedence
 
-The direct feature route uses the approved roadmap entry as its behavior source:
+The compact feature route uses the approved roadmap entry as its behavior source:
 
 ```text
-product requirements -> roadmap feature -> checklist
-                              |                 |
-                    architecture/UI        implementation
+product requirements -> roadmap feature -> implementation-plan.md
+                              |                       |
+                    architecture/UI              checklist.md
 ```
 
 The detailed route adds feature-local refinement:
@@ -30,19 +30,20 @@ When two approved artifacts disagree, report the conflict. The higher source of 
 remains authoritative until its owning workflow explicitly changes it. `spec-sync` edits
 neither side.
 
-## Direct feature checks
+## Compact feature checks
 
 | # | Lower artifact | Higher artifact | Required evidence | Severity |
 |---|---|---|---|---|
-| D1 | `checklist.md` | Roadmap description and acceptance | Every acceptance item is preserved without weakening or added behavior | Blocking |
+| D1 | `implementation-plan.md` and `checklist.md` | Roadmap description and acceptance | Every acceptance item is planned and preserved without weakening or added behavior | Blocking |
 | D2 | Roadmap feature | Owned and bound `PR-###` | Description and acceptance are sufficient to implement every applicable behavior | Blocking |
-| D3 | Proposed implementation approach | Applicable `AC-###`/ADRs | No shared constraint is contradicted or silently decided | Blocking |
+| D3 | Component design and delivery slices | Applicable `AC-###`/ADRs | No shared constraint is contradicted or silently decided; slices are vertically testable | Blocking |
 | D4 | `wireframes.md` or N/A | Roadmap `UI Surface` and behavior source | Required UI states are represented; `none` has no UI artifact | Blocking |
 | D5 | Roadmap feature | Roadmap dependencies | Prerequisites are delivered or explicitly approved for parallel work | Blocking |
 | D6 | Project guidance | Repository | Cited commands and paths resolve | Advisory |
 
 If D2 cannot pass from the roadmap entry, block with the missing behavior and
-recommend the detailed route. Do not invent detail or create the spec.
+recommend roadmap amendment or the detailed exception as appropriate. Do not
+invent detail or create the spec.
 
 ## Detailed route checks
 
@@ -62,7 +63,7 @@ Style preferences and uncited suspicions are out of scope.
 
 ## Work-kind applicability
 
-Only a `feature` may use the direct route. Detailed-route inputs must be mutually
+Only a `feature` may use the compact route. Detailed-route inputs must be mutually
 consistent. Read and apply only the row for the explicitly named kind.
 
 | Kind | Higher truth and required pre-checks | Must not claim |
@@ -80,7 +81,7 @@ migration, compatibility, acceptance, or release review required by project poli
 ## Missing inputs
 
 Missing route prerequisites, target identity, kind, or explicit user
-authorization block the mode. A missing spec is not a blocker for the direct
+authorization block the mode. A missing spec is not a blocker for the compact
 feature route. For other inputs, report the exact skipped checks:
 
 | Missing input | Result |

@@ -11,8 +11,9 @@
 **Approval Evidence**: Not approved | [Explicit user statement or review reference]
 
 This document owns technical decisions that more than one feature depends on.
-Decisions inside a single feature belong to that feature's `plan.md`. A
-`plan.md` may refine this baseline and may not contradict it.
+Decisions inside a single feature belong to that feature's
+`implementation-plan.md`. An implementation plan may refine this baseline and
+may not contradict it.
 
 ## Technical Drivers
 
@@ -62,7 +63,7 @@ data, or breaking an external contract. Every one-way decision has an ADR.
 
 ## Cross-Cutting Strategies
 
-State each as a rule a reviewer can check a `plan.md` against.
+State each as a rule a reviewer can check an implementation plan against.
 
 | Concern | Strategy |
 |---------|----------|
@@ -74,7 +75,7 @@ State each as a rule a reviewer can check a `plan.md` against.
 
 ## Plan Constraints
 
-The block every feature `plan.md` must honor. Keep it short, testable, and free
+The block every feature implementation plan must honor. Keep it short, testable, and free
 of rationale — rationale lives above and in the ADRs.
 
 - **AC-001**: [Constraint]

@@ -4,8 +4,10 @@
 # Never append a change log to this file.
 
 project: PROJECT-ID
-profile: lite                 # lite | full - intent marker only
 stage: discovery              # discovery | prd | roadmap | architecture | implementation | done
+
+# Add profile only after product-discovery-roadmap selects it:
+# profile: lite               # lite | full; descriptive, not a gate
 
 docs: {}
 
@@ -23,18 +25,23 @@ functions: []
 # functions:
 #   - id: F001
 #     name: Short function name
+#     domain: stable-domain-key
 #     status: accepted        # planned | as-built | implementing | verifying | accepted
-#     spec: specs/F001/spec.md # Optional; detailed delivery route only
+#     plan: specs/F001/implementation-plan.md
+#     spec: specs/F001/spec.md # Optional; detailed exception only
 #     checklist: specs/F001/checklist.md
 #     verified: 2026-08-06 by Gary Wu
 #
 #   - id: F002
 #     name: Another function
+#     domain: another-domain
 #     status: implementing
+#     plan: specs/F002/implementation-plan.md
 #     checklist: specs/F002/checklist.md
 #
 #   # Adopted from an existing codebase: implementation observed, not accepted here.
 #   - id: F003
 #     name: Pre-existing function
+#     domain: legacy-domain
 #     status: as-built
 #     notes: code in src/legacy-module/, no spec

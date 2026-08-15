@@ -27,7 +27,7 @@ replace that verification.
 ## Downstream Impact
 
 - Affected roadmap features/dependencies: {{IDS_OR_NONE}}
-- Existing specs/deliveries requiring follow-up: {{IDS_OR_NONE}}
+- Existing implementation plans, specs, checklists, or deliveries requiring follow-up: {{IDS_OR_NONE}}
 - Architecture/UI/guidance routes: {{ROUTES_OR_NONE}}
 
 ## Validation
@@ -35,6 +35,8 @@ replace that verification.
 - [ ] Product intent, journeys, requirements, and explicit exclusions remain
       consistent.
 - [ ] Requirement ownership and dependency graph remain valid.
+- [ ] Every feature has a stable domain key and one independently acceptable outcome.
+- [ ] Profile sizing and single/split bundle shape were recomputed when scope changed.
 - [ ] Stable IDs are never reused; successors exist only where both records
       require independent meaning or tracking.
 - [ ] Split-root membership changes are complete and unambiguous.

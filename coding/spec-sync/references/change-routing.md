@@ -27,7 +27,7 @@ Select the highest layer touched, then include every lower affected layer.
 | Cross-feature technical decision | Approved constraint or shared boundary must change | `architecture-baseline amend` |
 | Navigation or global shell | Product-wide navigation or shared UI structure changes | `ui-wireframe-spec product` |
 | Project governance | Build, repository layout, or agent working rule changes | `project-map refresh` |
-| Feature internals | Only one non-delivered feature's behavior changes | Human-authorized direct or detailed feature delivery workflow |
+| Feature internals | Only one non-delivered feature's behavior changes | Human-authorized compact or detailed feature delivery workflow |
 
 The list above names possible next workflows; it does not authorize their use.
 
@@ -35,7 +35,7 @@ The list above names possible next workflows; it does not authorize their use.
 
 | Current state | Proposed route |
 |---|---|
-| Planned | Amend the roadmap if its boundary changes; otherwise refresh the selected route's behavior source, checklist, UI, and detailed artifacts where present |
+| Planned | Amend the roadmap if its boundary changes; otherwise audit or rebuild the implementation plan and checklist, plus detailed artifacts where present |
 | In progress | Stop affected implementation; ask the human whether to finish a safe slice or re-specify now |
 | Verifying | Propose returning to the earliest affected stage; the stale evidence rows in `checklist.md` must be struck or re-run, not left standing |
 | Accepted | Propose one of the two routes below, and say which and why |

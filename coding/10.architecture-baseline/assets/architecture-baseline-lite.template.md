@@ -11,7 +11,7 @@
 **Approval Evidence**: Not approved | [Explicit user statement or review reference]
 
 One page. Decisions that more than one feature depends on. Everything else is
-`plan.md`.
+feature implementation plan.
 
 ## Drivers
 

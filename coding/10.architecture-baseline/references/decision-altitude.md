@@ -9,7 +9,7 @@ document fixes the altitude.
 
 > Would two different features need to agree on this?
 
-Yes → baseline. No → the owning feature's `plan.md`.
+Yes → baseline. No → the owning feature's `implementation-plan.md`.
 
 Apply it to the actual roadmap, not to an imagined system. That is why an
 approved roadmap is required before creating a new `full` or `lite` baseline;
@@ -35,13 +35,13 @@ evidence.
 | Deployment target and packaging | Baseline | Constrains everything |
 | Module or layer boundaries and dependency direction | Baseline | The rule plans are checked against |
 | API style between components | Baseline | Two components must agree |
-| Internal shape of one feature's service | `plan.md` | One feature |
-| Table columns for one feature's entity | `plan.md` | One feature, within the shared schema mechanism |
-| Whether a handler batches writes | `plan.md` | Local performance choice |
-| Endpoint paths and payloads for one feature | `plan.md` | Within the agreed API style |
-| Class and function decomposition | `plan.md` | Implementation detail |
+| Internal shape of one feature's service | `implementation-plan.md` | One feature |
+| Table columns for one feature's entity | `implementation-plan.md` | One feature, within the shared schema mechanism |
+| Whether a handler batches writes | `implementation-plan.md` | Local performance choice |
+| Endpoint paths and payloads for one feature | `implementation-plan.md` | Within the agreed API style |
+| Class and function decomposition | `implementation-plan.md` | Implementation detail |
 | Which specific test cases to write | `tasks.md` | Work item |
-| Library used by exactly one feature | `plan.md`, reported | Becomes baseline only on second use |
+| Library used by exactly one feature | `implementation-plan.md`, reported | Becomes baseline only on second use |
 
 The last row matters. A library adopted by one feature is a local decision. The
 moment a second feature reaches for it, it is a cross-feature decision and needs

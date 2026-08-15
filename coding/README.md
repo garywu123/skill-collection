@@ -1,150 +1,74 @@
-# Skill Collection
+# Coding Skill Collection
 
-A human-controlled, spec-driven development workflow for coding agents. It
-emphasizes domain discovery, narrow context, and evidence over long autonomous
-chains.
+一套由人类逐步授权、以 domain + feature 为统一产品模型、以证据完成验收的开发流程。
 
-## Start here
+## 场景指南
 
-[SPEC Driven Lite 总览](00_instructions/spec-drive-lite/spec-driven-lite-overview.md)
-explains the control model and the capability map. Then pick the mode that
-matches your situation:
+| 场景 | 指南 |
+|---|---|
+| 新建简化库存软件 | [10-small-inventory-new-project.md](00_instructions/10-small-inventory-new-project.md) |
+| 新建复杂 WMS | [20-complex-wms-new-project.md](00_instructions/20-complex-wms-new-project.md) |
+| Feature 太宽，需要重评 Roadmap | [30-roadmap-reassessment.md](00_instructions/30-roadmap-reassessment.md) |
+| 小库存系统演进为 WMS | [40-inventory-to-wms-evolution.md](00_instructions/40-inventory-to-wms-evolution.md) |
+| Change Request | [50-change-request.md](00_instructions/50-change-request.md) |
+| 已有仓库接入流程 | [60-existing-repository-adoption.md](00_instructions/60-existing-repository-adoption.md) |
 
-| Mode | Use when | Guide |
-|---|---|---|
-| New project | Starting from business discovery | [新项目](00_instructions/spec-drive-lite/wms-new-project.md) |
-| Change request | Project running, changing an existing function | [变更请求](00_instructions/spec-drive-lite/wms-change-request.md) |
-| Existing repository | Adopting the flow into a codebase that never used it | [已有仓库接入](00_instructions/spec-drive-lite/wms-existing-repo.md) |
+指南中的箭头只表示先后依赖，不授权 AI 自动调用下一项 Skill。每次由人类明确授权一个 operation；该 Skill 写自己的产物、更新自己改变的 `roadmap.yaml` 字段、报告并停止。
 
-All three use the same WMS example, so they can be read against each other.
-They are operator guides with one-message-at-a-time prompt examples and required
-Skill calls. Do not load a whole guide into a normal coding turn; copy only the
-next selected row.
+## 统一模型
 
-## Operating model
-
-```text
-Human speaks one operation
-  -> one Skill reads the smallest authoritative context
-  -> it writes only its owned artifacts
-  -> it updates that artifact's line in roadmap.yaml
-  -> it reports and stops
-  -> human reviews and speaks the next operation
-```
-
-- **State transitions are spoken, not enforced.** `roadmap.yaml` records where
-  the project is; it never gates, approves, or decides what comes next.
-- A workflow arrow means prerequisite order, never automatic invocation.
-- The human states intent in natural language and explicitly names the
-  `$skill-name`. A recommended next step is navigation, not permission.
-- Skills never invoke other Skills or Spec Kit.
-- One state file per repository: `roadmap.yaml` at the root, holding stage,
-  document routes, and one line per function. Requirements, design rationale,
-  and history live in the routed documents and in Git — never in that file.
-- Project Map owns the `roadmap.yaml` schema, initialization, refresh, and
-  audit. Each authorized operation updates only the route or function entry it
-  directly changed, then reconciles that entry before its final response.
-- `stage` is descriptive project context. It never authorizes a Skill or gates
-  an operation.
-- Delivery has no gate Skill. Each function carries a `checklist.md` written
-  before implementation from its roadmap entry or optional spec and verified
-  **in a fresh conversation**. The context that implemented a function does not
-  tick its own boxes.
-- Production release governance is project policy outside this Lite lifecycle.
-  Add scoped build, migration, rollback, operations, and execution evidence
-  when the repository's risk requires it; function acceptance is not release
-  authorization.
-- Keep an opened semantic/code/evidence slice at or below 8 KiB and the initial
-  payload for one operation at or below 24 KiB. Larger reviews use batches and
-  retain only citations, findings, and a coverage ledger; truncation or an
-  uncovered batch prevents a passing claim.
-- `guided-tdd-pairing` may keep one interactive implementation loop, but it
-  stops before any review.
+- 所有项目的 Feature Roadmap 都使用 `domain + feature`。Domain 是业务知识/职责边界；feature 是可独立验收的结果。小项目中两者可能一一对应，但不合并字段。
+- Product Roadmap 的 `draft-roadmap` 自动选择 `lite/full` 与 `single/split`，并在分配 F-ID 前拆开 domain-sized 候选项。
+- Architecture 的 `create` 和 `recover` 自动选择 Lite/Full；显式 `lite` 或 `full` 只用于有理由的 override。
+- Feature 交付默认走 compact：`implementation-plan.md + checklist.md`。项目很大并不自动要求 Spec Kit。
+- 只有 cohesive feature 仍存在无法安全压缩的行为模型时，才建议 detailed/Spec Kit 例外。
+- 如果 planning 时发现目标本身像 domain，`feature-implementation-plan` 不写文件；它输出 Roadmap Reassessment Handoff，由人类另行调用 Product amendment。
 
 ## Capability map
 
-| Skill | Explicit operations and owned output |
+| Skill | Operations / owned output |
 |---|---|
-| [`05.product-discovery-roadmap`](05.product-discovery-roadmap/SKILL.md) | `discover`, staged PRD/roadmap drafting, `amend` |
-| [`10.architecture-baseline`](10.architecture-baseline/SKILL.md) | `full`, `lite`, `recover`, `resolve-spike`, `amend` |
-| [`20.project-map`](20.project-map/SKILL.md) | `init`, `refresh`, `audit` for `roadmap.yaml`, `AGENTS.md`, thin adapters |
-| [`30.ui-wireframe-spec`](30.ui-wireframe-spec/SKILL.md) | `product` UI structure or one `feature` wireframe |
+| [`05.product-discovery-roadmap`](05.product-discovery-roadmap/SKILL.md) | `discover`, PRD/Roadmap draft and approval, `assess-roadmap`, `amend` |
+| [`10.architecture-baseline`](10.architecture-baseline/SKILL.md) | `create`, `assess`, `recover`, explicit `lite/full`, spikes and amendments |
+| [`20.project-map`](20.project-map/SKILL.md) | `init`, `refresh`, `audit` for `roadmap.yaml`, `AGENTS.md`, adapters |
+| [`feature-implementation-plan`](feature-implementation-plan/SKILL.md) | `assess`, `plan`, `audit` for one approved feature |
+| [`30.ui-wireframe-spec`](30.ui-wireframe-spec/SKILL.md) | Product UI structure or one feature's wireframes |
 | [`spec-sync`](spec-sync/SKILL.md) | `pre-implement`, `post-implement`, `change-request` |
-| [`guided-tdd-pairing`](guided-tdd-pairing/SKILL.md) | One user-controlled RED/GREEN pairing step |
-| [`skill-authoring`](skill-authoring/SKILL.md) | Create, review, update, or simplify one reusable Skill |
+| [`guided-tdd-pairing`](guided-tdd-pairing/SKILL.md) | Optional user-controlled RED/GREEN pairing |
+| [`skill-authoring`](skill-authoring/SKILL.md) | Create, review, update, or simplify a reusable Skill |
 
-Feature delivery has two routes. The direct route uses the approved roadmap
-description and acceptance as its behavior source. The detailed route adds Spec
-Kit `spec.md`, `plan.md`, and `tasks.md` only when one feature needs that extra
-behavior or implementation depth. Neither route replaces product definition,
-cross-function architecture, or vertical alignment.
-
-Tests, coverage, formatting, lint, build, schema validation, and CI are
-deterministic commands, hooks, or pipelines — not additional Skills.
-
-## Lifecycle at a glance
+## Feature lifecycle
 
 ```text
-Discovery -> PRD -> Roadmap
-                     |
-                     +-> Architecture
-                     +-> Project map (AGENTS.md)
-                     +-> [Product UI]
-
-for one direct function:
-  roadmap acceptance -> checklist -> [Feature UI] -> spec-sync pre-implement
-  -> implementation -> deterministic/risk checks -> spec-sync post-implement
-  -> FRESH CONVERSATION: verify checklist -> accepted
-
-for one detailed function:
-  optional Spec Kit spec/clarify (+ checklist) -> [Feature UI] -> plan/tasks
-  -> spec-sync pre-implement -> implementation -> deterministic/risk checks
-  -> spec-sync post-implement -> FRESH CONVERSATION: verify checklist -> accepted
+approved roadmap feature
+  -> feature-implementation-plan (assess first)
+       -> reassess: stop, hand off to product roadmap amendment
+       -> compact: implementation-plan.md + checklist.md
+       -> detailed exception: human explicitly starts the detailed workflow
+  -> [feature UI when UI Surface requires it]
+  -> spec-sync pre-implement
+  -> TDD implementation
+  -> deterministic and risk-specific checks
+  -> spec-sync post-implement (write evidence; status verifying)
+  -> fresh conversation verifies checklist
+  -> human marks accepted and checks the roadmap feature complete
 ```
 
-A partial order, not one mandatory chain. Brackets are conditional, not optional
-guesses: `UI Surface: none` skips UI artifacts with a stated reason.
-
-Follow-ups stay outside the current function unless explicitly routed:
-
-- behavior defect -> `bug` work item with regression evidence;
-- implementation debt -> `doc/tech-debt/TD-###-short-title.md` with impact,
-  owner, and repayment trigger;
-- future product idea -> roadmap candidate via a product amendment;
-- cross-function technical question -> a time-boxed spike, then an architecture
-  amendment for any consequence.
+`implementation-plan.md` owns component/class/type design, key functions, vertical slices, dependencies, and planned tests. `checklist.md` owns acceptance gates and actual evidence. Product meaning stays in PRD/Roadmap; cross-feature technical rules stay in Architecture.
 
 ## Repository structure
 
 ```text
-skill-collection/
-├── scripts/                        # Deploy-Skills.ps1 and deploy paths
-└── coding/
-    ├── README.md
-    ├── 00_instructions/spec-drive-lite/   # overview + the three mode guides
-    ├── 05.product-discovery-roadmap/      # discovery, PRD, roadmap templates
-    ├── 10.architecture-baseline/          # baseline and ADR templates
-    ├── 20.project-map/                    # roadmap.yaml, AGENTS.md, checklist templates
-    ├── 30.ui-wireframe-spec/              # product/feature UI templates
-    ├── spec-sync/                         # alignment and change-routing references
-    ├── guided-tdd-pairing/                # optional learning/pairing mode
-    └── _obsolete/                         # retired flow-state and delivery-gates
+coding/
+├── 00_instructions/               # six scenario guides
+├── 05.product-discovery-roadmap/  # discovery, PRD, domain-aware roadmap
+├── 10.architecture-baseline/      # adaptive Lite/Full baseline and ADRs
+├── 20.project-map/                # roadmap.yaml and AGENTS.md routing
+├── 30.ui-wireframe-spec/          # product and feature UI artifacts
+├── feature-implementation-plan/   # compact plan/checklist templates
+├── spec-sync/                     # alignment, evidence, change routing
+├── guided-tdd-pairing/            # optional interactive implementation
+└── _obsolete/                     # retired workflow machinery
 ```
 
-Each Skill keeps its always-needed contract in `SKILL.md`; templates,
-references, and scripts load only when their trigger applies.
-
-## `_obsolete/`
-
-`flow-state` and `delivery-gates`, plus the old full/lite flow guides, enforced
-state transitions through `flow_state.py` and bound approvals with SHA-256
-receipts. They were retired because that machinery defends against multi-writer
-tampering, which a single-writer project does not have, while its cost was real:
-two whole Skills, 5,500 lines of Python and tests, 1,080 lines of worked
-examples, and roughly a sixth of every surviving `SKILL.md` spent on revision
-and hash protocol rather than on the work.
-
-Git carries history and drift detection, `roadmap.yaml` carries state, the
-per-function checklist carries the delivery bar, and a fresh conversation
-carries independence. Take a piece back from `_obsolete/` when a specific
-failure calls for it — not in advance.
+Tests, lint, build, schema validation, migration rehearsal, security review, and CI remain deterministic commands or project policy, not extra lifecycle Skills.

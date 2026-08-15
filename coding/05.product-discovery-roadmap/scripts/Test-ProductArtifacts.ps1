@@ -71,6 +71,56 @@ foreach ($entry in $requirementDefinitions.GetEnumerator()) {
 
 $resolvedRoadmap = Get-ResolvedFile -Path $RoadmapPath
 $roadmapLines = @(Get-Content -LiteralPath $resolvedRoadmap)
+$domainDefinitions = @{}
+$domainRegistryHeading = -1
+for ($index = 0; $index -lt $roadmapLines.Count; $index++) {
+    if ($roadmapLines[$index] -match '^##\s+Domain Registry\s*$') {
+        $domainRegistryHeading = $index
+        break
+    }
+}
+
+if ($domainRegistryHeading -lt 0) {
+    $errors.Add('Roadmap is missing the required Domain Registry section.')
+}
+else {
+    $domainHeaderIndex = -1
+    for ($index = $domainRegistryHeading + 1; $index -lt $roadmapLines.Count; $index++) {
+        if ($roadmapLines[$index] -match '^\s*\|' -and $roadmapLines[$index] -match 'Domain key') {
+            $domainHeaderIndex = $index
+            break
+        }
+        if ($roadmapLines[$index] -match '^##\s+') {
+            break
+        }
+    }
+    if ($domainHeaderIndex -lt 0) {
+        $errors.Add('Domain Registry is missing its table.')
+    }
+    else {
+        for ($index = $domainHeaderIndex + 2; $index -lt $roadmapLines.Count; $index++) {
+            $line = $roadmapLines[$index]
+            if ($line -notmatch '^\s*\|') {
+                break
+            }
+            $cells = @(Split-MarkdownRow -Line $line)
+            if ($cells.Count -eq 0) {
+                continue
+            }
+            $domainKey = $cells[0]
+            if ($domainKey -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$') {
+                $errors.Add("Invalid Domain Registry key: $domainKey")
+            }
+            elseif ($domainDefinitions.ContainsKey($domainKey)) {
+                $errors.Add("Domain Registry key appears more than once: $domainKey")
+            }
+            else {
+                $domainDefinitions[$domainKey] = $true
+            }
+        }
+    }
+}
+
 $featureMapHeading = -1
 for ($index = 0; $index -lt $roadmapLines.Count; $index++) {
     if ($roadmapLines[$index] -match '^##\s+Feature Map\s*$') {
@@ -110,7 +160,7 @@ else {
         $column[$headers[$index].ToLowerInvariant()] = $index
     }
 
-    foreach ($requiredColumn in @('id', 'owns requirements', 'also bound by', 'depends on', 'delivery', 'ui surface')) {
+    foreach ($requiredColumn in @('id', 'domain', 'owns requirements', 'also bound by', 'depends on', 'delivery', 'ui surface')) {
         if (-not $column.ContainsKey($requiredColumn)) {
             $errors.Add("Feature Map is missing column: $requiredColumn")
         }
@@ -137,6 +187,7 @@ else {
             continue
         }
 
+        $domain = if ($column.ContainsKey('domain') -and $column['domain'] -lt $cells.Count) { $cells[$column['domain']] } else { '' }
         $ownsText = if ($column.ContainsKey('owns requirements') -and $column['owns requirements'] -lt $cells.Count) { $cells[$column['owns requirements']] } else { '' }
         $boundText = if ($column.ContainsKey('also bound by') -and $column['also bound by'] -lt $cells.Count) { $cells[$column['also bound by']] } else { '' }
         $dependsText = if ($column.ContainsKey('depends on') -and $column['depends on'] -lt $cells.Count) { $cells[$column['depends on']] } else { '' }
@@ -147,6 +198,12 @@ else {
         $boundIds = @(Get-Ids -Text $boundText -Pattern 'PR-\d{3}')
         $dependencies = @(Get-Ids -Text $dependsText -Pattern 'F\d{3}')
 
+        if ($domain -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$') {
+            $errors.Add("Feature $featureId has invalid Domain key: $domain")
+        }
+        elseif (-not $domainDefinitions.ContainsKey($domain)) {
+            $errors.Add("Feature $featureId references unregistered Domain key: $domain")
+        }
         if ($ownedIds.Count -eq 0) {
             $errors.Add("Feature $featureId owns no requirements.")
         }

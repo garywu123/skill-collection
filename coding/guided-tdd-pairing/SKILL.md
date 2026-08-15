@@ -14,9 +14,9 @@ an already-authorized implementation task but never authorizes or advances it.
   Default to the agent writing failing tests/fixtures and the user writing core
   logic; honor changes at any step.
 - In a spec-driven repository, read `roadmap.yaml` at the repository root to
-  find the active function's `spec` path. Read that task, the smallest
-  applicable spec section, existing code, and the targeted tests; do not load
-  the whole roadmap or unrelated function artifacts.
+  find the active function's `plan` path and optional `spec`. Read the smallest
+  incomplete delivery slice, its acceptance source, existing code, and targeted
+  tests; do not load the whole roadmap or unrelated function artifacts.
 - Keep each opened semantic/code slice at or below 8 KiB and the initial target
   payload at or below 24 KiB. Narrow large changes by task and path. This
   interactive context may span several red/green loops for the same authorized

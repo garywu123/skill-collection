@@ -28,7 +28,9 @@ Never split by feature or discovery wave.
 ## Draft Roadmap
 
 Use the [single-file roadmap template](../assets/feature-roadmap-template.md).
-Every vertical, independently acceptable feature needs outcome, scope,
+First identify stable business domains, then split each domain into vertical,
+independently acceptable features. A small project may have one feature in a
+domain; still record both the domain key and feature ID. Every feature needs outcome, scope,
 dependencies, observable acceptance, one primary owning relation per
 requirement, `UI Surface`, and a delivery boundary. Record `Owns Requirements`
 and `Also Bound By` once in the feature map. Do not create a reverse requirement
@@ -37,10 +39,12 @@ coverage table or downstream specification handoff.
 Record feature, deployable, and owning-team counts as positive integers,
 datastore count as a non-negative integer, and the constraint field as `yes`,
 `no`, or `unknown`; put only stable anchors in `Sizing evidence`.
-Choose `lite` only for at most eight features, exactly one deployable, at most
+Select `lite` only for at most eight features, exactly one deployable, at most
 one datastore, exactly one owning team, and constraint `no`; any failed or
 unknown condition is `full`. Cross-cutting requirements may apply many times
-but have one owner.
+but have one owner. Before writing canonical F-IDs, split any candidate with
+multiple independently valuable outcomes, independent lifecycle/state models,
+unrelated acceptance paths, or separately schedulable dependencies.
 
 Above roughly 300 lines/12 features, or for concurrent domains, use the
 [roadmap index template](../assets/feature-roadmap-index-template.md). Its root
@@ -50,6 +54,12 @@ the [roadmap-domain template](../assets/feature-roadmap-domain-template.md) and
 own concise descriptions and acceptance. Do not repeat root-owned values in a
 domain member. Resolve one F-ID, then read only its root row plus its domain
 file. Roadmap never mirrors mutable delivery state.
+
+`assess-roadmap` applies the same tests read-only to an existing roadmap and
+reports: selected profile, single or split recommendation, domain-key gaps,
+over-broad features, temporary-label candidate splits, affected requirement
+IDs, and the exact amendment prompt. Never change an approved roadmap during
+assessment.
 
 After drafting, validate that every PR ID has exactly one owner, every bound ID
 exists, every dependency names a feature, and the dependency graph is acyclic.

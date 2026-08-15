@@ -58,8 +58,8 @@ route or function entry whose underlying fact it directly changed.
 |---|---|
 | A routed product, architecture, or UI document now exists | Add or correct its `docs.*` path |
 | The approved product roadmap adds a function | Add `planned`, or evidence-backed `as-built` during adoption |
-| A direct-route checklist now exists | Record its path; leave `planned` until implementation starts |
-| A detailed spec and checklist now exist | Record both paths; leave `planned` until implementation starts |
+| A compact plan and checklist now exist | Record both paths; leave `planned` until implementation starts |
+| A detailed spec, plan, and checklist now exist | Record their paths; leave `planned` until implementation starts |
 | The human starts implementation | Set `implementing` |
 | Implementation evidence is ready for independent checking | Set `verifying` |
 | Fresh verification passes and the human accepts | Set `accepted`; add `verified` |

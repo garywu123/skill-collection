@@ -19,6 +19,15 @@
 [How the sequence reaches a usable release. Delete this section when the
 feature map makes the order self-explanatory.]
 
+## Domain Registry
+
+Domains are stable business knowledge and ownership boundaries. A small domain
+may currently contain one feature; do not collapse the two concepts.
+
+| Domain key | Purpose | Feature IDs |
+|---|---|---|
+| [stable-domain-key] | [Business boundary] | F001 |
+
 ## Lifecycle Boundary
 
 This roadmap owns product outcome, horizon, sequence, dependencies, and release
@@ -32,9 +41,9 @@ Requirement ownership appears only in this table. `Owns Requirements` must give
 every approved `PR-###` exactly one owner. `Also Bound By` may reference a
 requirement from another row without creating a second owner.
 
-| ID | Feature | Outcome | Owns Requirements | Also Bound By | Depends On | Delivery | UI Surface |
-|---|---|---|---|---|---|---|---|
-| F001 | [User capability] | [Observable user result] | PR-001, PR-002 | PR-100 | None | MVP | new screens |
+| ID | Feature | Domain | Outcome | Owns Requirements | Also Bound By | Depends On | Delivery | UI Surface |
+|---|---|---|---|---|---|---|---|---|
+| F001 | [User capability] | [stable-domain-key] | [Observable user result] | PR-001, PR-002 | PR-100 | None | MVP | new screens |
 
 Allowed delivery values: `MVP`, `Post-MVP`, `Deferred`, `Candidate`.
 Allowed UI values: `none`, `reuses existing`, `new screens`.

@@ -91,6 +91,28 @@ if ($null -ne $roadmapContent) {
             Add-ValidationError "roadmap.yaml is missing top-level field: $field"
         }
     }
+
+    $functionMatches = [regex]::Matches(
+        $roadmapContent,
+        '(?ms)^\s{2}-\s+id:\s*(F\d{3})\s*$.*?(?=^\s{2}-\s+id:|\z)'
+    )
+    foreach ($functionMatch in $functionMatches) {
+        $functionId = $functionMatch.Groups[1].Value
+        $block = $functionMatch.Value
+        if ($block -notmatch '(?m)^\s{4}domain:\s*[a-z0-9]+(?:-[a-z0-9]+)*\s*$') {
+            Add-ValidationError "Function $functionId is missing a valid domain key."
+        }
+
+        $statusMatch = [regex]::Match($block, '(?m)^\s{4}status:\s*([a-z-]+)\s*$')
+        if ($statusMatch.Success -and $statusMatch.Groups[1].Value -in @('implementing', 'verifying', 'accepted')) {
+            if ($block -notmatch '(?m)^\s{4}plan:\s*\S+\s*$') {
+                Add-ValidationError "Function $functionId at $($statusMatch.Groups[1].Value) is missing plan."
+            }
+            if ($block -notmatch '(?m)^\s{4}checklist:\s*\S+\s*$') {
+                Add-ValidationError "Function $functionId at $($statusMatch.Groups[1].Value) is missing checklist."
+            }
+        }
+    }
 }
 
 if ($RequireClaude) {

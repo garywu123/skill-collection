@@ -17,10 +17,10 @@ after read-only reporting. The decision itself, and any downstream operation,
 begins in a new conversation the user explicitly authorizes.
 
 Read `roadmap.yaml` at the repository root first to find the target function's
-status, optional `spec`, and `checklist` paths. Read only the target IDs and the
-relevant sections. The absence of `spec` selects the direct feature route; its
-presence selects the detailed route. Stop on conflicting IDs, paths, or truth
-sources.
+status, `domain`, `plan`, optional `spec`, and `checklist` paths. Read only the
+target IDs and relevant sections. A `plan` plus `checklist` with no `spec`
+selects the compact feature route; `spec` selects the detailed route. Stop on
+conflicting IDs, paths, or truth sources.
 
 Keep each opened slice at or below 8 KiB and the initial target payload at or
 below 24 KiB. Beyond that, process stable-ID batches separately and merge only
@@ -36,7 +36,7 @@ only; never approve, and never set a function to `accepted`.
 
 | Operation | Prerequisites | Owned output | `roadmap.yaml` effect |
 |---|---|---|---|
-| `pre-implement <id> feature`, direct | Function at `planned`; approved roadmap behavior source and checklist present; no `spec` path | `Pass` or `Blocked` response only | None on `Pass`; record the blocker in `notes` on `Blocked` |
+| `pre-implement <id> feature`, compact | Function at `planned`; approved roadmap behavior source, implementation plan, and checklist present; no `spec` path | `Pass` or `Blocked` response only | None on `Pass`; record the blocker in `notes` on `Blocked` |
 | `pre-implement <id> <kind>`, detailed | Function at `planned`; spec, plan, tasks, and checklist present | `pre-implementation-review.md` in the work-item directory | None on `Pass`; record the blocker in `notes` on `Blocked` |
 | `post-implement <id> <kind>` | Converged implementation, checklist, and named evidence; approved pre-review additionally required for the detailed route | Evidence rows and check results inside that function's `checklist.md` | `status: verifying` when no blocker remains |
 | `change-request <CR-ID>` | Source request text | `doc/change-requests/<CR-ID>.md`, or a response when the project keeps no CR records | None |
@@ -55,14 +55,15 @@ evidence it writes into the checklist, and the proposed change route.
 
 ## Delivery routes
 
-Use the direct route only for a `feature` whose approved roadmap description and
-acceptance are sufficient to implement and verify. It requires a checklist
-derived from that roadmap entry and no `spec` path in `roadmap.yaml`.
+Use the compact route for a cohesive `feature` whose approved roadmap behavior
+is sufficient when combined with its `implementation-plan.md`. It requires a
+plan and checklist derived from the approved sources and no `spec` path in
+`roadmap.yaml`.
 
 Use the detailed route when a feature has an optional `spec` path, and for every
 non-feature kind. It requires `spec.md`, `plan.md`, `tasks.md`, and
 `checklist.md`. A partial detailed bundle blocks; never silently fall back to
-the direct route. Both routes enter pre-implementation at `status: planned`.
+the compact route. Both routes enter pre-implementation at `status: planned`.
 
 ## `pre-implement`
 
@@ -73,29 +74,30 @@ constraints for every other supported kind. Cite both sides by ID, anchor, or
 line. Classify findings as `Blocking`, `Advisory`, or `Skipped`; a skipped
 required check prevents `Pass`.
 
-For the direct feature route, return one concrete `Pass` or `Blocked` result in
+For the compact feature route, return one concrete `Pass` or `Blocked` result in
 the response and create no review artifact. For the detailed route, create or
 update `pre-implementation-review.md` from
 [the template](./assets/pre-implementation-review.template.md).
 
 - For `Pass`, report the pending human implementation authorization and stop.
    Detailed-route implementation also requires explicit approval of its review;
-   a direct-route `Pass` is not implementation authorization by itself.
-- For `Blocked`, list every concrete blocker in the direct response or detailed
+   a compact-route `Pass` is not implementation authorization by itself.
+- For `Blocked`, list every concrete blocker in the compact response or detailed
    review, note it in the function's `roadmap.yaml` entry, report the required
    owner action, and stop.
 
 ## `post-implement`
 
-First resolve the same direct or detailed route used before implementation. For
+First resolve the same compact or detailed route used before implementation. For
 the detailed route, confirm the pre-implementation review exists and was
 approved. Then read only
 [the post-implementation contract](./references/post-implementation-contract.md).
 Then:
 
 1. For a detailed route, confirm every task and check is complete or has an
-   explicit deferred-work destination. For a direct route, confirm every
-   checklist criterion has named evidence.
+   explicit deferred-work destination. For a compact route, confirm every plan
+   slice is complete or explicitly deferred and every checklist criterion has
+   named evidence.
 2. Trace every applicable requirement, scenario, regression, migration
    invariant, or security control to named implementation evidence. A green
    build alone does not demonstrate behavior.
