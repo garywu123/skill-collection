@@ -9,6 +9,9 @@ Turn uncertain product intent into reviewed discovery evidence, an approved
 product requirements document, and an approved feature roadmap. Keep product
 decisions independent of architecture and implementation.
 
+Every artifact stores current product truth at its own altitude. Conversation
+history and superseded wording live in Git, not in downstream summaries.
+
 ## Lifecycle Contract
 
 - Require the current user request to authorize one named operation. A recorded
@@ -59,6 +62,7 @@ Require the current request to identify a CR-ID; never allocate or guess one.
 This skill owns product semantics in:
 
 - discovery notes: `doc/product-discovery-notes.md`;
+- discovery-maintained domain knowledge: `doc/domain/<topic>.md`;
 - product requirements: `doc/general-product-requirement.md`;
 - feature roadmap: `doc/feature-roadmap.md`;
 - reviewed amendment proposal: `doc/product-amendments/<CR-ID>.md`.
@@ -110,10 +114,21 @@ user explicitly gave and does not begin the next operation.
   complete coverage while a required batch or resolver result is truncated.
 - Do not copy summaries into `roadmap.yaml`. Store product truth once and
   reference it by path and stable ID.
+- Discovery notes summarize the current understanding; they do not preserve
+  interview rounds, question transcripts, rejected alternatives, or a decision
+  history. Put substantial reusable vocabulary and process facts in linked
+  `doc/domain/` files rather than expanding the notes.
+- PRDs and roadmaps never contain decision logs. A PRD does not retain a
+  discovery-to-requirement coverage table. A roadmap records requirement
+  ownership only from feature to requirement and never repeats the inverse
+  mapping.
+- Discovery, PRD, and roadmap artifacts do not prescribe or hand off a
+  downstream specification workflow. Delivery work links back to the approved
+  roadmap when it begins.
 
-A `full` or `lite` profile changes document depth, not product guarantees.
-`lite` still keeps staged approvals, stable IDs, explicit non-goals, coverage,
-dependencies, and independent acceptance; prefer shorter single-file artifacts.
+A `full` or `lite` profile changes scale, splitting, and necessary domain depth,
+not the rule against duplication. Both retain staged approvals, stable IDs,
+feature-to-requirement ownership, dependencies, and observable acceptance.
 
 ## Roadmap sizing fields
 
@@ -143,17 +158,26 @@ Approving discovery, a PRD, or a roadmap loads no drafting playbook.
 
 ## Validation
 
-Nothing validates these mechanically. Before presenting an artifact, check them
-yourself:
+For a roadmap, run the deterministic ownership and dependency validator against
+the canonical PRD file(s) and roadmap:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Test-ProductArtifacts.ps1 `
+  -RequirementsPath doc/general-product-requirement.md `
+  -RoadmapPath doc/feature-roadmap.md
+```
+
+For a split PRD, pass all requirement-member paths to `-RequirementsPath`.
+Before presenting any artifact, also check:
 
 - prerequisites and cited approval evidence hold;
 - stable IDs are unique and references resolve;
 - no product statement prescribes architecture or implementation;
-- for a roadmap: complete requirement coverage, single primary ownership,
-  acyclic dependencies, explicit MVP/deferred boundaries, allowed horizon/UI
-  values, one stable product domain per feature, an independent acceptance
-  demonstration per feature, and sizing fields matching the criteria above with
-  anchor-only `Sizing evidence`;
+- for a roadmap: every requirement has exactly one primary owner, every
+  `Also Bound By` reference resolves, dependencies resolve without cycles,
+  delivery boundaries and UI values are valid, each feature has observable
+  acceptance, and sizing fields match the criteria above with anchor-only
+  `Sizing evidence`; perform this check without writing a reverse coverage table;
 - for a PRD, `Product UI structure applicability` is exactly `required` or
   `not_applicable`; the latter cites one approved `PR-###` whose wording rules
   out a global shell, navigation, and shared cross-feature UI pattern, without

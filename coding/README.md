@@ -47,8 +47,9 @@ Human speaks one operation
 - `stage` is descriptive project context. It never authorizes a Skill or gates
   an operation.
 - Delivery has no gate Skill. Each function carries a `checklist.md` written
-  alongside its spec and verified **in a fresh conversation**. The context that
-  implemented a function does not tick its own boxes.
+  before implementation from its roadmap entry or optional spec and verified
+  **in a fresh conversation**. The context that implemented a function does not
+  tick its own boxes.
 - Production release governance is project policy outside this Lite lifecycle.
   Add scoped build, migration, rollback, operations, and execution evidence
   when the repository's risk requires it; function acceptance is not release
@@ -72,9 +73,11 @@ Human speaks one operation
 | [`guided-tdd-pairing`](guided-tdd-pairing/SKILL.md) | One user-controlled RED/GREEN pairing step |
 | [`skill-authoring`](skill-authoring/SKILL.md) | Create, review, update, or simplify one reusable Skill |
 
-Spec Kit remains the feature-local horizontal workflow: specify, clarify, plan,
-tasks, analyze, implement. It does not replace product definition, cross-function
-architecture, or vertical alignment.
+Feature delivery has two routes. The direct route uses the approved roadmap
+description and acceptance as its behavior source. The detailed route adds Spec
+Kit `spec.md`, `plan.md`, and `tasks.md` only when one feature needs that extra
+behavior or implementation depth. Neither route replaces product definition,
+cross-function architecture, or vertical alignment.
 
 Tests, coverage, formatting, lint, build, schema validation, and CI are
 deterministic commands, hooks, or pipelines — not additional Skills.
@@ -88,8 +91,13 @@ Discovery -> PRD -> Roadmap
                      +-> Project map (AGENTS.md)
                      +-> [Product UI]
 
-for one function:
-  Spec Kit specify/clarify (+ checklist) -> [Feature UI] -> plan/tasks
+for one direct function:
+  roadmap acceptance -> checklist -> [Feature UI] -> spec-sync pre-implement
+  -> implementation -> deterministic/risk checks -> spec-sync post-implement
+  -> FRESH CONVERSATION: verify checklist -> accepted
+
+for one detailed function:
+  optional Spec Kit spec/clarify (+ checklist) -> [Feature UI] -> plan/tasks
   -> spec-sync pre-implement -> implementation -> deterministic/risk checks
   -> spec-sync post-implement -> FRESH CONVERSATION: verify checklist -> accepted
 ```

@@ -88,13 +88,12 @@ functions:
   - id: F001
     name: 收货入库
     status: accepted
-    spec: specs/F001-receiving/spec.md
+    spec: specs/F001-receiving/spec.md  # 该 feature 选择 Detailed route
     checklist: specs/F001-receiving/checklist.md
     verified: 2026-08-14 by Gary Wu
   - id: F002
     name: 上架
     status: implementing
-    spec: specs/F002-putaway/spec.md
     checklist: specs/F002-putaway/checklist.md
   - id: F003
     name: 库存查询与调整
@@ -106,26 +105,29 @@ functions:
 
 ## 3. 交付一个 Feature（以 F001 收货入库 为例）
 
-每个 function 独立重复这个循环。不能用 F001 的验收替代其他 function 的验收。
+每个 function 先单独选择路径。不能用 F001 的验收替代其他 function 的验收。
+
+### Direct route
+
+Roadmap 的 description、acceptance、requirements 和 architecture constraints 已足够时：
 
 | # | 必须调用 | 你可以这样说 | 产物 / 地图回写 |
 |---|---|---|---|
-| 1 | Spec Kit `specify` | `执行 Spec Kit specify F001 收货入库；只覆盖 roadmap 中的 F001 和它拥有的 PR IDs，同时创建 spec.md 与交付 checklist；回写 spec/checklist 路径并设为 specified。` | spec/checklist；`specified` |
-| 2 | Spec Kit `clarify` | `执行 Spec Kit clarify F001；只解决会改变验收场景、边界或失败行为的问题，把答案写回 spec 后停止。` | 澄清后的 spec；地图不变 |
-| 3 | `$ui-wireframe-spec feature F001`，仅适用时 | `使用 $ui-wireframe-spec feature F001，根据已澄清 spec 和 product UI structure 画低保真结构与状态；只写 F001 wireframes，然后停止。` | wireframes；地图不变 |
-| 4 | `$ui-wireframe-spec feature F001`，仅适用时 | `使用 $ui-wireframe-spec feature F001；我 <姓名> 于 <日期> 批准当前 F001 wireframes，依据是本消息；只记录批准，不进入 plan。` | UI 批准字段；地图不变 |
-| 5 | Spec Kit `plan` | `执行 Spec Kit plan F001；遵守 architecture baseline 和已批准 wireframes，只设计 F001，不吸收后续 functions。` | plan；地图不变 |
-| 6 | Spec Kit `tasks` | `执行 Spec Kit tasks F001；把 spec 场景、plan 和所需验证拆成可执行任务，不扩大范围。` | tasks；地图不变 |
-| 7 | `$spec-sync pre-implement F001 feature` | `使用 $spec-sync pre-implement F001 feature，检查 spec、plan、tasks、checklist 与上层事实的纵向一致性；只写 pre-review，报告 Pass/Blocked 后停止。` | pre-review；Blocked 时只记 notes |
-| 8 | 无；普通实现，或可选 `$guided-tdd-pairing` | `我已审阅并批准 F001 pre-implementation review。现在只实现 F001，运行约定测试，并把 roadmap.yaml 中 F001 设为 implementing、stage 记为 implementation；不要验收。` | 代码/测试；`implementing` |
-| 9 | `$spec-sync post-implement F001 feature` | `使用 $spec-sync post-implement F001 feature，把实际命令和结果写入 checklist Evidence；不要勾 acceptance boxes 或填写 Decision；无 blocker 时设为 verifying。` | Evidence；`verifying` |
-| 10 | 无；必须开新对话 | `核对 roadmap.yaml 中 F001 指向的 spec、checklist、diff 和测试证据。不要修代码；逐项判断 checklist。若全部满足，我 <姓名> 于 <日期> 明确接受 F001；否则记录 changes requested。` | checklist Decision；通过时 `accepted` + `verified` |
+| 1 | 无 | `从 approved Roadmap F001 acceptance 建立 checklist；不增加行为，不创建 spec/plan/tasks；登记 checklist 路径并保持 planned。` | checklist；仍为 `planned` |
+| 2 | `$ui-wireframe-spec feature F001`，仅适用时 | `使用 $ui-wireframe-spec feature F001，以 Roadmap entry 为 behavior source 画低保真结构与状态；只写 wireframes 后停止。` | wireframes；地图不变 |
+| 3 | `$spec-sync pre-implement F001 feature` | `使用 $spec-sync pre-implement F001 feature，按 direct route 检查 Roadmap、checklist、architecture 和 UI；只报告 Pass/Blocked，不创建 review 文件。` | response；Blocked 时只记 notes |
+| 4 | 无；普通实现，或可选 `$guided-tdd-pairing` | `Direct pre-check 已 Pass。现在只实现 F001 并运行约定测试，把 F001 设为 implementing；不要验收。` | 代码/测试；`implementing` |
+| 5 | `$spec-sync post-implement F001 feature` | `使用 $spec-sync post-implement F001 feature，把实际证据写入 checklist；不要勾 acceptance boxes 或填写 Decision；无 blocker 时设为 verifying。` | Evidence；`verifying` |
+| 6 | 无；必须开新对话 | `核对 F001 的 Roadmap entry、checklist、diff 和测试证据，不修代码；由我明确 accepted 或 changes requested。` | 通过时 `accepted` + `verified` |
 
-第 1 步同时写 checklist 是关键：这时候你才最清楚验收标准是什么。
-交付前才补的 checklist 一定会被写成刚好能通过的样子。
+### Detailed route
 
-第 10 步必须换对话。写代码的上下文不给自己的作业打勾——这是整套流程里唯一不能省的
-独立性要求。
+当 Roadmap 不足以描述复杂流程、状态、协议、迁移或高风险边界时，先用 Spec Kit 建立
+optional `spec.md`、`plan.md` 和 `tasks.md`。Checklist 从 spec acceptance 建立；
+`spec-sync pre-implement` 会写 `pre-implementation-review.md`，人类批准后才能实施。
+其余 implementation、post-implement 和 fresh-context acceptance 与 Direct route 相同。
+
+Checklist 必须在实现前写。最后一步必须换对话：写代码的上下文不给自己的作业打勾。
 
 实现后发现的新问题不能悄悄塞回 F001：行为缺陷、技术债、未来想法、跨 function 技术
 决策各有各的路径，见[模式二](wms-change-request.md)。
@@ -153,9 +155,9 @@ wms/
 │       └── CR-0001-部分收货.md         # spec-sync
 ├── specs/
 │   ├── F001-receiving/
-│   │   ├── spec.md                    # Spec Kit
-│   │   ├── plan.md                    # Spec Kit
-│   │   ├── tasks.md                   # Spec Kit
+│   │   ├── spec.md                    # 可选：Detailed route
+│   │   ├── plan.md                    # 可选：Detailed route
+│   │   ├── tasks.md                   # 可选：Detailed route
 │   │   ├── wireframes.md              # ui-wireframe-spec
 │   │   ├── pre-implementation-review.md  # spec-sync
 │   │   └── checklist.md               # 交付标准与证据
@@ -170,8 +172,8 @@ wms/
 
 - **一份事实一个语义拥有者。** 各 Skill 只改自己拥有的工件；`roadmap.yaml` 是例外的
   共享记账文件，Project Map 拥有 schema，各操作只回写自己直接改变的条目。
-- **全局的进 `doc/`，单个 function 的进 `specs/F###-slug/`。** 判断标准是这份内容
-  是否跨 function。
+- **全局的进 `doc/`，单个 function 的可选详细工件与 checklist 进 `specs/F###-slug/`。**
+  判断标准是这份内容是否跨 function。
 - **`roadmap.yaml` 只存路径和状态。** 任何需要一段话说明的东西都属于它指向的文件。
 
 ## 5. 操作者的三个固定动作

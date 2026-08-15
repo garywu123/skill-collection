@@ -83,26 +83,26 @@ functions:
     notes: 新能力，走完整流程
 ```
 
-`as-built` 的意思是：仓库里存在可识别的实现，但这套流程尚未建立完整 spec、业务
-符合性或验收结论。测试或运行证据可以写进现状记录，但状态本身不保证“能跑”。
+`as-built` 的意思是：仓库里存在可识别的实现，但这套流程尚未建立业务符合性或验收
+结论。测试或运行证据可以写进现状记录，但状态本身不保证“能跑”。
 它不是失败状态，是一个诚实的起点。
 
-## 3. 不要回头补全所有 spec
+## 3. 不要回头补全所有 delivery artifacts
 
 这是本模式最重要的一条实践建议。
 
-一个跑了两年的 WMS 可能有三十个 function。把它们全部补上 spec、checklist 和验收，
+一个跑了两年的 WMS 可能有三十个 function。把它们全部补上 checklist、optional spec 和验收，
 是几个月的工作，产出的文档没人读，而且写完就开始过期。
 
 **改到哪个，才补哪个。** 下次你要动 F002 上架时，它自然要走一遍
-[模式二](wms-change-request.md)：那时候补 spec 和 checklist 是顺手的，而且写出来
-的东西马上就被用到。
+[模式二](wms-change-request.md)：先把状态改为 `planned`，再判断 approved Roadmap entry
+是否足以走 Direct route；只有不足时才补 optional spec/plan/tasks。
 
 ```text
-as-built  --（下次要改它时）-->  specified  -->  implementing  -->  verifying  -->  accepted
+as-built  --（下次要改它时）-->  planned  -->  implementing  -->  verifying  -->  accepted
 ```
 
-主动补 spec 只有两种情况值得：这个 function 出过事故要重建理解，或者它是新人和 AI
+主动补 optional spec 只有两种情况值得：这个 function 出过事故要重建理解，或者它是新人和 AI
 最常撞上的那一块。除此之外，让 `as-built` 就那么放着。
 
 ## 4. 一个已有仓库接入后长什么样
@@ -122,7 +122,7 @@ wms/
 │   │   ├── 0001-inventory-consistency.md   + 追认既有决定
 │   │   └── 0002-receiving-putaway-coupling.md  + 标为历史包袱
 │   └── change-requests/            +
-├── specs/                          + 一开始是空的，改到哪个建哪个
+├── specs/                          + 一开始可为空，改到哪个才建 checklist/optional detail
 │   └── F007-wave-picking/
 ├── src/                              原有代码，本次不动
 ├── tests/                            原有测试，作为「已验证」证据来源

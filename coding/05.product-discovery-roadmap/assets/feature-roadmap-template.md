@@ -16,7 +16,8 @@
 
 ## Delivery Strategy
 
-[How the sequence reaches a usable MVP while controlling product risk.]
+[How the sequence reaches a usable release. Delete this section when the
+feature map makes the order self-explanatory.]
 
 ## Lifecycle Boundary
 
@@ -25,83 +26,26 @@ boundary. It does not mirror mutable delivery state. Current status per feature
 lives in `roadmap.yaml`; delivery evidence lives in each feature's
 `checklist.md`; history lives in Git.
 
-## Domain Registry
+## Feature Map
 
-| Domain key | Detail path | Feature IDs | Requirement range |
-|---|---|---|---|
-| [stable-domain-key] | this file | F001 | PR-001..PR-010 |
+Requirement ownership appears only in this table. `Owns Requirements` must give
+every approved `PR-###` exactly one owner. `Also Bound By` may reference a
+requirement from another row without creating a second owner.
 
-## Feature Dependency Map
+| ID | Feature | Outcome | Owns Requirements | Also Bound By | Depends On | Delivery | UI Surface |
+|---|---|---|---|---|---|---|---|
+| F001 | [User capability] | [Observable user result] | PR-001, PR-002 | PR-100 | None | MVP | new screens |
 
-```mermaid
-flowchart LR
-    F001[F001: First capability] --> F002[F002: Next capability]
-```
+Allowed delivery values: `MVP`, `Post-MVP`, `Deferred`, `Candidate`.
+Allowed UI values: `none`, `reuses existing`, `new screens`.
 
-## Feature Sequence
+## Feature Detail
 
 ### F001: [User Capability]
-**Horizon**: Committed | Planned | Candidate | Unknown
-**UI Surface**: none | reuses existing | new screens
-**Product Domain**: [stable-domain-key]
 
-**Outcome**: [What a user can accomplish after this feature]
+**Description**: [What this feature enables.]
 
-**Scope**:
+**Acceptance**:
 
-- [Included behavior]
-
-**Non-Goals**:
-
-- [Behavior deliberately left to another feature]
-
-**Owns Requirements**: PR-001, PR-002
-**Applicable Cross-Cutting Rules**: PR-100
-**Dependencies**: None
-**Release Boundary**: MVP | Post-MVP | Deferred
-**Primary Risk**: [Product or delivery uncertainty]
-
-**Independent Acceptance**:
-
-[A short end-to-end demonstration that proves this feature delivers value.]
-
-**Suggested Specification Name**: `[short-action-noun-name]`
-
-**Feature Specification Handoff**:
-
-```text
-Create a feature specification for F001 from [ROADMAP_PATH].
-Use [PRODUCT_REQUIREMENTS_PATH] as the product source of truth.
-Implement only F001 Scope, preserve its Non-Goals, and cover the listed PR IDs.
-Do not absorb behavior assigned to later features.
-```
-
-If `UI Surface` is not `none`, produce wireframes after clarification and before
-technical planning only after the human explicitly authorizes that design step.
-Resolve the eventual specification, wireframes, verification, and acceptance
-records by `F001` through the generated artifact index; do not mirror their
-mutable state here.
-
-## Parallel Work
-
-- [Features that may proceed in parallel after named prerequisites]
-
-## MVP Boundary
-
-- **F001**: [Why this outcome is required for MVP]
-- **F002**: [Why this outcome is required for MVP]
-- **Deferred**: [Feature IDs and rationale]
-
-## Requirements Coverage
-
-| Requirement | Relationship | Feature(s) | Status | Notes |
-|-------------|--------------|------------|--------|-------|
-| PR-001 | Owns | F001 | Covered | |
-| PR-100 | Applies | F001, F002 | Covered | Cross-cutting safeguard |
-
-## Validation Findings
-
-- **Uncovered requirements**: None
-- **Duplicate ownership**: None
-- **Circular dependencies**: None
-- **Boundary concerns**: None
+- [Observable end-to-end result]
+- [Important failure or boundary result, when needed]

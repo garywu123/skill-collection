@@ -8,7 +8,8 @@
    reversibility. Compare consequential alternatives; ask at most five
    decision-changing questions per round.
 3. Record boundaries, dependency direction, cross-cutting strategies, deferred
-   decisions, spikes, and risks; exclude single-feature design.
+   decisions, spikes, and risks; exclude single-feature design, default
+   non-goals, and chronological decision logs.
 4. Use the [Full single-file template](../assets/architecture-baseline.template.md)
    plus the [ADR template](../assets/adr.template.md), or the
    [Lite template](../assets/architecture-baseline-lite.template.md). When the
@@ -17,6 +18,10 @@
    [domain-detail template](../assets/architecture-domain.template.md).
 5. Produce short, testable Plan Constraints last. Set every output only to
    `Ready for Review`.
+
+The baseline states the current choice and links an ADR where one owns detailed
+rationale. Do not duplicate the ADR's rejected alternatives, history, or
+supersession record in the baseline.
 
 Single roots declare `**Artifact bundle**: single` and omit a Member Registry.
 Split roots declare `**Artifact bundle**: split`; after every domain and

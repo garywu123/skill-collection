@@ -8,6 +8,9 @@ description: "Use only when the current user explicitly authorizes architecture-
 Own technical decisions that multiple features must share. Record evidence and
 trade-offs without deciding feature-internal design.
 
+The baseline stores current architecture truth, not a chronological decision
+log. Git and, for consequential one-way choices, ADRs preserve history.
+
 ## Lifecycle Contract
 
 - Require the current user request to authorize one named operation. A recorded
@@ -94,9 +97,9 @@ explicitly given; it does not begin agent bootstrap or feature planning.
 ## Context Discipline
 
 - For `full`/`lite`, read the PRD registry before cited requirement text, and
-  roadmap summary, dependencies, coverage, and boundaries — not handoff prompts
-  or delivery history. For split requirements, select only the relevant domain
-  files plus the cross-cutting area.
+  roadmap feature map, dependencies, and boundaries, not delivery history. For
+  split requirements, select only the relevant domain files plus the
+  cross-cutting area.
 - Exclude discovery history, wireframes, feature specs, plans, tasks, and source
   by default. For `amend`, add only the named trigger artifact.
 - For `recover`, inspect manifests, build/CI configuration, and directory
@@ -177,6 +180,8 @@ yourself:
   decisions in force until approval;
 - a spike result answers exactly one approved question, preserves raw evidence,
   and routes any architecture consequence to a separate amendment.
+- no baseline contains a decision log or repeats rationale already owned by an
+  ADR; current choices and their enforceable consequences remain visible.
 
 Report mode, sizing result, paths, created versus modified files, decisions,
 deferred items, spikes, contradictions, validation results, the `roadmap.yaml`

@@ -23,15 +23,14 @@ functions: []
 # functions:
 #   - id: F001
 #     name: Short function name
-#     status: accepted        # planned | as-built | specified | implementing | verifying | accepted
-#     spec: specs/F001/spec.md
+#     status: accepted        # planned | as-built | implementing | verifying | accepted
+#     spec: specs/F001/spec.md # Optional; detailed delivery route only
 #     checklist: specs/F001/checklist.md
 #     verified: 2026-08-06 by Gary Wu
 #
 #   - id: F002
 #     name: Another function
 #     status: implementing
-#     spec: specs/F002/spec.md
 #     checklist: specs/F002/checklist.md
 #
 #   # Adopted from an existing codebase: implementation observed, not accepted here.

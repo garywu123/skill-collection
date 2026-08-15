@@ -49,13 +49,20 @@ Spec Kit 和普通实现不是本集合的 Skill，指南会明确标成“Spec 
 | `10` | 架构治理层 | `architecture-baseline` | 需要跨 function 的技术边界、ADR、spike | architecture baseline、ADR、架构修订 |
 | `20` | 项目地图层 | `project-map` | 建立或刷新项目路由、状态与文件夹记录 | `roadmap.yaml`、`AGENTS.md`、薄适配器 |
 | `30` | 产品/交互设计层 | `ui-wireframe-spec` | 有全局导航、共享 UI 或 function UI 时 | UI structure、wireframes |
-| `40` | 规格与计划层 | Spec Kit（外部） | 要交付一个具体 function | spec、plan、tasks |
+| `40` | 可选详细设计层 | Spec Kit（外部） | Roadmap entry 不足以指导某个复杂 function 时 | spec、plan、tasks |
 | `50` | 实施一致性层 | `spec-sync` | 实施前检查对齐、实施后记录证据、路由变更请求 | pre-review、证据、CR 提案 |
 | `60` | 实施协作层 | `guided-tdd-pairing` | 你想自己主写代码、小步 TDD 时 | 一次 RED/GREEN 协作 |
 
 `20` 和 `50` 不拥有产品阶段：`20` 记录地图和状态，`50` 检查纵向对齐。两者都不改产品需求、架构或代码，也都不能批准任何东西。
 
-交付门禁没有独立的 Skill。它是每个 function 自己的 `checklist.md`，在写 spec 的同时写出来，**在一个新对话里**核对。写代码的上下文不给自己的作业打勾。
+交付门禁没有独立的 Skill。它是每个 function 自己的 `checklist.md`，在实现前从 Roadmap entry 或 optional spec 写出来，**在一个新对话里**核对。写代码的上下文不给自己的作业打勾。
+
+Feature 有两条交付路径：
+
+- **Direct**：Roadmap 的 description 与 acceptance 已足够，直接建立 checklist 后实施。
+- **Detailed**：单个 feature 有复杂流程、状态、协议、迁移或高风险边界时，再使用 Spec Kit 建立 spec、plan 与 tasks。
+
+是否需要 Detailed route 按 feature 判断，不由整个项目的 `lite` / `full` 标签决定。
 
 ## 三种模式
 
@@ -71,7 +78,7 @@ Spec Kit 和普通实现不是本集合的 Skill，指南会明确标成“Spec 
 
 - 不知道项目现在在哪里：读仓库根目录的 `roadmap.yaml`。
 - 还不清楚产品要做什么：`$product-discovery-roadmap discover`。
-- 已批准产品，要开始某个能力：进入该 function 的 Spec Kit specification。
+- 已批准产品，要开始某个能力：先判断 Roadmap entry 是否足以作为 behavior source；足够走 Direct，不足再走 Detailed。
 - 不确定一项请求会影响产品、架构还是单个 function：`$spec-sync change-request CR-XXXX`。
 - 已有实现证据，要判断能否交付：**开一个新对话**，核对该 function 的 `checklist.md`。
 - 仓库还没有 `roadmap.yaml`：`$project-map init`。

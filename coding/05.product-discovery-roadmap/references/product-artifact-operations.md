@@ -3,19 +3,25 @@
 ## Draft PRD
 
 Use the [single-file PRD template](../assets/product-requirements-template.md).
-State testable user/business behavior; separate confirmed requirements,
-assumptions, open questions, non-goals, and destructive-operation safeguards.
-Use append-only `PR-###` IDs; changed approved requirements receive successor
-IDs. Capture cross-feature experience requirements, but leave layout, style,
-and components to UI artifacts. Remove placeholders, contradictions,
-implementation detail, and unbounded language before review.
+Compress approved discovery into current product intent, main jobs, MVP, user
+journeys, testable requirements, safeguards, and success measures. Use
+append-only `PR-###` IDs; changed approved requirements receive successor IDs.
+Capture cross-feature experience requirements, but leave layout, style, and
+components to UI artifacts.
+
+Add `Explicit Exclusions` only for a capability the user explicitly rejected or
+one likely to be mistaken as included. Add a critical assumption only when it
+could change the MVP, product promise, or feasibility. Add a blocking product
+decision only when delivery cannot proceed without it. Omit empty optional
+sections. Never copy a discovery decision history, question backlog, rejected
+alternatives, or discovery-to-requirement coverage matrix into the PRD.
 
 Start with one PRD. Above roughly 400 lines/40 requirements, or for concurrent
 domain ownership, use the
 [PRD index template](../assets/product-requirements-index-template.md). The root
 owns the global ID registry, status, coverage, waves, and cross-cutting ID
 routing; files created from the
-[PRD domain template](../assets/product-requirements-domain-template.md) own the
+PRD domain template](../assets/product-requirements-domain-template.md) own the
 requirement text. The root registry points to detail and never copies a summary.
 Never split by feature or discovery wave.
 
@@ -23,9 +29,10 @@ Never split by feature or discovery wave.
 
 Use the [single-file roadmap template](../assets/feature-roadmap-template.md).
 Every vertical, independently acceptable feature needs outcome, scope,
-non-goals, dependencies, independent acceptance, one primary owning relation,
-stable `Product Domain`, `Horizon`, `UI Surface`, release boundary, and
-one-spec/plan sizing.
+dependencies, observable acceptance, one primary owning relation per
+requirement, `UI Surface`, and a delivery boundary. Record `Owns Requirements`
+and `Also Bound By` once in the feature map. Do not create a reverse requirement
+coverage table or downstream specification handoff.
 
 Record feature, deployable, and owning-team counts as positive integers,
 datastore count as a non-negative integer, and the constraint field as `yes`,
@@ -37,13 +44,17 @@ but have one owner.
 
 Above roughly 300 lines/12 features, or for concurrent domains, use the
 [roadmap index template](../assets/feature-roadmap-index-template.md). Its root
-alone owns sizing, domain and feature routing, requirement ownership/coverage,
-dependency/order, horizon, UI-surface, and release-boundary values. Domain files
-use the [roadmap-domain template](../assets/feature-roadmap-domain-template.md)
-and own outcomes, scope, non-goals, risks, independent acceptance, and handoff
-names. Do not repeat root-owned values in a domain member. Resolve one F-ID,
-then read only its root rows plus its domain file. Roadmap never mirrors mutable
-delivery state.
+alone owns sizing, domain and feature routing, requirement ownership,
+dependency/order, UI-surface, and delivery-boundary values. Domain files use
+the [roadmap-domain template](../assets/feature-roadmap-domain-template.md) and
+own concise descriptions and acceptance. Do not repeat root-owned values in a
+domain member. Resolve one F-ID, then read only its root row plus its domain
+file. Roadmap never mirrors mutable delivery state.
+
+After drafting, validate that every PR ID has exactly one owner, every bound ID
+exists, every dependency names a feature, and the dependency graph is acyclic.
+Report a concise pass result or concrete issues; do not persist a second
+coverage registry when the checks pass.
 
 For either split artifact, set `**Artifact bundle**: split` on the root and add a
 complete `## Member Registry`. It lists every owned detail file exactly once; it

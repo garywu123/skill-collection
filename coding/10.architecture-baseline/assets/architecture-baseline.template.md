@@ -98,13 +98,3 @@ of rationale — rationale lives above and in the ADRs.
 | Risk | Impact | Early signal | Response |
 |------|--------|--------------|----------|
 | [Risk] | [What breaks] | [What you would observe first] | [Mitigation or accepted] |
-
-## Non-Goals
-
-- [Technical capability deliberately not built, and what would change that]
-
-## Decision Log
-
-| ADR | Title | Status |
-|-----|-------|--------|
-| ADR-0001 | [Title] | Ready for Review |

@@ -12,18 +12,9 @@ requirement relationships, dependencies/order, and release boundary.
 ### F001: [User Capability]
 
 **Root control row**: [Link to F001 in the root]
-**Outcome**: [Independently acceptable user outcome]
+**Description**: [What this feature enables.]
 
-**Scope**:
+**Acceptance**:
 
-- [Included behavior]
-
-**Non-Goals**:
-
-- [Explicit exclusion]
-
-**Primary Risk**: [Product or delivery uncertainty]
-
-**Independent Acceptance**: [One end-to-end demonstration]
-
-**Suggested Specification Name**: `[short-action-noun-name]`
+- [Observable end-to-end result]
+- [Important failure or boundary result, when needed]

@@ -18,10 +18,16 @@ The product MUST [testable, technology-independent behavior].
 
 - [Rule, or `None`].
 
-## Domain Assumptions
+## Critical Domain Assumptions
 
-- [Bounded assumption, or `None`].
+Include only assumptions that could change the MVP, product promise, or
+feasibility. Delete when empty.
 
-## Domain Open Questions
+- [Bounded assumption and consequence if false.]
 
-- [Unresolved decision, or `None`].
+## Blocking Domain Decisions
+
+Include only unresolved decisions that block roadmap or delivery work. Delete
+when empty.
+
+- [Decision needed and what it blocks.]

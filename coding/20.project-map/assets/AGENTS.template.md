@@ -7,7 +7,7 @@ boundaries. Product, architecture, function, and delivery truth live in the
 artifacts routed by `roadmap.yaml`.
 
 Resolve conflicts in this order: current explicit user instruction, approved
-product truth, the selected roadmap entry and function spec, applicable
+product truth, the selected roadmap entry and optional function spec, applicable
 architecture, repository evidence, then legacy material. Report conflicts;
 never silently promote current or legacy behavior into desired behavior.
 
@@ -22,7 +22,8 @@ permission to start work. Follow only the route needed for the named operation.
 | Function boundaries and sequence | `docs.roadmap`, then one selected entry |
 | Cross-function technical decisions | `docs.architecture` |
 | Product UI structure | `docs.ui`, when present |
-| One function's behavior or delivery bar | that entry's `spec` or `checklist` |
+| One function's behavior | its `docs.roadmap` entry, then optional `spec` |
+| One function's delivery bar | that entry's `checklist` |
 | Legacy evidence | `docs.legacy`, when present; evidence only |
 
 Do not load unrelated function specs or reconstruct state from chat history.
@@ -57,20 +58,21 @@ route or function entry whose underlying fact it directly changed.
 |---|---|
 | A routed product, architecture, or UI document now exists | Add or correct its `docs.*` path |
 | The approved product roadmap adds a function | Add `planned`, or evidence-backed `as-built` during adoption |
-| A function spec and checklist now exist | Set `specified`; record both paths |
+| A direct-route checklist now exists | Record its path; leave `planned` until implementation starts |
+| A detailed spec and checklist now exist | Record both paths; leave `planned` until implementation starts |
 | The human starts implementation | Set `implementing` |
 | Implementation evidence is ready for independent checking | Set `verifying` |
 | Fresh verification passes and the human accepts | Set `accepted`; add `verified` |
-| Accepted behavior changes | Reset to `specified`; remove `verified`; clear stale checklist results |
+| Accepted behavior changes | Reset to `planned`; remove `verified`; clear stale checklist results |
 
 Do not change the map merely because an operation ran, and never advance
 unrelated entries.
 
 ## Function lifecycle
 
-`planned -> specified -> implementing -> verifying -> accepted`
+`planned -> implementing -> verifying -> accepted`
 
-`as-built` means an implementation was observed but not specified or accepted
+`as-built` means an implementation was observed but not accepted
 under this process. Convert only the function being changed. When accepted
 behavior changes, clear old checklist boxes, Evidence, Decision, reviewer, and
 date before reverification.
@@ -86,8 +88,10 @@ Omit commands not verified by a manifest, CI, or a successful repository run.
 
 ## Change rules
 
-- Make the smallest change satisfying the selected function spec.
-- Preserve explicit non-goals; avoid unrelated refactors and dependency bumps.
+- Make the smallest change satisfying the selected roadmap entry and optional
+   function spec.
+- Stay inside the approved feature boundary; avoid unrelated refactors and
+   dependency bumps.
 - Add or update tests for changed behavior.
 - Report unknowns, conflicts, assumptions, and remaining risk.
 - Never commit secrets or production data.

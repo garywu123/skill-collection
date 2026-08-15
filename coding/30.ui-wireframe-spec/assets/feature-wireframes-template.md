@@ -1,7 +1,7 @@
 # [FNNN]: [Feature Name] — Wireframes
 
-**Feature Spec**: [Relative link to spec.md]
 **Roadmap Entry**: [Relative link and feature ID]
+**Behavior Source**: [Roadmap entry above | Relative link to optional spec.md]
 **UI Structure**: [Relative link to doc/ui-structure.md] | Not applicable — [approved rationale/source]
 **UI Surface**: reuses existing | new screens
 **Status**: Ready for Review
@@ -11,9 +11,9 @@
 Human approval is recorded by the lifecycle owner after review; generation of
 this draft does not approve it.
 
-Low-fidelity layout intent for this feature only. Produced after feature
-clarification and before technical planning. Contains no component library,
-styling, or framework decision.
+Low-fidelity layout intent for this feature only. Produced after its behavior
+source is sufficiently clear and before implementation planning when planning
+is needed. Contains no component library, styling, or framework decision.
 
 ## Screen Inventory
 
@@ -96,6 +96,6 @@ flowchart TD
 
 ## Gaps for Clarification
 
-Behavior the specification does not define and that layout cannot invent.
+Behavior the selected source does not define and that layout cannot invent.
 
 - [Question, and which screen or state is blocked on it]

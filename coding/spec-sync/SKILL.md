@@ -17,8 +17,10 @@ after read-only reporting. The decision itself, and any downstream operation,
 begins in a new conversation the user explicitly authorizes.
 
 Read `roadmap.yaml` at the repository root first to find the target function's
-status and its `spec` and `checklist` paths. Read only the target IDs and the
-relevant sections. Stop on conflicting IDs, paths, or truth sources.
+status, optional `spec`, and `checklist` paths. Read only the target IDs and the
+relevant sections. The absence of `spec` selects the direct feature route; its
+presence selects the detailed route. Stop on conflicting IDs, paths, or truth
+sources.
 
 Keep each opened slice at or below 8 KiB and the initial target payload at or
 below 24 KiB. Beyond that, process stable-ID batches separately and merge only
@@ -34,8 +36,9 @@ only; never approve, and never set a function to `accepted`.
 
 | Operation | Prerequisites | Owned output | `roadmap.yaml` effect |
 |---|---|---|---|
-| `pre-implement <id> <kind>` | Function at `specified`, with spec, plan, tasks, and checklist present | `pre-implementation-review.md` in the work-item directory | None on `Pass`; record the blocker in `notes` on `Blocked` |
-| `post-implement <id> <kind>` | An approved pre-implementation review; converged implementation and named evidence | Evidence rows and check results inside that function's `checklist.md` | `status: verifying` when no blocker remains |
+| `pre-implement <id> feature`, direct | Function at `planned`; approved roadmap behavior source and checklist present; no `spec` path | `Pass` or `Blocked` response only | None on `Pass`; record the blocker in `notes` on `Blocked` |
+| `pre-implement <id> <kind>`, detailed | Function at `planned`; spec, plan, tasks, and checklist present | `pre-implementation-review.md` in the work-item directory | None on `Pass`; record the blocker in `notes` on `Blocked` |
+| `post-implement <id> <kind>` | Converged implementation, checklist, and named evidence; approved pre-review additionally required for the detailed route | Evidence rows and check results inside that function's `checklist.md` | `status: verifying` when no blocker remains |
 | `change-request <CR-ID>` | Source request text | `doc/change-requests/<CR-ID>.md`, or a response when the project keeps no CR records | None |
 
 `pre-implement` never moves a function to `implementing`; the human does that
@@ -46,19 +49,20 @@ Supported kinds: `feature`, `bug`, `maintenance`, `migration`, `security`. Never
 infer the kind from an ID.
 
 Product, roadmap, architecture, UI, and project-map changes belong to their
-owning skills. Spec Kit owns horizontal `spec.md`/`plan.md`/`tasks.md` analysis.
-This skill owns only the pre-implementation review, the verification evidence it
-writes into the checklist, and the proposed change route.
+owning skills. Spec Kit may own detailed-route `spec.md`/`plan.md`/`tasks.md`
+analysis. This skill owns only route-aware alignment results, the verification
+evidence it writes into the checklist, and the proposed change route.
 
-## Upstream prerequisites
+## Delivery routes
 
-`pre-implement` requires, for the same function: `spec.md`, `plan.md`,
-`tasks.md`, and `checklist.md` all present, and a `roadmap.yaml` status of
-`specified`. Spec Kit and the human produce those; this skill never writes them
-and never marks them approved.
+Use the direct route only for a `feature` whose approved roadmap description and
+acceptance are sufficient to implement and verify. It requires a checklist
+derived from that roadmap entry and no `spec` path in `roadmap.yaml`.
 
-When a required file is missing or the status does not match, block and report
-exactly which file its owner must produce. Do not proceed on a partial set.
+Use the detailed route when a feature has an optional `spec` path, and for every
+non-feature kind. It requires `spec.md`, `plan.md`, `tasks.md`, and
+`checklist.md`. A partial detailed bundle blocks; never silently fall back to
+the direct route. Both routes enter pre-implementation at `status: planned`.
 
 ## `pre-implement`
 
@@ -69,24 +73,29 @@ constraints for every other supported kind. Cite both sides by ID, anchor, or
 line. Classify findings as `Blocking`, `Advisory`, or `Skipped`; a skipped
 required check prevents `Pass`.
 
-Create or update the work item's `pre-implementation-review.md` from
-[the template](./assets/pre-implementation-review.template.md) with one concrete
-result: `Pass` or `Blocked`.
+For the direct feature route, return one concrete `Pass` or `Blocked` result in
+the response and create no review artifact. For the detailed route, create or
+update `pre-implementation-review.md` from
+[the template](./assets/pre-implementation-review.template.md).
 
-- For `Pass`, report the pending human review and stop. Implementation starts
-  only after the human explicitly approves this review; `Pass` alone is not
-  approval.
-- For `Blocked`, list every concrete blocker in the review, note it in the
-  function's `roadmap.yaml` entry, report the required owner action, and stop.
+- For `Pass`, report the pending human implementation authorization and stop.
+   Detailed-route implementation also requires explicit approval of its review;
+   a direct-route `Pass` is not implementation authorization by itself.
+- For `Blocked`, list every concrete blocker in the direct response or detailed
+   review, note it in the function's `roadmap.yaml` entry, report the required
+   owner action, and stop.
 
 ## `post-implement`
 
-First confirm the pre-implementation review exists and was approved, then read
-only [the post-implementation contract](./references/post-implementation-contract.md).
+First resolve the same direct or detailed route used before implementation. For
+the detailed route, confirm the pre-implementation review exists and was
+approved. Then read only
+[the post-implementation contract](./references/post-implementation-contract.md).
 Then:
 
-1. Confirm every task and check is complete, or has an explicit deferred-work
-   destination.
+1. For a detailed route, confirm every task and check is complete or has an
+   explicit deferred-work destination. For a direct route, confirm every
+   checklist criterion has named evidence.
 2. Trace every applicable requirement, scenario, regression, migration
    invariant, or security control to named implementation evidence. A green
    build alone does not demonstrate behavior.
@@ -119,7 +128,7 @@ the exact suggested human prompts but run none of them. Do not edit routed
 artifacts. Stop with every action pending.
 
 For a change to a function already at `accepted`, state which route applies and
-why. The default is editing in place: reset it to `specified`, remove
+why. The default is editing in place: reset it to `planned`, remove
 `verified`, and clear old checklist boxes, Evidence, Decision, reviewer, and
 date. Use a successor only when the old and new capabilities need independent
 deployment, support, acceptance, migration, or long-term tracking.

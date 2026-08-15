@@ -16,26 +16,19 @@ Use `not_applicable` only when the cited cross-cutting approved requirement
 states that no global shell, navigation, or shared cross-feature UI pattern
 exists. Feature-level `UI Surface` remains independently authoritative.
 
-## Product Vision
+## Product Intent
 
-[The user or business outcome this product exists to create.]
+[Why users need the product and the result it promises.]
 
-## Users and Problems
+## Users and Main Jobs
 
 ### [User or Persona]
 
-- **Problem**: [Current pain or unmet need]
-- **Desired outcome**: [Observable improvement]
+- [The main job this user needs to complete.]
 
-## Product Scope
+## MVP
 
-### In Scope
-
-- [Capability or behavior]
-
-### Non-Goals
-
-- [Explicitly excluded behavior]
+[The smallest useful product outcome and the core capabilities required for it.]
 
 ## Requirement Waves
 
@@ -70,19 +63,25 @@ registry is the sole ID-to-member mapping.
 
 - **SM-001**: [Technology-independent measurable outcome].
 
-## Assumptions
+## Explicit Exclusions
 
-- **A-001**: [Product-wide bounded assumption and impact if false].
+Include only explicit or easily misunderstood exclusions. Delete when empty.
 
-## Open Questions
+- [Explicitly excluded capability.]
 
-- **Q-001**: [Product-wide unresolved decision and why it matters].
+## Critical Assumptions
 
-## Decision Log
+Include only assumptions that could change the MVP, product promise, or
+feasibility. Delete when empty.
 
-| Date | Decision | Rationale | Affected IDs |
-|---|---|---|---|
-| YYYY-MM-DD | [Decision] | [Reason] | PR-001 |
+- **A-001**: [Assumption and consequence if false.]
+
+## Blocking Product Decisions
+
+Include only unresolved decisions that block roadmap or delivery work. Delete
+when empty.
+
+- [Decision needed and what it blocks.]
 
 ## Member Registry
 

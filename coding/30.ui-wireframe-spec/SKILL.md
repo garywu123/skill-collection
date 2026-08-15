@@ -1,6 +1,6 @@
 ---
 name: ui-wireframe-spec
-description: Create or revise low-fidelity product UI structure or feature wireframes from approved requirements and a clarified feature. Use only when the current user explicitly requests this semantic design work; never infer authorization from a roadmap UI Surface value, a recorded stage in roadmap.yaml, or another skill.
+description: Create or revise low-fidelity product UI structure or feature wireframes from approved requirements and a sufficiently clear roadmap feature or optional function spec. Use only when the current user explicitly requests this semantic design work; never infer authorization from a roadmap UI Surface value, a recorded stage in roadmap.yaml, or another skill.
 ---
 
 # UI Wireframe Spec
@@ -59,7 +59,7 @@ reviewed artifact.
 | Mode | Required before execution | Read | Creates or modifies |
 |---|---|---|---|
 | `product` | Explicit request; approved product requirements and roadmap; product has a UI | Applicable product experience constraints and roadmap feature outcomes/UI Surface values | Canonical `doc/ui-structure.md` or user-specified equivalent |
-| `feature` | Explicit request; one feature spec exists and is clarified; roadmap UI Surface is not `none`; product UI structure is approved **or** global product UI is explicitly `not applicable` | One roadmap entry, applicable requirement IDs, the feature spec/clarifications, and product UI structure when applicable | Canonical `specs/NNN-feature/wireframes.md` or user-specified equivalent |
+| `feature` | Explicit request; roadmap UI Surface is not `none`; the roadmap feature is behaviorally sufficient **or** an optional function spec exists and is clarified; product UI structure is approved **or** global product UI is explicitly `not applicable` | One roadmap entry, applicable requirement IDs, optional function spec/clarifications when present, and product UI structure when applicable | Canonical `specs/NNN-feature/wireframes.md` or user-specified equivalent |
 
 In feature mode, a roadmap `UI Surface: none` routes away from wireframing: do
 not start `feature_ui`. If `UI Surface` is missing or ambiguous, stop and report
@@ -124,18 +124,22 @@ and stop for review rather than loading the entire product into one context.
 
 ### Feature mode
 
-1. Apply the fidelity contract to every clarified flow and state. Present the
+1. Resolve the behavior source: use the optional function spec when present;
+  otherwise use the roadmap description and acceptance. If that source leaves
+  a screen-changing behavior unresolved, report the gap and stop rather than
+  inventing it or requiring a spec by default.
+2. Apply the fidelity contract to every clarified flow and state. Present the
    candidate screen inventory and qualifying reasons before drawing when scope
    is uncertain or exceeds eight L1 screens.
-2. For every qualifying screen, produce L1 then L2. Every specified state must
+3. For every qualifying screen, produce L1 then L2. Every specified state must
    appear in the state table; every visible control must appear in the control
    table.
-3. Add L3 only for qualifying branching flows and name every edge condition.
-4. Reuse the approved shell, terminology, and patterns when applicable. If
+4. Add L3 only for qualifying branching flows and name every edge condition.
+5. Reuse the approved shell, terminology, and patterns when applicable. If
    product UI is explicitly N/A, record the cited reason and use only approved
    product terminology. Record deviations and unresolved behavioral gaps;
    never invent missing domain behavior.
-5. Use [the feature wireframes template](assets/feature-wireframes-template.md).
+6. Use [the feature wireframes template](assets/feature-wireframes-template.md).
 
 Ask at most five decision-changing questions per round. Prefer a recommended
 answer with its consequence. Do not ask styling questions.
@@ -145,8 +149,8 @@ answer with its consequence. Do not ask styling questions.
 Nothing validates these mechanically. Before reporting, check them yourself:
 
 - each screen and diagram satisfies the fidelity contract;
-- every applicable acceptance scenario is reachable through represented screens
-  and states;
+- every applicable acceptance criterion in the selected behavior source is
+  reachable through represented screens and states;
 - states, destructive-action safeguards, controls, branch conditions, and
   terminology trace to approved sources or are marked unresolved;
 - no styling, component, framework, or invented product decision appears;

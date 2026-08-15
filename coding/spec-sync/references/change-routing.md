@@ -8,7 +8,7 @@ controller, not authorization to execute any routed action.
 1. **Preserve approved IDs.** A changed approved `PR-###` receives a successor ID; the
    owning requirements workflow records the supersession. Never renumber or reuse IDs.
 2. **Preserve delivery validity.** When accepted behavior changes in place,
-   reset it to `specified`, remove `verified`, and clear stale checklist results;
+   reset it to `planned`, remove `verified`, and clear stale checklist results;
    Git preserves the prior version. Use a successor only when the behaviors
    need independent deployment, support, acceptance, migration, or tracking.
 3. **Route top-down.** Resolve the highest affected source of truth before downstream
@@ -27,7 +27,7 @@ Select the highest layer touched, then include every lower affected layer.
 | Cross-feature technical decision | Approved constraint or shared boundary must change | `architecture-baseline amend` |
 | Navigation or global shell | Product-wide navigation or shared UI structure changes | `ui-wireframe-spec product` |
 | Project governance | Build, repository layout, or agent working rule changes | `project-map refresh` |
-| Feature internals | Only one non-delivered feature's behavior changes | Human-authorized feature specification workflow |
+| Feature internals | Only one non-delivered feature's behavior changes | Human-authorized direct or detailed feature delivery workflow |
 
 The list above names possible next workflows; it does not authorize their use.
 
@@ -35,16 +35,16 @@ The list above names possible next workflows; it does not authorize their use.
 
 | Current state | Proposed route |
 |---|---|
-| Planned, not specified | Ask the roadmap owner to amend the entry, then re-enter feature specification |
-| Specified, not implemented | Re-authorize specification/clarification; refresh UI, plan, and tasks only where affected |
+| Planned | Amend the roadmap if its boundary changes; otherwise refresh the selected route's behavior source, checklist, UI, and detailed artifacts where present |
 | In progress | Stop affected implementation; ask the human whether to finish a safe slice or re-specify now |
 | Verifying | Propose returning to the earliest affected stage; the stale evidence rows in `checklist.md` must be struck or re-run, not left standing |
 | Accepted | Propose one of the two routes below, and say which and why |
 
-For an accepted function, the default route is to edit its spec and checklist in
-place, reset `status` to `specified`, delete `verified`, and clear every old
-checklist box, Evidence row, Decision, reviewer, and date. Git retains the
-previous version. Propose a successor only when the old and new capabilities
+For an accepted function, the default route is to update its roadmap entry and,
+when present, optional spec; rebuild the checklist; reset `status` to `planned`;
+delete `verified`; and clear every old checklist box, Evidence row, Decision,
+reviewer, and date. Git retains the previous version. Propose a successor only
+when the old and new capabilities
 need independent deployment, support, acceptance, migration, or long-term
 tracking; cross-reference both entries in `notes`. Never leave acceptance
 evidence on behavior that has since changed.

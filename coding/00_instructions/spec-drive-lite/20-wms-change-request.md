@@ -29,7 +29,7 @@ $spec-sync change-request CR-0021
 | 新业务能力 | 新增波次拣货 | product/roadmap 修订 → 新 function | checklist 验收 |
 | 业务规则变化 | 允许超收，或允许部分收货 | product 修订；必要时架构修订 → function | checklist 验收 |
 | 已接受 function 的行为改动 | F001 收货改为支持部分收货 | 见第 3 节 | checklist 重新验收 |
-| 未交付 function 的内部调整 | 实现前改收货页面字段 | 直接重写 spec，刷新 plan/tasks/UI | 正常 pre/post 流程 |
+| 未交付 function 的内部调整 | 实现前改收货页面字段 | 更新 Roadmap behavior source；Detailed route 再刷新 spec/plan/tasks/UI | 正常 pre/post 流程 |
 | 缺陷 | 重复扫描导致库存加两次 | `bug` 工作项 + 复现与回归测试 | post-implement + 人工确认 |
 | 不改变外部行为的改善 | 查询索引、重构、日志 | `maintenance` 工作项 | post-implement + 人工确认 |
 | 数据模型或迁移 | 库存台账表拆分 | `migration` 工作项 + dry run/回退/恢复 | post-implement + 发布证据 |
@@ -40,21 +40,21 @@ $spec-sync change-request CR-0021
 
 ## 3. 改一个已接受的 function：两种做法
 
-已接受的 function 带着一条 `verified` 记录，那条记录是对**当时那份 spec** 的验收。
-改了 spec 而不动状态，那条记录就变成假的。这是唯一必须处理的问题。
+已接受的 function 带着一条 `verified` 记录，那条记录是对**当时 behavior source** 的验收。
+改了 Roadmap entry 或 optional spec 而不动状态，那条记录就变成假的。这是唯一必须处理的问题。
 
 ### 做法 A：就地修改（默认）
 
 适用于新行为**取代**旧行为。
 
-1. 修改 `specs/F001-receiving/spec.md`。
-2. 根据新 spec 重建 `checklist.md` 的受影响条目，并清空旧 boxes、Evidence、Decision、
+1. 修改 Roadmap feature entry；Detailed route 同时修改 optional `spec.md`。
+2. 根据新 behavior source 重建 `checklist.md` 的受影响条目，并清空旧 boxes、Evidence、Decision、
    reviewer 和 date。
-3. 在 `roadmap.yaml` 里把 F001 的 `status` 退回 `specified`，**删掉 `verified` 字段**。
+3. 在 `roadmap.yaml` 里把 F001 的 `status` 退回 `planned`，**删掉 `verified` 字段**。
 4. 重走一遍：pre-implement → 实施 → post-implement → 开新对话验收。
 
-旧版本的 spec、checklist 和证据都在 git 里。`git log specs/F001-receiving/spec.md`
-就是你的历史记录，不需要另建一个 function 编号来保存它。
+旧版本的 Roadmap、optional spec、checklist 和证据都在 git 里，不需要另建一个 function
+编号来保存它。
 
 ### 做法 B：后继 function
 
@@ -71,7 +71,7 @@ $spec-sync change-request CR-0021
     notes: 部分收货由 F008 承担
   - id: F008
     name: 部分收货
-    status: specified
+    status: planned
     spec: specs/F008-partial-receiving/spec.md
     checklist: specs/F008-partial-receiving/checklist.md
     notes: 扩展 F001 的收货流程，F001 行为不变
@@ -94,12 +94,11 @@ $spec-sync change-request CR-0021
 | 4 | `$product-discovery-roadmap approve-amendment` | `使用 $product-discovery-roadmap approve-amendment CR-0021；我 <姓名> 于 <日期> 批准完整修订集，依据是本消息；应用到 canonical product 文件并停止。` | canonical 产品事实更新；必要时校正 `docs.*` |
 | 5 | `$architecture-baseline amend CR-0021`，仅影响共享技术边界时 | `使用 $architecture-baseline amend CR-0021，评估部分收货是否改变库存状态、事务或集成边界；只写架构修订和 proposed ADR，不修改 accepted baseline。` | 架构修订提案；地图不变 |
 | 6 | `$architecture-baseline approve`，仅执行第 5 步后 | `使用 $architecture-baseline approve CR-0021；我 <姓名> 于 <日期> 批准列出的 baseline/ADR 变更，依据是本消息；应用完整修订并停止。` | canonical 架构更新；地图路径通常不变 |
-| 7 | Spec Kit `specify/clarify` | `执行 Spec Kit 重新 specify 并 clarify F001，只反映已批准的部分收货规则；重建受影响 checklist，清空旧 boxes、Evidence 和 Decision；设为 specified 并删除 verified。` | spec/checklist；`specified`、无 `verified` |
-| 8 | Spec Kit `plan/tasks` | `执行 Spec Kit 重新生成 F001 受影响的 plan 和 tasks；保留未受影响内容，并纳入最新架构约束和验证工作。` | plan/tasks；地图不变 |
-| 9 | `$spec-sync pre-implement F001 feature` | `使用 $spec-sync pre-implement F001 feature，重新检查修订后的完整输入；只写 pre-review，报告后停止。` | pre-review；地图不变或 blocker notes |
-| 10 | 无；普通实现，或可选 `$guided-tdd-pairing` | `我批准当前 F001 pre-review。现在只实现部分收货变更及所需测试/迁移，并把 F001 设为 implementing；不要验收。` | 代码/测试/迁移；`implementing` |
-| 11 | `$spec-sync post-implement F001 feature` | `使用 $spec-sync post-implement F001 feature，把真实执行证据写进 checklist；不要勾选或作 acceptance decision；无 blocker 时设为 verifying。` | Evidence；`verifying` |
-| 12 | 无；必须开新对话 | `独立核对 F001 最新 spec、checklist、diff、测试和迁移证据，不修代码。若全部满足，我 <姓名> 于 <日期> 接受 F001；否则记录 changes requested。` | 新 Decision；通过时 `accepted` + 新 `verified` |
+| 7 | 无或 Spec Kit | `从修订后的 Roadmap 重新选择 Direct/Detailed route；重建 checklist，清空旧 boxes、Evidence 和 Decision；设为 planned 并删除 verified。Detailed route 同时刷新 spec/plan/tasks。` | behavior source/checklist；`planned`、无 `verified` |
+| 8 | `$spec-sync pre-implement F001 feature` | `使用 $spec-sync pre-implement F001 feature，按选定 route 检查修订后的输入；报告后停止。` | Direct: response；Detailed: pre-review |
+| 9 | 无；普通实现，或可选 `$guided-tdd-pairing` | `我批准当前 route 的 pre-check。现在只实现部分收货变更及所需测试/迁移，并把 F001 设为 implementing；不要验收。` | 代码/测试/迁移；`implementing` |
+| 10 | `$spec-sync post-implement F001 feature` | `使用 $spec-sync post-implement F001 feature，把真实执行证据写进 checklist；不要勾选或作 acceptance decision；无 blocker 时设为 verifying。` | Evidence；`verifying` |
+| 11 | 无；必须开新对话 | `独立核对 F001 最新 behavior source、checklist、diff、测试和迁移证据，不修代码。若全部满足，我 <姓名> 于 <日期> 接受 F001；否则记录 changes requested。` | 新 Decision；通过时 `accepted` + 新 `verified` |
 
 第 3 步不是 discovery。它只改动 PRD 里被这次变更影响的那几条规则，不重开业务访谈。
 
@@ -111,7 +110,7 @@ $spec-sync change-request CR-0021
 
 | 必须调用 | 你可以这样说 |
 |---|---|
-| Spec Kit | `为 BUG-0042 建立 bug spec 和 checklist，只描述重复扫描导致库存加两次的复现、期望行为、边界和回归证据；登记路径并设为 specified。` |
+| Spec Kit | `为 BUG-0042 建立 bug spec 和 checklist，只描述重复扫描导致库存加两次的复现、期望行为、边界和回归证据；登记路径并保持 planned。` |
 | `$spec-sync pre-implement BUG-0042 bug` | `使用 $spec-sync pre-implement BUG-0042 bug，确认它没有偷偷改变产品规则；报告后停止。` |
 | 无；普通实现 | `我批准 BUG-0042 pre-review。只修复该缺陷并增加先失败后通过的回归测试；设为 implementing，不要扩大行为。` |
 | `$spec-sync post-implement BUG-0042 bug` | `使用 $spec-sync post-implement BUG-0042 bug，把复现、修复后结果和回归命令写入 checklist；无 blocker 时设为 verifying。` |
@@ -122,7 +121,7 @@ Bug 不能顺手改变产品规则。如果诊断下来发现是规则本身要�
 ### Maintenance
 
 记录边界、兼容性、回退方式和验证方法，使用同样的消息结构，只把 kind 换成
-`maintenance`：Spec Kit 建 spec/checklist → `$spec-sync pre-implement <ID> maintenance`
+`maintenance`：建立 work request/spec 与 checklist → `$spec-sync pre-implement <ID> maintenance`
 → 普通实现 → `$spec-sync post-implement <ID> maintenance` → 新对话验证。
 如果这项「维护」改变了用户可观察到的行为，它就不是维护，重新分类。
 

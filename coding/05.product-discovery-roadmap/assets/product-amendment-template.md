@@ -32,12 +32,12 @@ replace that verification.
 
 ## Validation
 
-- [ ] Scope and non-goals remain explicit.
+- [ ] Product intent, journeys, requirements, and explicit exclusions remain
+      consistent.
 - [ ] Requirement ownership and dependency graph remain valid.
 - [ ] Stable IDs are never reused; successors exist only where both records
       require independent meaning or tracking.
 - [ ] Split-root membership changes are complete and unambiguous.
 
-Keep this proposal unchanged while it is under review. The explicit human
-approval fields in the updated canonical artifact and Git history are the
-durable decision record.
+Keep this proposal unchanged while it is under review. Approval fields in the
+updated canonical artifact and Git history preserve the review record.

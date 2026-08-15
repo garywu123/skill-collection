@@ -104,8 +104,8 @@ report it and stop rather than loading a second reference.
      `roadmap.yaml` role/entry lookups over copied paths, feature lists, or
      summaries;
    - [the delivery checklist template](assets/delivery-checklist.template.md)
-     belongs to whichever skill specifies a function, not to this one. Point at
-     it; do not fill it in.
+     belongs to the operation preparing a function for implementation, not to
+     this Skill. Point at it; do not fill it in.
 4. Preserve valid human-written rules and reconcile conflicts visibly.
 5. Keep adapters derived and minimal. Never maintain a second copy of a
    universal rule.

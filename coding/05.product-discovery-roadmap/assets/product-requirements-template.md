@@ -8,26 +8,19 @@
 **Product UI structure applicability**: required | not_applicable
 **Product UI applicability evidence**: [Approved PR-### anchor]
 
-## Product Vision
+## Product Intent
 
-[The user or business outcome this product exists to create.]
+[Why users need the product and the result it promises.]
 
-## Users and Problems
+## Users and Main Jobs
 
 ### [User or Persona]
 
-- **Problem**: [Current pain or unmet need]
-- **Desired outcome**: [Observable improvement]
+- [The main job this user needs to complete.]
 
-## Product Scope
+## MVP
 
-### In Scope
-
-- [Capability or behavior]
-
-### Non-Goals
-
-- [Explicitly excluded behavior]
+[The smallest useful product outcome and the core capabilities required for it.]
 
 ## User Journeys
 
@@ -43,7 +36,7 @@
   one or more user journeys].
 
 Detailed screen layouts, visual styling, components, and transient UI states are
-defined in the specification for the feature that owns the interaction.
+owned by the feature's delivery artifacts when that work begins.
 
 Use `not_applicable` only when the cited approved requirement states that no
 global shell, navigation, or shared cross-feature UI pattern exists. It does not
@@ -61,16 +54,23 @@ turn a roadmap feature's `new screens` or `reuses existing` into `none`.
 
 - **SM-001**: [Technology-independent measurable outcome].
 
-## Assumptions
+## Explicit Exclusions
 
-- **A-001**: [Bounded assumption and impact if false].
+Include only capabilities the user explicitly rejected or that are likely to be
+mistaken as included. Delete this section when there are none.
 
-## Open Questions
+- [Explicitly excluded capability and the approved reason.]
 
-- **Q-001**: [Unresolved decision and why it matters].
+## Critical Assumptions
 
-## Decision Log
+Include only assumptions that could change the MVP, product promise, or
+feasibility. Delete this section when there are none.
 
-| Date | Decision | Rationale | Affected Requirements |
-|------|----------|-----------|-----------------------|
-| YYYY-MM-DD | [Decision] | [Reason] | PR-001 |
+- **A-001**: [Assumption and consequence if false.]
+
+## Blocking Product Decisions
+
+Include only unresolved decisions that prevent roadmap or delivery work. Delete
+this section when there are none.
+
+- [Decision needed and what it blocks.]

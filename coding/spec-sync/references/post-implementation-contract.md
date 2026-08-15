@@ -9,7 +9,7 @@ certification, or release approval.
 
 | Claim | Acceptable evidence | Not sufficient alone |
 |---|---|---|
-| Tasks complete | Every task checked, or each deferral has an ID, destination/owner, and reason | "Mostly done" |
+| Detailed-route tasks complete | Every task checked, or each deferral has an ID, destination/owner, and reason | "Mostly done" |
 | Checks complete | Named command, checklist, or CI job with result and revision | A build badge without revision |
 | Required behavior/control implemented | Applicable scenario, regression, invariant, or control ID linked to focused evidence | Code exists or PR merged |
 | Constraints honored | Relevant code/test evidence checked against each applicable `AC-###` | No reported complaints |
@@ -33,10 +33,12 @@ Apply exactly one row for the explicitly named kind.
 
 ## Completeness and missing inputs
 
-The exact work ID and kind, an approved `pre-implementation-review.md`, a converged
-implementation, tasks, and named evidence are required. A missing or contradictory
-prerequisite, an uncovered required ID batch, a truncated query that was not narrowed,
-any concrete blocker, or any skipped required check prevents a ready result.
+The exact work ID and kind, a converged implementation, checklist, and named
+evidence are required. The detailed route additionally requires an approved
+`pre-implementation-review.md` and completed tasks. The direct feature route
+does not. A missing or contradictory route prerequisite, an uncovered required
+ID batch, a truncated query that was not narrowed, any concrete blocker, or any
+skipped required check prevents a ready result.
 
 Batch exhaustive work by stable IDs. The `checklist.md` evidence table must retain a
 compact coverage ledger identifying every required batch and its result. Do not treat

@@ -1,67 +1,41 @@
 # [Product Name]: Discovery Notes
 
-**Status**: In Progress | Ready for Review | Approved for PRD
+**Status**: In Progress | Ready for PRD | Approved for PRD
 **Artifact bundle**: single
-**Started**: YYYY-MM-DD
 **Last Updated**: YYYY-MM-DD
 
-## Current Understanding
+## Why This Product
 
-### Users and Problems
+[Why the software is needed and what problem exists today.]
 
-- [Current understanding]
+## What It Should Do
 
-### Desired Outcomes
+[The main result the software should help its users achieve.]
 
-- [Observable product outcome]
+## Primary Workflow
 
-### Scope and Non-Goals
+1. [User action or operational step]
+2. [Product response]
+3. [Observable result]
 
-- **In scope**: [Capability]
-- **Non-goal**: [Excluded capability]
+## Users and Operating Context
 
-### Rules and Safeguards
+[Who uses the product, where they use it, and constraints needed to understand
+the job.]
 
-- [Business rule or safety constraint]
+## Domain Knowledge
 
-## Interview Rounds
+- [Important term, business rule, existing process, or confirmed fact]
+- [Link to `doc/domain/<topic>.md` when the detail needs its own maintained
+   document]
 
-### Round 1: [Topic] - YYYY-MM-DD
+## Critical Unknowns
 
-**Questions and Answers**
+Include this section only when an unresolved answer could change the product's
+core behavior, MVP boundary, or feasibility. Delete it when no such unknown
+remains.
 
-1. **Question**: [Question asked]
-   **Answer**: [User's answer]
-
-**Decisions and Rationale**
-
-- **D-001**: [Decision] because [rationale].
-
-**Rejected Alternatives**
-
-- [Alternative and why it was rejected]
-
-**New or Changed Understanding**
-
-- [Conclusion added or prior conclusion superseded]
-
-**Open Frontier**
-
-- [Next unresolved decision whose prerequisites are now satisfied]
-
-## Assumptions
-
-- **A-001**: [Bounded assumption and impact if false]
-
-## Contradictions and Open Questions
-
-- **Q-001**: [Conflict or unresolved decision]
-
-## Superseded Decisions
-
-| Decision | Superseded By | Reason |
-|----------|---------------|--------|
-| D-000 | D-001 | [Why understanding changed] |
+- [Unknown and why it blocks product definition]
 
 ## Discovery Approval
 
@@ -69,4 +43,3 @@
 - **Approved By**: [Name or role]
 - **Date**: YYYY-MM-DD
 - **Approval Evidence**: [Explicit user statement or review reference]
-- **Remaining bounded assumptions**: [IDs or None]

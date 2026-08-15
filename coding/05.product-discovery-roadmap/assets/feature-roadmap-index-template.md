@@ -20,10 +20,9 @@
 
 ## Ownership Boundary
 
-This root owns feature routing, requirement ownership/coverage, dependencies and
-order, horizon, UI surface, and release boundary. Domain members own outcomes,
-scope, non-goals, risk, independent acceptance, and handoff names. Product truth
-must appear under exactly one owner.
+This root owns feature routing, requirement ownership, dependencies, UI surface,
+and delivery boundary. Domain members own concise descriptions and acceptance.
+Product truth must appear under exactly one owner.
 
 ## Domain Registry
 
@@ -31,36 +30,18 @@ must appear under exactly one owner.
 |---|---|---|
 | [stable-domain-key] | `{{DOMAIN_1_PATH}}` | F001, F002 |
 
-## Feature Control Registry
+## Feature Map
 
-| Feature | Domain | Horizon | UI Surface | Dependencies | Release Boundary |
-|---|---|---|---|---|---|
-| F001 | [stable-domain-key] | Committed | new screens | None | MVP |
-| F002 | [stable-domain-key] | Planned | reuses existing | F001 | Post-MVP |
+Requirement ownership appears only in this table. Every approved `PR-###` has
+exactly one owner; `Also Bound By` never creates another owner.
 
-Allowed horizons: `Committed`, `Planned`, `Candidate`, `Unknown`.
-Allowed UI surfaces: `none`, `reuses existing`, `new screens`.
+| ID | Feature | Domain | Outcome | Owns Requirements | Also Bound By | Depends On | Delivery | UI Surface |
+|---|---|---|---|---|---|---|---|---|
+| F001 | [User capability] | [stable-domain-key] | [Observable result] | PR-001 | PR-100 | None | MVP | new screens |
+| F002 | [Next capability] | [stable-domain-key] | [Observable result] | PR-002 | PR-100 | F001 | Post-MVP | reuses existing |
 
-## Dependency and Order Graph
-
-```mermaid
-flowchart LR
-    F001 --> F002
-```
-
-## Requirements Coverage
-
-| Requirement | Relationship | Feature(s) | Status |
-|---|---|---|---|
-| PR-001 | Owns | F001 | Covered |
-| PR-100 | Applies | F001, F002 | Covered |
-
-## Validation Findings
-
-- **Uncovered requirements**: None
-- **Duplicate ownership**: None
-- **Circular dependencies**: None
-- **Boundary concerns**: None
+Allowed delivery values: `MVP`, `Post-MVP`, `Deferred`, `Candidate`.
+Allowed UI values: `none`, `reuses existing`, `new screens`.
 
 ## Member Registry
 

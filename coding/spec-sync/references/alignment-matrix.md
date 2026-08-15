@@ -6,15 +6,15 @@ behavior. A finding without specific evidence in both artifacts is not a finding
 
 ## Direction and precedence
 
-Spec Kit analysis checks horizontally inside one work item:
+The direct feature route uses the approved roadmap entry as its behavior source:
 
 ```text
-spec.md <-> plan.md <-> tasks.md
+product requirements -> roadmap feature -> checklist
+                              |                 |
+                    architecture/UI        implementation
 ```
 
-`spec-sync` checks vertically, using only relevant IDs and sections. Product,
-roadmap, and UI branches apply to features; every kind checks its approved
-work-item inputs and applicable architecture/repository constraints:
+The detailed route adds feature-local refinement:
 
 ```text
 product requirements
@@ -23,39 +23,38 @@ roadmap feature entry ----- architecture baseline ----- UI structure
         |                           |                         |
      spec.md -------------------- plan.md ------------- wireframes.md
         |
-     tasks.md
+     tasks.md ------------------- checklist.md
 ```
 
 When two approved artifacts disagree, report the conflict. The higher source of truth
 remains authoritative until its owning workflow explicitly changes it. `spec-sync` edits
 neither side.
 
-## Common pre-implementation checks
+## Direct feature checks
 
 | # | Lower artifact | Higher artifact | Required evidence | Severity |
 |---|---|---|---|---|
-| C1 | `spec` | Approved work request/source anchors | Scope and exclusions agree; no higher-truth change is hidden | Blocking |
-| C2 | `plan` | Applicable Plan Constraints/ADRs | Every applicable `AC-###` is honored or superseded by an accepted ADR | Blocking |
-| C3 | `tasks` | `spec` and `plan` | Every required proof has work; no task exceeds scope | Blocking |
-| C4 | `requirements_checklist` | `spec` | No unresolved requirement-quality blocker remains | Blocking |
-| C5 | All inputs | `roadmap.yaml` | Paths and IDs resolve, and the entry's status matches the operation being run | Blocking |
-| C6 | Project guidance | Repository | Cited commands and paths resolve | Advisory |
+| D1 | `checklist.md` | Roadmap description and acceptance | Every acceptance item is preserved without weakening or added behavior | Blocking |
+| D2 | Roadmap feature | Owned and bound `PR-###` | Description and acceptance are sufficient to implement every applicable behavior | Blocking |
+| D3 | Proposed implementation approach | Applicable `AC-###`/ADRs | No shared constraint is contradicted or silently decided | Blocking |
+| D4 | `wireframes.md` or N/A | Roadmap `UI Surface` and behavior source | Required UI states are represented; `none` has no UI artifact | Blocking |
+| D5 | Roadmap feature | Roadmap dependencies | Prerequisites are delivered or explicitly approved for parallel work | Blocking |
+| D6 | Project guidance | Repository | Cited commands and paths resolve | Advisory |
 
-Apply exactly one selected row from the work-kind table after these common checks.
+If D2 cannot pass from the roadmap entry, block with the missing behavior and
+recommend the detailed route. Do not invent detail or create the spec.
 
-## Additional feature checks
+## Detailed route checks
 
 | # | Lower artifact | Higher artifact | Required evidence | Severity |
 |---|---|---|---|---|
-| 1 | `spec.md` | Roadmap `Owns Requirements` | Each owned `PR-###` maps to a named acceptance scenario | Blocking |
-| 2 | `spec.md` | Other roadmap entries | No scenario implements a requirement owned by another feature | Blocking |
-| 3 | `spec.md` | Roadmap scope/non-goals | Scope agrees and no non-goal is implemented | Blocking |
-| 4 | `plan.md` | Approved baseline decisions | No undeclared cross-feature technology or boundary is introduced | Blocking |
-| 5 | `wireframes.md` | Roadmap `UI Surface` | Present when a new or changed UI is required; absence is explicit when `none` | Blocking |
-| 6 | `wireframes.md` | `spec.md` | Every screen/state traces to a scenario and every UI-visible scenario is represented | Blocking |
-| 7 | Roadmap feature | Roadmap dependencies | Prerequisites are delivered or approved for parallel work | Blocking |
-| 8 | Feature artifacts | Product glossary | Terms match approved domain language | Advisory |
-| 9 | `wireframes.md` | Approved UI structure | Shared patterns are reused or deviations declared | Advisory |
+| T1 | `spec.md` | Roadmap description, acceptance, and PR IDs | Behavior agrees, every owned PR maps to acceptance, and no other feature's behavior is absorbed | Blocking |
+| T2 | `plan.md` | Spec and applicable `AC-###`/ADRs | The plan covers the behavior and honors shared constraints | Blocking |
+| T3 | `tasks.md` | Spec, plan, and checklist | Every required proof has work and no task exceeds scope | Blocking |
+| T4 | `checklist.md` | Spec acceptance | Criteria are preserved without weakening | Blocking |
+| T5 | `wireframes.md` or N/A | UI Surface, behavior source, and UI structure | Required screens/states are represented or correctly absent | Blocking |
+| T6 | Roadmap feature | Roadmap dependencies | Prerequisites are delivered or explicitly approved for parallel work | Blocking |
+| T7 | Project guidance | Repository | Cited commands and paths resolve | Advisory |
 
 `Blocking` means that cited artifacts contradict or violate an approved constraint.
 `Advisory` means they remain compatible but traceability or maintainability has degraded.
@@ -63,13 +62,12 @@ Style preferences and uncited suspicions are out of scope.
 
 ## Work-kind applicability
 
-All kinds require approved, mutually consistent `spec`, `plan`, `tasks`, and
-`checklist` files at the paths recorded for the work item. Read and apply only
-the row for the explicitly named kind.
+Only a `feature` may use the direct route. Detailed-route inputs must be mutually
+consistent. Read and apply only the row for the explicitly named kind.
 
 | Kind | Higher truth and required pre-checks | Must not claim |
 |---|---|---|
-| `feature` | Owning roadmap entry and PR IDs; scope/non-goals; dependencies; applicable architecture and UI truth | Acceptance before fresh-context checklist verification |
+| `feature` | Owning roadmap entry and PR IDs; description/acceptance; dependencies; applicable architecture and UI truth | Acceptance before fresh-context checklist verification |
 | `bug` | Approved expected behavior and affected feature/requirement anchors when applicable; regression boundary; architecture constraints | New product behavior or feature acceptance |
 | `maintenance` | Explicit non-behavioral scope; repository/guidance facts; architecture constraints | Product-scope or architecture change |
 | `migration` | Migration/compatibility contract; data or protocol invariants; rollback/recovery plan; applicable architecture decisions | Successful production migration or release |
@@ -81,16 +79,16 @@ migration, compatibility, acceptance, or release review required by project poli
 
 ## Missing inputs
 
-Missing prerequisites (`spec`, `plan`, `tasks`, `requirements_checklist`, target identity,
-kind, or explicit user authorization) block the mode. For other inputs, report the exact
-skipped checks:
+Missing route prerequisites, target identity, kind, or explicit user
+authorization block the mode. A missing spec is not a blocker for the direct
+feature route. For other inputs, report the exact skipped checks:
 
 | Missing input | Result |
 |---|---|
-| Architecture baseline | Block C2 and feature check 4; the plan lacks an approved project constraint set |
-| Approved UI structure | Block feature checks 5-6 unless an approved product-UI N/A rationale applies; otherwise skip only check 9 |
-| Roadmap `UI Surface` | Block feature checks 5-6; do not infer it from implementation |
-| Project guidance | Skip C6 |
+| Architecture baseline | Block D3 or T2; the work lacks an approved project constraint set |
+| Approved UI structure | Block D4 or T5 unless an approved product-UI N/A rationale applies |
+| Roadmap `UI Surface` | Block D4 or T5; do not infer it from implementation |
+| Project guidance | Skip D6 or T7 |
 | `roadmap.yaml` missing, or its entry contradicts the files on disk | Block; a review cannot establish which function it is reviewing |
 
 A skipped check is never reported as passed.

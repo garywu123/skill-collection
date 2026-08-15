@@ -1,10 +1,10 @@
 # F[ID] Delivery Checklist - [function name]
 
-Spec: `[path to spec]`
+Behavior source: `[roadmap feature anchor or optional spec path]`
 
-Written with the spec, not at delivery time. Verified in a **fresh
-conversation**: the context that implemented a function does not tick its own
-boxes.
+Written before implementation from the approved behavior source, not at
+delivery time. Verified in a **fresh conversation**: the context that
+implemented a function does not tick its own boxes.
 
 If accepted behavior changes, rebuild the affected criteria and clear every
 box, Evidence row, Decision, reviewer, and date. Git retains the prior result;
@@ -12,8 +12,8 @@ the current file must never display acceptance for changed behavior.
 
 ## Acceptance criteria
 
-One box per acceptance criterion in the spec. Copy the criterion; do not
-paraphrase it into something easier to pass.
+One box per acceptance criterion in the behavior source. Copy the criterion; do
+not paraphrase it into something easier to pass.
 
 - [ ] [criterion 1]
 - [ ] [criterion 2]
@@ -23,7 +23,7 @@ paraphrase it into something easier to pass.
 - [ ] Tests cover the changed behavior and pass
 - [ ] Full project validation passes
 - [ ] The diff contains no unrelated changes
-- [ ] Explicit non-goals from the spec were not built
+- [ ] No behavior outside the approved feature boundary was added
 - [ ] Routed documents affected by this function are updated
 - [ ] The `roadmap.yaml` entry reflects reality
 
