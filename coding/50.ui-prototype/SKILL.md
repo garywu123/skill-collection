@@ -1,13 +1,15 @@
 ---
 name: ui-prototype
-description: Build or extend one executable fake-data UI prototype from approved product UI structure and feature wireframes. Use when a user explicitly requests a clickable prototype, demo mode, or simulated feature UI; do not use for canonical UX decisions, production backend logic, or feature acceptance.
+description: Build or extend one executable fake-data UI prototype host with a shared product frame and directly launchable, isolated feature demos. Use when a user explicitly requests a clickable prototype, demo mode, or simulated feature UI; do not use for canonical UX decisions, production backend logic, or feature acceptance.
 ---
 
 # UI Prototype
 
-Create a reviewable executable UI that exercises approved flows and states with
-deterministic fake data. Preserve it across feature iterations without treating
-prototype behavior as product truth or completed production implementation.
+Create a reviewable executable UI with a shared product frame and independently
+launchable feature demos backed by deterministic fake data. Optimize for direct
+feature review rather than replaying a complete app journey. Preserve the host
+across feature iterations without treating prototype behavior as product truth
+or completed production implementation.
 
 ## Authority and boundaries
 
@@ -35,7 +37,7 @@ Read the smallest authoritative slice needed for the requested operation.
 
 | Operation | Required input | Read |
 |---|---|---|
-| `bootstrap` | Approved product requirements, roadmap, product UI structure, target platform, and target repository | Experience constraints, product shell, screen inventory, target stack evidence, and requested initial feature IDs |
+| `bootstrap` | Approved product requirements, roadmap, product UI structure, target platform, and target repository | Experience constraints, product shell, screen inventory, target stack evidence, and the requested initial feature ID |
 | `feature` | Existing prototype manifest, one approved roadmap feature, approved product UI structure, and approved feature wireframes | Manifest, the feature entry, its owned/bound requirement IDs, referenced shared patterns, wireframes, and affected source files |
 | `revise` | Existing prototype manifest and explicit reviewed feedback or an approved changed source | Only the feedback or changed anchors, impacted scenarios, and affected source files |
 
@@ -47,13 +49,27 @@ Do not load every feature document for a feature operation. If an input exceeds
 8 KiB, extract the cited headings or stable IDs first. If the required slice is
 still unclear, report the routing gap and stop.
 
-## Product and app boundary
+## Prototype host and feature boundary
 
-Use one prototype app per product UI shell or deployable by default. Add features
-as routes or modules inside that app so navigation, components, terminology, and
-visual rules stay consistent.
+Use one prototype host per product UI shell or deployable by default. The host is
+a review surface, not a requirement to simulate the complete app journey. Its
+landing page lists the available feature demos and opens each one directly.
 
-Create a separate app only when one of these is true:
+Give every feature demo its own route or equivalent deep link. Give every named
+scenario a stable direct launch mechanism such as a query parameter, debug menu
+selection, or launch argument. Do not require reviewers to traverse login,
+menus, prerequisite features, or other production navigation before reaching
+the feature under review. Establish necessary preconditions through the selected
+fake scenario.
+
+Keep each feature in an isolated module that owns its screens, presentation
+state, feature-specific components, fixtures, and scenarios. A feature operation
+touches only that module, its registry entry, and any shared frame element that
+the feature strictly requires. Keep the shell, frame, tokens, terminology, and
+components already used by multiple features at host level. Do not promote a
+feature component to shared merely because it might be reused later.
+
+Create a separate host only when one of these is true:
 
 - the target platform or interaction shell is different;
 - the user explicitly wants isolated competing concepts;
@@ -61,7 +77,8 @@ Create a separate app only when one of these is true:
 - the existing prototype cannot host the feature without misrepresenting the
   approved product structure.
 
-Represent alternate outcomes as named data scenarios, not duplicate apps.
+Represent alternate outcomes as named data scenarios, not duplicate hosts or
+feature modules.
 
 ## Stack selection
 
@@ -95,10 +112,14 @@ screens/components -> presentation state -> ports -> fake adapters/scenarios
   fixture files.
 - Fake adapters are deterministic and contain only enough delay, success, empty,
   offline, and failure behavior to exercise approved states.
+- A feature registry powers the demo landing page and records one direct entry
+  for each implemented feature.
 - A scenario registry gives every reviewable state a stable ID and one repeatable
-  way to launch it. Prefer a debug menu, launch argument, or URL query parameter.
+  direct launch mechanism. Prefer a debug menu, launch argument, or URL query
+  parameter.
 - Shared shell, tokens, and components live once at product level. Feature code
-  owns feature-specific screens, presentation state, and scenarios.
+  owns feature-specific screens, presentation state, components, fixtures, and
+  scenarios.
 - In a production repository, keep fakes out of release builds and preserve the
   target architecture boundaries. Prototype shortcuts must not leak into domain
   or infrastructure code.
@@ -116,8 +137,9 @@ The manifest is the next run's routing index. Keep it concise and record:
 
 - product, prototype mode, target platform, stack, and entry command;
 - authoritative source paths and approval status;
-- shared shell and scenario-launch mechanism;
-- each implemented feature, routes/screens, scenario IDs, and source anchors;
+- shared shell, demo index, feature registry, and scenario-launch mechanism;
+- each implemented feature, direct entry, routes/screens, scenario IDs, and
+  source anchors;
 - validation commands and latest results; and
 - unresolved gaps or intentional prototype-only deviations.
 
@@ -128,35 +150,43 @@ the manifest.
 
 1. Inspect repository guidance, existing UI stack, build commands, and the
    prototype manifest when present. Preserve unrelated work.
-2. Resolve `bootstrap`, `feature`, or `revise`, the target feature IDs, source
-   approval status, app boundary, and stack using the contracts above.
+2. Resolve `bootstrap`, `feature`, or `revise`, the target feature ID, source
+   approval status, prototype-host boundary, and stack using the contracts above.
 3. Map each requested acceptance path and wireframe state to a stable scenario
    ID. Include applicable initial, loading, empty, success, offline, validation,
    failure, confirmation, and retry states; mark non-applicable states explicitly
    in the manifest rather than fabricating them.
-4. For `bootstrap`, create the smallest runnable shell, shared visual tokens,
-   scenario launcher, and one requested end-to-end path. For `feature` or
-   `revise`, reuse them and touch only affected modules.
+4. For `bootstrap`, create the smallest runnable host, shared product frame and
+   visual tokens, demo index, feature registry, scenario launcher, and one
+   requested feature demo. For `feature`, add or update exactly one named feature
+   by default and give it a direct demo-index entry. For `revise`, reuse the host
+   and touch only the affected feature module and strictly required shared code.
 5. Implement every visible action in scope. Simulate its result through the fake
    boundary; do not leave inert controls that look complete.
-6. Add focused deterministic tests for navigation, safeguards, and state
-   transitions. Prefer repository-native tooling and a few high-value flows over
-   broad snapshot output.
-7. Run formatting, type checks, focused tests, and a production or demo build as
-   applicable. Launch every changed scenario and visually inspect it at the
-   approved viewport or device size. Capture screenshots when repository tooling
-   supports stable artifacts.
+6. Keep automated tests opt-in for a review-only prototype. Do not add unit,
+   integration, end-to-end, or snapshot tests unless the user explicitly
+   requests them or existing repository policy requires them for the touched
+   files. If prototype code may survive into production or a failure risk seems
+   high, recommend appropriate tests instead of adding them without
+   authorization. Do not treat their absence as incomplete work.
+7. Perform run-only validation by default: run the command needed to build or
+   start the host, open the changed feature's direct entry, and confirm that its
+   initial view renders without a startup or render-blocking error. Run existing
+   mandatory repository checks when applicable, but do not introduce broader
+   validation. Leave interaction quality, visual correctness, and product
+   acceptance for human review unless the user explicitly requests additional
+   inspection.
 8. Update the manifest after validation with actual commands and results.
 
 ## Token and cost discipline
 
-- Bootstrap shared shell and architecture once; implement one bounded feature per
-  later run.
+- Bootstrap the shared host once; implement one bounded, directly launchable
+  feature demo per later run.
 - On later runs, open the manifest first, then only the named feature sources and
   affected code. Do not reread the full PRD, roadmap, or app tree.
-- Reuse stable scenario schemas, components, and test helpers. Avoid copying
+- Reuse stable scenario schemas, components, and launch helpers. Avoid copying
   prompts, requirements, or whole screens into each feature folder.
-- Prefer deterministic commands for inventory, validation, and screenshots over
+- Prefer deterministic commands for inventory, build, and launch checks over
   asking the model to reason about generated summaries.
 - Use a cost-balanced model for bounded feature work after the scaffold is stable.
   Escalate model capability for initial architecture, cross-feature redesign,
@@ -171,14 +201,17 @@ Before reporting, verify:
 
 - every implemented route, state, label, and safeguard traces to a source anchor
   or is visibly marked as a prototype-only assumption;
-- every in-scope control responds and every named scenario is reproducible;
+- the demo index links directly to every implemented feature and the changed
+  feature's initial entry is runnable;
+- every in-scope control is wired to a presentation action or fake result; human
+  review owns interaction quality and UX acceptance;
 - no fake or debug implementation is reachable from a production release build;
-- the app boundary and stack follow the selection rules;
-- changed scenarios were visually inspected at the target size;
-- tests and build checks report their actual result; and
+- the prototype-host boundary and stack follow the selection rules;
+- run-only or explicitly requested extended checks report their actual result;
 - `prototype.yaml` matches the executable prototype.
 
-Report the operation, app and manifest paths, stack choice, implemented feature
-and scenario IDs, commands run, visual inspection result, deviations, unresolved
-gaps, and the next human review action. Stop without implementing backend logic,
-changing canonical product artifacts, or declaring the feature complete.
+Report the operation, host and manifest paths, stack choice, implemented feature
+and scenario IDs, direct entry, commands run, smoke-open result, automated checks
+not requested or run, deviations, unresolved gaps, and the next human review
+action. Stop without implementing backend logic, changing canonical product
+artifacts, or declaring the feature complete.

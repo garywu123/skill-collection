@@ -10,6 +10,7 @@ stack:
   rationale: "[Why this minimizes total lifecycle cost]"
 run:
   command: "[Deterministic entry command]"
+  demo_index: "[Landing-page route or equivalent entry]"
   scenario_launcher: "[Debug menu, launch argument, or query parameter]"
 sources:
   requirements:
@@ -24,9 +25,12 @@ sources:
 shared:
   shell: "[Module or path]"
   tokens: "[Module or path]"
+  feature_registry: "[Module or path]"
 features:
   FNNN:
+    display_name: "[Feature demo label]"
     source: "[Roadmap and wireframe anchors]"
+    direct_entry: "[Route, deep link, or launch argument]"
     routes: []
     screens: []
     scenarios:
@@ -36,7 +40,10 @@ features:
     omitted_states: []
     deviations: []
 validation:
+  profile: run_only # run_only | extended
   commands: []
   last_result: "not_run"
-  visually_inspected: []
+  opened_entries: []
+  automated_tests: "not_requested"
+  human_review: "pending"
 gaps: []

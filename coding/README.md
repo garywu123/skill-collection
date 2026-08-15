@@ -33,7 +33,7 @@
 | [`20.project-map`](20.project-map/SKILL.md) | `init`, `refresh`, `audit` for `roadmap.yaml`, `AGENTS.md`, adapters |
 | [`30.feature-implementation-plan`](30.feature-implementation-plan/SKILL.md) | `assess`, `plan`, `audit` for one approved feature |
 | [`40.ui-wireframe-spec`](40.ui-wireframe-spec/SKILL.md) | Product UI structure or one feature's wireframes |
-| [`50.ui-prototype`](50.ui-prototype/SKILL.md) | Executable fake-data UI prototype for one product and selected features |
+| [`50.ui-prototype`](50.ui-prototype/SKILL.md) | Shared executable prototype host with directly launchable, isolated feature demos |
 | [`spec-sync`](spec-sync/SKILL.md) | `pre-implement`, `post-implement`, `change-request` |
 | [`guided-tdd-pairing`](guided-tdd-pairing/SKILL.md) | Optional user-controlled RED/GREEN pairing |
 | [`skill-authoring`](skill-authoring/SKILL.md) | Create, review, update, or simplify a reusable Skill |
