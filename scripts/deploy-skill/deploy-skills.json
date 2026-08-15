@@ -13,12 +13,16 @@
             "name": "project-map"
         },
         {
-            "source": "coding/feature-implementation-plan",
+            "source": "coding/30.feature-implementation-plan",
             "name": "feature-implementation-plan"
         },
         {
-            "source": "coding/30.ui-wireframe-spec",
+            "source": "coding/40.ui-wireframe-spec",
             "name": "ui-wireframe-spec"
+        },
+        {
+            "source": "coding/50.ui-prototype",
+            "name": "ui-prototype"
         },
         {
             "source": "coding/spec-sync",

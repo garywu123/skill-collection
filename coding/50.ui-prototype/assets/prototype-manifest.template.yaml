@@ -1,0 +1,42 @@
+schema_version: 1
+product: "[Product name]"
+mode: reviewable # reviewable | exploratory
+target:
+  platform: "[android | web | ios | desktop | other]"
+  app_path: "[Repository-relative prototype app path]"
+stack:
+  ui: "[UI stack]"
+  fake_boundary: "[Port or adapter mechanism]"
+  rationale: "[Why this minimizes total lifecycle cost]"
+run:
+  command: "[Deterministic entry command]"
+  scenario_launcher: "[Debug menu, launch argument, or query parameter]"
+sources:
+  requirements:
+    path: "[Relative path]"
+    status: "[Approved status]"
+  roadmap:
+    path: "[Relative path]"
+    status: "[Approved status]"
+  ui_structure:
+    path: "[Relative path]"
+    status: "[Approved status]"
+shared:
+  shell: "[Module or path]"
+  tokens: "[Module or path]"
+features:
+  FNNN:
+    source: "[Roadmap and wireframe anchors]"
+    routes: []
+    screens: []
+    scenarios:
+      - id: "FNNN-success"
+        state: success
+        launch: "[Repeatable launch value]"
+    omitted_states: []
+    deviations: []
+validation:
+  commands: []
+  last_result: "not_run"
+  visually_inspected: []
+gaps: []

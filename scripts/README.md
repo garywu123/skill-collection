@@ -39,7 +39,7 @@
 ## 项目级安装
 
 ```powershell
-# 在项目根目录，链接 coding 预设的 7 个 skill
+# 在项目根目录，链接 coding 预设的 8 个 skill
 d:\code\personal-projects\skill-collection\scripts\Install-Skills.ps1
 
 # 先看会装什么，不写任何文件

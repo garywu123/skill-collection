@@ -31,8 +31,9 @@
 | [`05.product-discovery-roadmap`](05.product-discovery-roadmap/SKILL.md) | `discover`, PRD/Roadmap draft and approval, `assess-roadmap`, `amend` |
 | [`10.architecture-baseline`](10.architecture-baseline/SKILL.md) | `create`, `assess`, `recover`, explicit `lite/full`, spikes and amendments |
 | [`20.project-map`](20.project-map/SKILL.md) | `init`, `refresh`, `audit` for `roadmap.yaml`, `AGENTS.md`, adapters |
-| [`feature-implementation-plan`](feature-implementation-plan/SKILL.md) | `assess`, `plan`, `audit` for one approved feature |
-| [`30.ui-wireframe-spec`](30.ui-wireframe-spec/SKILL.md) | Product UI structure or one feature's wireframes |
+| [`30.feature-implementation-plan`](30.feature-implementation-plan/SKILL.md) | `assess`, `plan`, `audit` for one approved feature |
+| [`40.ui-wireframe-spec`](40.ui-wireframe-spec/SKILL.md) | Product UI structure or one feature's wireframes |
+| [`50.ui-prototype`](50.ui-prototype/SKILL.md) | Executable fake-data UI prototype for one product and selected features |
 | [`spec-sync`](spec-sync/SKILL.md) | `pre-implement`, `post-implement`, `change-request` |
 | [`guided-tdd-pairing`](guided-tdd-pairing/SKILL.md) | Optional user-controlled RED/GREEN pairing |
 | [`skill-authoring`](skill-authoring/SKILL.md) | Create, review, update, or simplify a reusable Skill |
@@ -46,6 +47,7 @@ approved roadmap feature
        -> compact: implementation-plan.md + checklist.md
        -> detailed exception: human explicitly starts the detailed workflow
   -> [feature UI when UI Surface requires it]
+  -> [optional executable fake-data UI prototype]
   -> spec-sync pre-implement
   -> TDD implementation
   -> deterministic and risk-specific checks
@@ -64,8 +66,9 @@ coding/
 ├── 05.product-discovery-roadmap/  # discovery, PRD, domain-aware roadmap
 ├── 10.architecture-baseline/      # adaptive Lite/Full baseline and ADRs
 ├── 20.project-map/                # roadmap.yaml and AGENTS.md routing
-├── 30.ui-wireframe-spec/          # product and feature UI artifacts
-├── feature-implementation-plan/   # compact plan/checklist templates
+├── 40.ui-wireframe-spec/          # product and feature UI artifacts
+├── 50.ui-prototype/               # executable fake-data UI prototype
+├── 30.feature-implementation-plan/ # compact plan/checklist templates
 ├── spec-sync/                     # alignment, evidence, change routing
 ├── guided-tdd-pairing/            # optional interactive implementation
 └── _obsolete/                     # retired workflow machinery
