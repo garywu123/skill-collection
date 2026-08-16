@@ -12,6 +12,7 @@
 | 小库存系统演进为 WMS | [40-inventory-to-wms-evolution.md](00_instructions/40-inventory-to-wms-evolution.md) |
 | Change Request | [50-change-request.md](00_instructions/50-change-request.md) |
 | 已有仓库接入流程 | [60-existing-repository-adoption.md](00_instructions/60-existing-repository-adoption.md) |
+| UI Prototype 按 Feature 隔离构型 | [70-feature-isolated-ui-prototype.md](00_instructions/70-feature-isolated-ui-prototype.md) |
 
 指南中的箭头只表示先后依赖，不授权 AI 自动调用下一项 Skill。每次由人类明确授权一个 operation；该 Skill 写自己的产物、更新自己改变的 `roadmap.yaml` 字段、报告并停止。
 
@@ -33,7 +34,7 @@
 | [`20.project-map`](20.project-map/SKILL.md) | `init`, `refresh`, `audit` for `roadmap.yaml`, `AGENTS.md`, adapters |
 | [`30.feature-implementation-plan`](30.feature-implementation-plan/SKILL.md) | `assess`, `plan`, `audit` for one approved feature |
 | [`40.ui-wireframe-spec`](40.ui-wireframe-spec/SKILL.md) | Product UI structure or one feature's wireframes |
-| [`50.ui-prototype`](50.ui-prototype/SKILL.md) | Shared executable prototype host with directly launchable, isolated feature demos |
+| [`50.ui-prototype`](50.ui-prototype/SKILL.md) | Auto-routed shared prototype host with directly launchable, isolated feature demos |
 | [`spec-sync`](spec-sync/SKILL.md) | `pre-implement`, `post-implement`, `change-request` |
 | [`guided-tdd-pairing`](guided-tdd-pairing/SKILL.md) | Optional user-controlled RED/GREEN pairing |
 | [`skill-authoring`](skill-authoring/SKILL.md) | Create, review, update, or simplify a reusable Skill |

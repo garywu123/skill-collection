@@ -1,6 +1,6 @@
 ---
 name: ui-prototype
-description: Build or extend one executable fake-data UI prototype host with a shared product frame and directly launchable, isolated feature demos. Use when a user explicitly requests a clickable prototype, demo mode, or simulated feature UI; do not use for canonical UX decisions, production backend logic, or feature acceptance.
+description: Build or extend one executable fake-data UI prototype host with a shared product frame and directly launchable, isolated feature demos. Use when a user requests a clickable prototype, demo mode, or simulated feature UI; infer whether to bootstrap, add a feature, or revise it from repository state, and do not use for canonical UX decisions, production backend logic, or feature acceptance.
 ---
 
 # UI Prototype
@@ -13,9 +13,9 @@ or completed production implementation.
 
 ## Authority and boundaries
 
-- Require an explicit current request to bootstrap or extend a prototype and an
-  explicit product, deployable, or feature scope. Never start from roadmap state
-  alone.
+- Require an explicit current request for a prototype outcome and an explicit or
+  safely resolvable product, deployable, or feature scope. The user does not need
+  to name an internal operation. Never start from roadmap state alone.
 - Consume approved requirements, roadmap entries, UI structure, and feature
   wireframes. Do not silently amend them or resolve a contradiction in code.
 - Implement presentation behavior, navigation, local interaction state, and
@@ -30,6 +30,35 @@ or completed production implementation.
 Stop when a source conflict or unresolved decision changes a screen, transition,
 safety rule, or operator-visible result. Report the exact gap instead of
 inventing behavior.
+
+## Automatic operation resolution
+
+Treat `bootstrap`, `feature`, and `revise` as internal routing labels, not syntax
+the user must know. Inspect the repository and `prototype/prototype.yaml` when
+present, then select the operation without asking the user to restate an already
+clear goal.
+
+| Current evidence and requested outcome | Select |
+|---|---|
+| No prototype manifest or host exists; the request identifies a product or feature prototype | `bootstrap`; create the host and one initial feature demo in the same operation |
+| A host exists and the requested feature is not registered | `feature` |
+| The requested feature exists and the request supplies reviewed feedback or an approved changed source | `revise` |
+| The requested feature exists and no change is requested or evidenced | Launch or report its existing direct entry; do not invent a revision |
+
+A natural-language request such as “create a prototype for F101” is sufficient.
+If no host exists, do not require a separate `bootstrap` request followed by a
+`feature` request; `bootstrap` already includes F101.
+
+When the user names only an approved roadmap, select the earliest roadmap-ordered
+feature whose UI surface requires a prototype and whose required UI sources are
+approved. State the selected feature and why. If ordering is absent, candidates
+are tied, or no candidate has sufficient sources, ask only for the decision or
+source that blocks selection.
+
+An explicit operation label is an optional override. If it conflicts with the
+manifest or requested outcome, report the conflict rather than following it
+blindly. Complete one bounded feature demo and stop for human review by default;
+do not continue through additional roadmap features merely because they exist.
 
 ## Source contract
 
@@ -150,8 +179,10 @@ the manifest.
 
 1. Inspect repository guidance, existing UI stack, build commands, and the
    prototype manifest when present. Preserve unrelated work.
-2. Resolve `bootstrap`, `feature`, or `revise`, the target feature ID, source
-   approval status, prototype-host boundary, and stack using the contracts above.
+2. Infer `bootstrap`, `feature`, or `revise` using automatic operation resolution,
+   then resolve the target feature ID, source approval status, prototype-host
+   boundary, and stack. Treat a user-supplied operation label as an optional
+   override, not a prerequisite.
 3. Map each requested acceptance path and wireframe state to a stable scenario
    ID. Include applicable initial, loading, empty, success, offline, validation,
    failure, confirmation, and retry states; mark non-applicable states explicitly
