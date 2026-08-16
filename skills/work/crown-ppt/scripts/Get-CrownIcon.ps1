@@ -54,13 +54,15 @@ $manifestEntries += [pscustomobject]@{
     File = $fileName
     Provider = 'Iconify public API'
     Collection = 'fluent'
+    Upstream = 'Microsoft Fluent UI System Icons'
+    License = 'MIT'
     Icon = $IconName
     Color = "#$($Color.ToUpperInvariant())"
     Source = $uri
     RetrievedAtUtc = [DateTime]::UtcNow.ToString('o')
     Sha256 = $hash
 }
-$manifestEntries | Sort-Object File | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+$sortedManifestEntries = @($manifestEntries | Sort-Object File)
+ConvertTo-Json -InputObject $sortedManifestEntries -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
 Write-Output $outputPath
-

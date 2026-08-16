@@ -58,7 +58,7 @@ try {
     }
 
     $indexPath = Join-Path $resolvedOutputDirectory 'index.json'
-    $renderIndex | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $indexPath -Encoding UTF8
+    ConvertTo-Json -InputObject @($renderIndex) -Depth 4 | Set-Content -LiteralPath $indexPath -Encoding UTF8
     Write-Output $resolvedOutputDirectory
 }
 finally {

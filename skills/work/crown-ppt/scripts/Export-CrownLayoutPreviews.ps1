@@ -109,7 +109,7 @@ try {
     }
 
     $indexPath = Join-Path $resolvedOutputDirectory 'index.json'
-    $previewIndex | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $indexPath -Encoding UTF8
+    ConvertTo-Json -InputObject @($previewIndex) -Depth 4 | Set-Content -LiteralPath $indexPath -Encoding UTF8
     Write-Output $resolvedOutputDirectory
 }
 finally {
