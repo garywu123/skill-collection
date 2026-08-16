@@ -1,0 +1,102 @@
+﻿[
+    {
+        "Index":  1,
+        "Layout":  "Cover_Light",
+        "File":  "01-cover-light.png"
+    },
+    {
+        "Index":  2,
+        "Layout":  "Section_Light",
+        "File":  "02-section-light.png"
+    },
+    {
+        "Index":  3,
+        "Layout":  "Agenda_Light",
+        "File":  "03-agenda-light.png"
+    },
+    {
+        "Index":  4,
+        "Layout":  "Content Option 1_Light_Blank",
+        "File":  "04-content-option-1-light-blank.png"
+    },
+    {
+        "Index":  5,
+        "Layout":  "Content Option 1_Light_Title Only",
+        "File":  "05-content-option-1-light-title-only.png"
+    },
+    {
+        "Index":  6,
+        "Layout":  "Content Option 1_Light_1 Column",
+        "File":  "06-content-option-1-light-1-column.png"
+    },
+    {
+        "Index":  7,
+        "Layout":  "Content Option 1_Light_2 Column",
+        "File":  "07-content-option-1-light-2-column.png"
+    },
+    {
+        "Index":  8,
+        "Layout":  "Content Option 1_Light_3 Column",
+        "File":  "08-content-option-1-light-3-column.png"
+    },
+    {
+        "Index":  9,
+        "Layout":  "Content Option 1_Light_Image Right",
+        "File":  "09-content-option-1-light-image-right.png"
+    },
+    {
+        "Index":  10,
+        "Layout":  "Content Option 1_Light_Image Left",
+        "File":  "10-content-option-1-light-image-left.png"
+    },
+    {
+        "Index":  11,
+        "Layout":  "Content Option 2_Light_1 Column",
+        "File":  "11-content-option-2-light-1-column.png"
+    },
+    {
+        "Index":  12,
+        "Layout":  "Content Option 2_Light_2 Column",
+        "File":  "12-content-option-2-light-2-column.png"
+    },
+    {
+        "Index":  13,
+        "Layout":  "Content Option 2_Light_1/3 Left",
+        "File":  "13-content-option-2-light-1-3-left.png"
+    },
+    {
+        "Index":  14,
+        "Layout":  "Content Option 2_Light_1/3 Right",
+        "File":  "14-content-option-2-light-1-3-right.png"
+    },
+    {
+        "Index":  15,
+        "Layout":  "Content Option 3_Light_1 Column",
+        "File":  "15-content-option-3-light-1-column.png"
+    },
+    {
+        "Index":  16,
+        "Layout":  "Content Option 3_Light_2 Column",
+        "File":  "16-content-option-3-light-2-column.png"
+    },
+    {
+        "Index":  17,
+        "Layout":  "Content Option 3_Light_Image Right",
+        "File":  "17-content-option-3-light-image-right.png"
+    },
+    {
+        "Index":  18,
+        "Layout":  "Content Option 3_Light_1/3 Left",
+        "File":  "18-content-option-3-light-1-3-left.png"
+    },
+    {
+        "Index":  19,
+        "Layout":  "Content Option 3_Light_1/3 Right",
+        "File":  "19-content-option-3-light-1-3-right.png"
+    },
+    {
+        "Index":  20,
+        "Layout":  "Sign-Off",
+        "File":  "20-sign-off.png"
+    }
+]

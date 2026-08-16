@@ -1,0 +1,5 @@
+interface:
+  display_name: "Crown PowerPoint"
+  short_description: "Create editable Crown-branded PowerPoint decks"
+  default_prompt: "Use $crown-ppt to turn this content into an editable Crown-branded PowerPoint deck."
+
