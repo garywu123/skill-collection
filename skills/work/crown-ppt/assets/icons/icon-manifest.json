@@ -1,5 +1,65 @@
 ﻿[
     {
+        "File":  "calendar-checkmark-24-regular.svg",
+        "Provider":  "Iconify public API",
+        "Collection":  "fluent",
+        "Upstream":  "Microsoft Fluent UI System Icons",
+        "License":  "MIT",
+        "Icon":  "calendar-checkmark-24-regular",
+        "Color":  "#FD9827",
+        "Source":  "https://api.iconify.design/fluent/calendar-checkmark-24-regular.svg?color=%23FD9827",
+        "RetrievedAtUtc":  "2026-08-16T03:45:21.2762975Z",
+        "Sha256":  "8AF39D438BC0B4A41F098A36FAF86191A939BFD5331030F1F2238B0FCB71264D"
+    },
+    {
+        "File":  "desktop-24-regular.svg",
+        "Provider":  "Iconify public API",
+        "Collection":  "fluent",
+        "Upstream":  "Microsoft Fluent UI System Icons",
+        "License":  "MIT",
+        "Icon":  "desktop-24-regular",
+        "Color":  "#515151",
+        "Source":  "https://api.iconify.design/fluent/desktop-24-regular.svg?color=%23515151",
+        "RetrievedAtUtc":  "2026-08-16T03:45:21.2209757Z",
+        "Sha256":  "562970369B329AD62C9159DEFCBA0452B3911BAB816EFE031BB3B4368D0C4991"
+    },
+    {
+        "File":  "document-24-regular.svg",
+        "Provider":  "Iconify public API",
+        "Collection":  "fluent",
+        "Upstream":  "Microsoft Fluent UI System Icons",
+        "License":  "MIT",
+        "Icon":  "document-24-regular",
+        "Color":  "#FD9827",
+        "Source":  "https://api.iconify.design/fluent/document-24-regular.svg?color=%23FD9827",
+        "RetrievedAtUtc":  "2026-08-16T03:45:21.3423486Z",
+        "Sha256":  "C342D469E249A5B650F54C6ABFCD08E8F3EAC1F0CA0ED1955CF06AB7D08CBEF2"
+    },
+    {
+        "File":  "headset-24-regular.svg",
+        "Provider":  "Iconify public API",
+        "Collection":  "fluent",
+        "Upstream":  "Microsoft Fluent UI System Icons",
+        "License":  "MIT",
+        "Icon":  "headset-24-regular",
+        "Color":  "#515151",
+        "Source":  "https://api.iconify.design/fluent/headset-24-regular.svg?color=%23515151",
+        "RetrievedAtUtc":  "2026-08-16T03:45:21.0641320Z",
+        "Sha256":  "BE556DBE5C992C39D1B764ECC580CC2B2CA491B22E3B7383B03E71289053BE92"
+    },
+    {
+        "File":  "settings-24-regular.svg",
+        "Provider":  "Iconify public API",
+        "Collection":  "fluent",
+        "Upstream":  "Microsoft Fluent UI System Icons",
+        "License":  "MIT",
+        "Icon":  "settings-24-regular",
+        "Color":  "#515151",
+        "Source":  "https://api.iconify.design/fluent/settings-24-regular.svg?color=%23515151",
+        "RetrievedAtUtc":  "2026-08-16T03:45:21.1465548Z",
+        "Sha256":  "C74BFA4E4598DD2200244DFDA50B695D0EDF6B23BAC31B8439F8ECAFA3456A04"
+    },
+    {
         "File":  "warning-24-regular.svg",
         "Provider":  "Iconify public API",
         "Collection":  "fluent",
