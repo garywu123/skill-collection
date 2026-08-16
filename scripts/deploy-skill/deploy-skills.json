@@ -1,40 +1,44 @@
 {
     "skills": [
         {
-            "source": "coding/05.product-discovery-roadmap",
+            "source": "skills/coding/05.product-discovery-roadmap",
             "name": "product-discovery-roadmap"
         },
         {
-            "source": "coding/10.architecture-baseline",
+            "source": "skills/coding/10.architecture-baseline",
             "name": "architecture-baseline"
         },
         {
-            "source": "coding/20.project-map",
+            "source": "skills/coding/20.project-map",
             "name": "project-map"
         },
         {
-            "source": "coding/30.feature-implementation-plan",
+            "source": "skills/coding/30.feature-implementation-plan",
             "name": "feature-implementation-plan"
         },
         {
-            "source": "coding/40.ui-wireframe-spec",
+            "source": "skills/coding/40.ui-wireframe-spec",
             "name": "ui-wireframe-spec"
         },
         {
-            "source": "coding/50.ui-prototype",
+            "source": "skills/coding/50.ui-prototype",
             "name": "ui-prototype"
         },
         {
-            "source": "coding/spec-sync",
+            "source": "skills/coding/spec-sync",
             "name": "spec-sync"
         },
         {
-            "source": "coding/guided-tdd-pairing",
+            "source": "skills/coding/guided-tdd-pairing",
             "name": "guided-tdd-pairing"
         },
         {
-            "source": "coding/skill-authoring",
+            "source": "skills/coding/skill-authoring",
             "name": "skill-authoring"
+        },
+        {
+            "source": "skills/work/crown-ppt",
+            "name": "crown-ppt"
         }
     ]
 }
