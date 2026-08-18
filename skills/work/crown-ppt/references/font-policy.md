@@ -44,15 +44,15 @@ These are working minimums for a 16:9 presentation viewed in a conference room. 
 
 Do not shrink all text to make an overcrowded slide fit. Shorten the content, split the slide, simplify the evidence, or choose a compatible layout. Text below the minimum requires an explicit user decision and must be called out during rendered-slide review.
 
-## Why Aptos replaces Arial as the preferred body font
+## Why Aptos replaces Arial as the preferred body font in the crown profile
 
-Aptos is contemporary and has clear differentiation between weights while retaining Office-native behavior. It pairs with the warmer slab-serif character of Amasis without competing with it. Arial remains the compatibility fallback for broad Office support.
+This rationale applies only to the `crown` profile; the `standard` profile keeps Arial. Aptos is contemporary and has clear differentiation between weights while retaining Office-native behavior. It pairs with the warmer slab-serif character of Amasis without competing with it. Arial remains the compatibility fallback for broad Office support.
 
 Do not claim that Aptos is an official Crown font. Treat it as the preferred working recommendation until the corporate brand owner confirms a body family.
 
-## When to use Amasis for page titles
+## When to use Amasis for page titles in the crown profile
 
-Use Amasis when all of the following are true:
+This section does not apply to the `standard` profile. Use Amasis when all of the following are true:
 
 - the title is a natural-language assertion rather than a file name or technical token;
 - it fits on one line at 28 pt or larger;

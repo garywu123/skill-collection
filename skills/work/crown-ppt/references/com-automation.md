@@ -34,7 +34,7 @@ These facts were verified with PowerPoint COM. Stop if the template no longer ma
 
 The template contains example Cover and Sign-Off slides. In the working copy only:
 
-- reuse and edit them when the approved storyboard contains those roles;
+- reuse and edit them when the approved storyboard, or the design being proposed, contains those roles;
 - otherwise delete the unused example slide;
 - do not leave template prompt text or unused placeholders in the final deck.
 
@@ -51,7 +51,7 @@ The template contains example Cover and Sign-Off slides. In the working copy onl
 ## Authoring requirements
 
 - Create slides from the selected Crown `CustomLayout`.
-- Prefer inherited placeholders when their semantic role matches the approved storyboard.
+- Prefer inherited placeholders when their semantic role matches the approved storyboard or the design being proposed.
 - Preserve inherited master and layout objects; do not redraw or cover them.
 - Use points for geometry and derive positions from placeholders or the `960 x 540` point canvas.
 - Use native tables, charts, shapes, connectors, text boxes, and supported SVG icons.

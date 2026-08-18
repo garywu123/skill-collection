@@ -1,4 +1,4 @@
 interface:
   display_name: "Crown PowerPoint"
-  short_description: "Implement approved designs as Crown PPTX decks"
-  default_prompt: "Use $crown-ppt to implement this completed storyboard and content as an editable PowerPoint deck using the bundled Crown template."
+  short_description: "Design or implement Crown PPTX decks"
+  default_prompt: "Use $crown-ppt in design mode to turn this content into reviewable PNG design references, or in implementation mode to turn this approved storyboard into an editable PowerPoint deck using the bundled Crown template."

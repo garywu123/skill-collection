@@ -2,22 +2,22 @@
 
 ## Purpose
 
-Implement a completed design screenshot or storyboard as a coherent, editable Crown PowerPoint deck. The storyboard controls composition; the content source controls facts; the Crown template supplies the master, layouts, and brand furniture.
+Produce a coherent Crown PowerPoint deck, whether design mode is composing a new design reference from raw content or implementation mode is recreating an approved screenshot or storyboard. The storyboard or proposed composition controls layout; the content source controls facts; the Crown template supplies the master, layouts, and brand furniture.
 
 ## Precedence
 
 Apply inputs in this order:
 
 1. Preserve facts, terminology, data, and required messages from the content source.
-2. Follow the approved storyboard for slide sequence, composition, hierarchy, proportions, alignment, and visual rhythm.
+2. In implementation mode, follow the approved storyboard for slide sequence, composition, hierarchy, proportions, alignment, and visual rhythm. In design mode, propose that same structure from the content and this document.
 3. Preserve inherited brand elements from the selected Crown layout.
-4. Use the defaults in this document only where the storyboard is silent.
+4. Use the defaults in this document where the storyboard is silent or does not yet exist.
 
 Do not create a new design direction or reproduce sample copy from a design image unless the user explicitly requests it.
 
 ## Storyboard interpretation
 
-For each approved frame, identify:
+For each approved frame, or each frame being proposed in design mode, identify:
 
 - slide role and primary reading order;
 - content regions and their relative proportions;
@@ -51,7 +51,7 @@ Use one primary assertion per slide. Split the slide rather than overfill the ap
 
 ## Typography
 
-Use the detailed rules in [font-policy.md](font-policy.md). The template theme declares Arial for major and minor Latin fonts. Follow an approved storyboard or brand direction when it explicitly requires another available font; otherwise preserve template typography.
+Use the detailed rules in [font-policy.md](font-policy.md), starting with the selected `standard` or `crown` font profile. The template theme declares Arial for major and minor Latin fonts. Follow an approved storyboard or brand direction when it explicitly requires a font outside the selected profile; otherwise follow the profile.
 
 ## Template color tokens
 
@@ -72,7 +72,7 @@ Use pale orange fills only for one selected row, status, or action band. Never c
 ## Grid and spacing
 
 - Work within the inherited `960 x 540` point canvas.
-- Derive outer margins and anchors from the selected layout and approved storyboard.
+- Derive outer margins and anchors from the selected layout and the approved storyboard or proposed composition.
 - Use a consistent 8 point spacing rhythm when neither source provides a clearer system.
 - Keep at least 18 points between distinct information groups.
 - Keep generated objects clear of inherited footer and page-number regions.
