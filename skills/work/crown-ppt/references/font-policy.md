@@ -4,6 +4,19 @@
 
 This is a working recommendation for generated Crown presentations. It is not represented as an official Crown corporate typography standard. Follow an authoritative user-supplied design or brand guide when available, but do not guess or bundle an unavailable commercial font.
 
+## Font profiles
+
+Choose one profile at the start of design or implementation mode. The profile applies to the design reference and the final PPTX so that approval reflects the intended typography.
+
+| Profile | Titles | Body and labels | Use |
+|---|---|---|---|
+| `standard` | Arial Bold | Arial | Broad compatibility, conservative business presentations, and recipients with uncertain font availability |
+| `crown` | Amasis MT Pro Medium for short editorial titles; Aptos Semibold for long or technical titles | Aptos | The current expressive Crown treatment when the required fonts are available |
+
+Both profiles use Consolas for code and logs and Microsoft YaHei, then DengXian, for Simplified Chinese. The `standard` profile is the recommended name for the user's regular design; `crown` replaces the ambiguous term "advanced design."
+
+The selected profile overrides the generic role table below for Latin titles, body text, labels, tables, and captions. Use the `standard` profile's Arial choices when `standard` is requested.
+
 ## Font roles
 
 | Role | Primary | Fallback | Rule |
@@ -15,6 +28,21 @@ This is a working recommendation for generated Crown presentations. It is not re
 | Tables | Aptos | Arial | Prefer Regular and Semibold |
 | Code and logs | Consolas | Cascadia Mono | Keep exact spacing |
 | Simplified Chinese | Microsoft YaHei | DengXian | Do not force Amasis or Aptos onto missing glyphs |
+
+## Conference-room size guidance
+
+These are working minimums for a 16:9 presentation viewed in a conference room. Use larger sizes when the room, projector, viewing distance, or audience requires it.
+
+| Element | Preferred range | Minimum |
+|---|---:|---:|
+| Cover or section title | 34-44 pt | 32 pt |
+| Content slide title | 28-34 pt | 28 pt |
+| Main body or bullets | 20-24 pt | 18 pt |
+| Table and chart labels | 18-22 pt | 16 pt |
+| Captions and secondary labels | 16-18 pt | 14 pt |
+| Footnotes and sources | 14-16 pt | 12 pt |
+
+Do not shrink all text to make an overcrowded slide fit. Shorten the content, split the slide, simplify the evidence, or choose a compatible layout. Text below the minimum requires an explicit user decision and must be called out during rendered-slide review.
 
 ## Why Aptos replaces Arial as the preferred body font
 

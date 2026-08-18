@@ -1,19 +1,44 @@
 ---
 name: crown-ppt
-description: Implement completed PowerPoint design screenshots or storyboards as editable Crown presentations from the bundled Crown template on Windows using Microsoft PowerPoint COM. Use when the visual design is already approved and the output must be a native PPTX on the template's 960 x 540 point canvas. Do not use for design ideation, image-only decks, HTML slides, or unattended server-side Office automation.
+description: Design and implement Crown PowerPoint presentations on Windows using Microsoft PowerPoint COM. Use design mode to turn slide content and optional pictures into reviewable PNG design references, or use implementation mode to turn an approved screenshot or storyboard into an editable PPTX on the bundled template's 960 x 540 point canvas. Do not use for image-only final decks, HTML slides, or unattended server-side Office automation.
 ---
 
 # Crown PowerPoint
 
-Turn an approved design screenshot or storyboard and its content into an editable PowerPoint deck that inherits the bundled Crown template.
+Design or implement a Crown presentation while keeping the design-review and editable-deck stages explicit.
+
+## Modes
+
+Select one mode at the start of the request. Do not silently run both modes.
+
+### Design mode
+
+Use when the user has content but does not yet have an approved visual design.
+
+- Accept slide content as text, pictures, or a mixture of both.
+- Apply the selected [font profile](references/font-policy.md#font-profiles), Crown design language, layout catalog, canvas, spacing, and conference-room legibility rules.
+- Create a temporary PowerPoint working deck with native text, shapes, tables, charts, and supplied content images, then export each slide as a PNG design reference.
+- Label the output as a design reference, not as the final editable deliverable.
+- Stop after presenting the rendered design references and request approval or concrete design changes. Do not proceed to final implementation in the same mode.
+
+Design mode may use placeholder copy only when the user has not supplied the final wording. Mark placeholder content clearly and replace it before implementation.
+
+### Implementation mode
+
+Use when the user supplies an approved screenshot, storyboard, or equivalent slide-by-slide visual specification.
+
+- Recreate the approved design as an editable presentation that inherits the bundled Crown template.
+- Preserve the selected font profile unless the user explicitly changes it.
+- Treat the approved reference as an implementation specification, never as a slide image.
 
 ## Input contract
 
-- Require a completed design screenshot, storyboard, or equivalent slide-by-slide visual specification before authoring.
+- In design mode, require the slide content and any supplied pictures or data; a completed design reference is not required.
+- In implementation mode, require a completed design screenshot, storyboard, or equivalent slide-by-slide visual specification before authoring.
 - Treat supplied text, data, documents, and factual instructions as the content source.
 - Treat the approved design as the source for composition, hierarchy, proportions, spacing, and visual rhythm.
 - Use sample text visible in a design reference only to understand hierarchy and density. Do not copy it unless the user identifies it as content.
-- If the design direction is incomplete or materially ambiguous, stop and request a completed design. This Skill implements designs; it does not create the upstream design concept.
+- If implementation-mode design direction is incomplete or materially ambiguous, stop and request a completed design. Design mode creates a reviewable reference; it does not silently treat that reference as approved.
 
 ## Required environment
 
@@ -32,19 +57,19 @@ Turn an approved design screenshot or storyboard and its content into an editabl
 
 ## Core workflow
 
-1. Inspect all content inputs and every approved design screenshot or storyboard frame.
-2. Read [the layout catalog](references/layout-catalog.md) and map each storyboard slide to the closest useful Crown `CustomLayout`. Treat the catalog as guidance, not a rigid content-to-layout rule.
+1. Confirm the requested mode and font profile, then inspect all content inputs and any approved design screenshot or storyboard frame.
+2. In design mode, read [the layout catalog](references/layout-catalog.md) and select the closest useful Crown `CustomLayout` for each proposed slide. In implementation mode, map each storyboard slide to the closest useful layout. Treat the catalog as guidance, not a rigid content-to-layout rule.
 3. Read [the design language](references/design-language.md).
 4. Read [the font policy](references/font-policy.md) for font selection, dense content, code, or multilingual text.
 5. Read [the icon policy](references/icon-policy.md) before sourcing a new icon.
 6. Read [the COM automation contract](references/com-automation.md) before authoring or changing PowerShell automation.
-7. Create a working copy of `designs/Crown Template.pptx` at the output path. Never save over the bundled template.
-8. Reuse or remove the working copy's example Cover and Sign-Off slides as required by the storyboard, then create remaining slides from existing Crown `CustomLayout` objects.
-9. Implement the approved design with inherited placeholders and native PowerPoint objects. Preserve the master, layout, logo, footer, page number, photography, and other brand furniture.
+7. Create a temporary working copy for design mode, or a caller-provided working copy for implementation mode. Never save over the bundled template.
+8. Reuse or remove the working copy's example Cover and Sign-Off slides as required, then create remaining slides from existing Crown `CustomLayout` objects.
+9. Implement the selected design with native PowerPoint objects. Preserve the master, layout, logo, footer, page number, photography, and other brand furniture.
 10. When icons are required, obtain suitable open-source SVG icons before COM authoring, cache them under `assets/icons/`, and record source and license information as required by the icon policy.
 11. Build text, tables, charts, diagrams, connectors, callouts, and labels as native editable objects. Use raster images only for actual content or evidence.
-12. Export every slide to PNG with `scripts/Export-CrownPresentation.ps1` and compare it with the approved design for composition, clipping, overlap, contrast, hierarchy, and footer clearance.
-13. Repair the editable objects, re-export, and stop only when the PPTX, rendered slides, content source, approved design, and template hierarchy agree.
+12. Export every slide to PNG with `scripts/Export-CrownPresentation.ps1` and inspect composition, clipping, overlap, contrast, hierarchy, footer clearance, and minimum font sizes.
+13. In design mode, deliver the PNG references and stop for approval. In implementation mode, repair the editable objects and stop only when the PPTX, rendered slides, content source, approved design, and template hierarchy agree.
 
 ## Layout-selection contract
 
@@ -77,7 +102,7 @@ Turn an approved design screenshot or storyboard and its content into an editabl
 
 ## Boundaries
 
-- Do not generate the upstream design screenshot or storyboard as part of this Skill.
+- Do not treat an unapproved design-mode PNG as an approved implementation reference.
 - Do not save changes over `designs/Crown Template.pptx`.
 - Do not recreate or flatten the Crown master from screenshots.
 - Do not create an image-only deck.
