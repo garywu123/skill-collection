@@ -6,4 +6,4 @@ This collection contains reusable Skills for presentations and other workplace c
 
 | Skill | Capability |
 |---|---|
-| [`crown-ppt`](crown-ppt/SKILL.md) | Create, inspect, and validate editable Crown-branded PowerPoint decks with the supplied template and Microsoft PowerPoint COM. |
+| [`crown-ppt`](crown-ppt/SKILL.md) | Implement completed screenshots or storyboards as editable Crown PowerPoint decks from the bundled template on a 960 x 540 point canvas using Microsoft PowerPoint COM. |

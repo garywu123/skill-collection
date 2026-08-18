@@ -1,76 +1,71 @@
-# Crown Light Layout Catalog
+# Crown Dark Layout Catalog
 
-## Selection sequence
+## Selection principle
 
-1. Write the slide assertion.
-2. Identify the evidence form: narrative, comparison, table, process, image, or decision.
-3. Choose the narrowest Crown layout that supports that evidence without forcing small text.
-4. Add native editable objects inside the inherited content region.
-5. Split the content when it exceeds the selected layout's natural capacity.
+Choose a layout by matching the approved storyboard's composition, not by assigning one mandatory layout to each content type. The same content may work in several layouts, and a familiar content type may use an unexpected layout when the approved design supports it.
 
-## Opening and navigation
+Use this sequence:
 
-| Layout | Use for | Avoid for |
+1. Identify the frame's role: opening, transition, navigation, evidence, comparison, image-led story, or close.
+2. Match its column and image structure.
+3. Choose the preferred amount and placement of Crown photography or brand furniture.
+4. Select the layout requiring the fewest changes to the approved design.
+5. Use native objects inside the selected layout; do not modify the master for a one-slide exception.
+
+## Opening, navigation, and close
+
+| Layout | Strong fit | Also useful for |
 |---|---|---|
-| `Cover_Light` | Deck title, project, reporting period, presenter | Agenda or normal content |
-| `Section_Light` | Category opening or major transition | Detailed evidence |
-| `Agenda_Light` | Agenda, objectives, presentation roadmap | Project status details |
+| `Cover_Dark` | Deck title and opening statement | Project name, reporting period, presenter |
+| `Section_Dark` | Major section transition | Chapter thesis, phase change, category divider |
+| `Agenda_Dark` | Agenda and presentation roadmap | Objectives, discussion topics, workshop sequence |
+| `Sign-Off` | Final close | Contact, discussion prompt, final action |
 
-## Content Option 1: clean evidence pages
+`Agenda_Dark` is not mandatory for every agenda. Use a content layout when the approved storyboard presents the agenda as a timeline, grouped objectives, or another structured composition.
 
-| Layout | Use for | Content pattern |
+## Content Option 1: clean and flexible
+
+Use Option 1 when evidence density and custom composition matter more than large photographic treatment.
+
+| Layout | Strong fit | Also useful for |
 |---|---|---|
-| `Content Option 1_Light_Blank` | Highly custom native diagram | One focal visual system |
-| `Content Option 1_Light_Title Only` | Full-width table, timeline, architecture, chart | Assertion + one large evidence object |
-| `Content Option 1_Light_1 Column` | Executive narrative, detailed case, code explanation | Assertion + structured vertical story |
-| `Content Option 1_Light_2 Column` | Evidence/implication, issue/response, comparison | Two regions with distinct jobs |
-| `Content Option 1_Light_3 Column` | Three workstreams, states, or capabilities | Three parallel concepts of similar depth |
-| `Content Option 1_Light_Image Right` | Tool or product explanation | Explanation left, screenshot right |
-| `Content Option 1_Light_Image Left` | Case evidence or product context | Evidence image left, findings right |
+| `Content Option 1_Dark_Blank` | Fully custom storyboard frame | Architecture, complex diagram, unconventional composition |
+| `Content Option 1_Dark_Title Only` | One large evidence object | Full-width table, chart, timeline, process |
+| `Content Option 1_Dark_1 Column` | One continuous narrative or evidence region | Executive summary, large table, detailed explanation |
+| `Content Option 1_Dark_2 Column` | Two distinct semantic regions | Comparison, evidence and implication, issue and response |
+| `Content Option 1_Dark_3 Column` | Three parallel concepts | Workstreams, phases, capabilities, current/build/target |
+| `Content Option 1_Dark_Image Right` | Explanation with image evidence on the right | Product screenshot, case result, annotated visual |
+| `Content Option 1_Dark_Image Left` | Image evidence on the left with findings on the right | Case study, product context, before-and-after story |
 
-## Content Option 2: stronger brand presence
+## Content Option 2: stronger photographic brand presence
 
-| Layout | Use for | Content pattern |
+Use Option 2 when the storyboard calls for a stronger Crown industrial image treatment and relatively concise content.
+
+| Layout | Strong fit | Also useful for |
 |---|---|---|
-| `Content Option 2_Light_1 Column` | Executive summary or short branded narrative | One concise message block |
-| `Content Option 2_Light_2 Column` | Paired themes or senior-level comparison | Two concise columns |
-| `Content Option 2_Light_1/3 Left` | Metric or status plus explanation | Narrow feature left, narrative right |
-| `Content Option 2_Light_1/3 Right` | Analysis plus decision or callout | Narrative left, narrow action right |
+| `Content Option 2_Dark_1 Column` | Branded executive narrative | Key message, short summary, section-level evidence |
+| `Content Option 2_Dark_2 Column` | Two concise branded regions | Paired themes, senior-level comparison |
+| `Content Option 2_Dark_1/3 Left` | Narrow feature or image at left | Metric plus explanation, case highlight, status callout |
+| `Content Option 2_Dark_1/3 Right` | Narrow feature or image at right | Analysis plus decision, summary, risk, or action |
 
-## Content Option 3: asymmetric feature pages
+Avoid Option 2 when a dense full-width table or highly technical diagram would compete with the photographic treatment.
 
-| Layout | Use for | Content pattern |
+## Content Option 3: asymmetric feature treatment
+
+Use Option 3 for feature stories and asymmetric compositions that need clear separation between primary evidence and a supporting region.
+
+| Layout | Strong fit | Also useful for |
 |---|---|---|
-| `Content Option 3_Light_1 Column` | General content with light brand rail | One structured content field |
-| `Content Option 3_Light_2 Column` | Balanced comparison | Two related groups |
-| `Content Option 3_Light_Image Right` | Product screenshot or case image | Explanation left, evidence right |
-| `Content Option 3_Light_1/3 Left` | Case study or product feature | Feature/image left, detail right |
-| `Content Option 3_Light_1/3 Right` | Detailed analysis plus summary | Detail left, summary/decision right |
+| `Content Option 3_Dark_1 Column` | General content with restrained brand rail | Narrative, product introduction, summary |
+| `Content Option 3_Dark_2 Column` | Balanced comparison with alternate brand treatment | Two scenarios, problem and solution, evidence and action |
+| `Content Option 3_Dark_Image Right` | Text-led story with right image | Product explanation, proof point, case image |
+| `Content Option 3_Dark_1/3 Left` | Left feature region and larger right detail | Case study, key metric, product feature |
+| `Content Option 3_Dark_1/3 Right` | Larger left detail and right summary | Analysis, risk, decision, next step |
 
-## Closing
+## Flexible choices
 
-| Layout | Use for | Avoid for |
-|---|---|---|
-| `Sign-Off` | Final action, discussion prompt, contact | Empty generic thank-you page |
-
-## Common mappings
-
-| Content | First choice | Alternative |
-|---|---|---|
-| Recent outage evidence | `Content Option 1_Light_Title Only` | `Content Option 1_Light_1 Column` |
-| Support operating model | `Content Option 1_Light_3 Column` | `Content Option 1_Light_Title Only` |
-| Project status by workstream | `Content Option 1_Light_1 Column` | `Content Option 1_Light_3 Column` |
-| Tool logic plus screenshot | `Content Option 1_Light_Image Right` | `Content Option 3_Light_Image Right` |
-| Case study | `Content Option 3_Light_1/3 Left` | `Content Option 1_Light_Image Left` |
-| Product introduction | `Content Option 1_Light_Image Right` | `Content Option 3_Light_1/3 Left` |
-| Executive decision | `Content Option 2_Light_1/3 Right` | `Content Option 1_Light_2 Column` |
-
-## Capacity guardrails
-
-- Use one column for one large object or one detailed story.
-- Use two columns only when the regions have different semantic roles.
-- Use three columns only for genuinely parallel concepts.
-- Use 1/3 layouts when the narrow region is a metric, summary, image, risk, or decision.
-- Use an image layout only when the image is evidence.
-- Do not place a full-width dense table into a two-column placeholder system.
-
+- Use `Blank` when the storyboard is highly custom and the template needs to supply only the inherited Crown brand system.
+- Use `Title Only` for any content dominated by one large object, regardless of topic.
+- Use one-column layouts for depth, two-column layouts for different semantic jobs, and three-column layouts for genuinely parallel concepts.
+- Use image layouts only when the image is real content or evidence.
+- Choose between Options 1, 2, and 3 by the storyboard's desired brand treatment and usable content area, not by topic alone.

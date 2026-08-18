@@ -2,7 +2,7 @@
 
 ## Status
 
-This is a presentation-specific recommendation derived from the supplied template and the requested use of Amasis. It is not represented as an official Crown corporate typography standard. Replace it if an authoritative Crown brand guide provides different font requirements.
+This is a working recommendation for generated Crown presentations. It is not represented as an official Crown corporate typography standard. Follow an authoritative user-supplied design or brand guide when available, but do not guess or bundle an unavailable commercial font.
 
 ## Font roles
 
@@ -18,7 +18,7 @@ This is a presentation-specific recommendation derived from the supplied templat
 
 ## Why Aptos replaces Arial as the preferred body font
 
-Aptos is more contemporary and has clearer differentiation between weights while retaining Office-native behavior. It pairs with the warmer slab-serif character of Amasis without competing with it. Arial remains the compatibility fallback because the supplied template currently declares Arial as both its major and minor theme font.
+Aptos is contemporary and has clear differentiation between weights while retaining Office-native behavior. It pairs with the warmer slab-serif character of Amasis without competing with it. Arial remains the compatibility fallback for broad Office support.
 
 Do not claim that Aptos is an official Crown font. Treat it as the preferred working recommendation until the corporate brand owner confirms a body family.
 
@@ -41,4 +41,3 @@ Use Aptos Semibold when any condition fails. This two-mode rule preserves Crown 
 - Prefer Microsoft 365 cloud-font availability where the organization supports it.
 - Confirm corporate rights before embedding or distributing commercial fonts.
 - If recipients use older or offline Office versions, export a PDF proof and test the PPTX on a representative recipient machine.
-

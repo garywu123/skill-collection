@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+    [string]$TemplatePath = '',
     [string[]]$RequiredFonts = @(
         'Amasis MT Pro Medium',
         'Aptos',
@@ -10,6 +11,10 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($TemplatePath)) {
+    $TemplatePath = Join-Path $PSScriptRoot '..\designs\Crown Template.pptx'
+}
 
 function Release-ComObject {
     param([object]$ComObject)
@@ -22,6 +27,11 @@ function Release-ComObject {
 if ($env:OS -ne 'Windows_NT') {
     throw 'Crown PowerPoint automation requires Windows.'
 }
+if (-not (Test-Path -LiteralPath $TemplatePath -PathType Leaf)) {
+    throw "Crown PowerPoint template is missing: $TemplatePath"
+}
+
+$resolvedTemplatePath = (Resolve-Path -LiteralPath $TemplatePath).Path
 
 $installedFonts = @()
 try {
@@ -50,6 +60,7 @@ try {
         Windows = $true
         PowerPointComAvailable = $true
         PowerPointVersion = [string]$powerPoint.Version
+        TemplatePath = $resolvedTemplatePath
         RequiredFonts = @($fontChecks)
         Note = 'Office cloud fonts may be usable in PowerPoint even when they are not registered as Windows-installed fonts.'
     }
@@ -70,4 +81,3 @@ finally {
     [GC]::Collect()
     [GC]::WaitForPendingFinalizers()
 }
-

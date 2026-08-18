@@ -11,7 +11,7 @@ Use `../scripts/Get-CrownIcon.ps1` for deterministic retrieval and basic SVG saf
 - Use the Fluent `regular` style by default.
 - Use `filled` only for one selected state or high-priority warning.
 - Use one icon family per deck.
-- Use Crown dark gray `#515151` for neutral icons and Crown orange `#FD9827` for active or selected states.
+- Match the supplied design reference when it defines icon color. Otherwise use Crown dark gray `#515151` for neutral icons and Crown orange `#FD9827` for active or selected states.
 - Use a native PowerPoint shape for simple arrows, lines, checks, circles, and connectors.
 - Do not use an icon as decoration when a direct label is clearer.
 - Do not mix emoji, multicolor icons, and Fluent line icons.
@@ -29,4 +29,3 @@ References:
 - Iconify API: https://iconify.design/docs/api/
 - Iconify SVG endpoint: https://iconify.design/docs/api/svg.html
 - Microsoft Fluent UI System Icons: https://github.com/microsoft/fluentui-system-icons
-

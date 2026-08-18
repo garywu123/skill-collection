@@ -12,7 +12,7 @@
     "targets": {
         "claude": ".claude/skills",
         "copilot": ".github/copilot/skills",
-        "agents": ".codex/skills"
+        "codex": ".codex/skills"
     },
 
     "presets": {
