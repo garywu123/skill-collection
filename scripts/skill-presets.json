@@ -17,19 +17,19 @@
 
     "presets": {
         "coding": [
-            "coding/05.product-discovery-roadmap",
-            "coding/10.architecture-baseline",
-            "coding/20.project-map",
-            "coding/30.feature-implementation-plan",
-            "coding/40.ui-wireframe-spec",
-            "coding/50.ui-prototype",
-            "coding/spec-sync",
-            "coding/guided-tdd-pairing"
+            "skills/coding/05.product-discovery-roadmap",
+            "skills/coding/10.architecture-baseline",
+            "skills/coding/20.project-map",
+            "skills/coding/30.feature-implementation-plan",
+            "skills/coding/40.ui-wireframe-spec",
+            "skills/coding/50.ui-prototype",
+            "skills/work/crown-ppt",
+            "skills/coding/spec-sync",
+            "skills/coding/guided-tdd-pairing"
         ],
-
         "coding-minimal": [
-            "coding/20.project-map",
-            "coding/spec-sync"
+            "skills/coding/20.project-map",
+            "skills/coding/spec-sync"
         ],
 
         "map-only": [
