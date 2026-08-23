@@ -19,7 +19,7 @@
 
     Numeric ordering prefixes are stripped on install, so the installed folder
     name matches the `name:` field in each SKILL.md
-    (`05.product-discovery-roadmap` -> `product-discovery-roadmap`).
+    (`10.product-brief` -> `product-brief`).
 
     Presets and per-tool target directories are defined in skill-presets.json.
 
@@ -53,8 +53,8 @@
     .\Install-Skills.ps1 -ProjectPath D:\code\work-projects\wms -Mode Copy
 
 .EXAMPLE
-    # Just the map and alignment skills
-    .\Install-Skills.ps1 -Preset coding-minimal
+    # Install only the planning skills
+    .\Install-Skills.ps1 -Skill skills/coding/10.product-brief,skills/coding/20.feature-map,skills/coding/30.feature-plan
 
 .EXAMPLE
     .\Install-Skills.ps1 -Uninstall

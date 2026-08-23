@@ -52,7 +52,11 @@ Otherwise, state the smallest reasonable assumption and proceed.
    resource only when it reduces the core file or provides executable value.
 6. Update the collection capability map when the public Skill set or behavior
    changed.
-7. Validate the changed files and report scope, design choices, checks run, and
+7. Inventory active project Markdown and YAML files. Check the changed Skill,
+   collection map, deployment documentation, and adjacent Skills for conflicting
+   ownership, repeated rules, stale names, and broken paths. Fix mechanical
+   conflicts now; ask only when ownership requires a user decision.
+8. Validate the changed files and report scope, design choices, checks run, and
    remaining uncertainty. Stop without executing the new domain workflow.
 
 ## Lean test
@@ -84,5 +88,5 @@ Use the narrowest available parser, test, or deployment list command. For an
 active `coding/` Skill, run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/Deploy-Skills.ps1 -ListOnly
+powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1 -ListOnly
 ```

@@ -9,7 +9,7 @@
 
     The deployed folder name comes from the SKILL.md frontmatter `name` field,
     so repository ordering prefixes are not copied
-    (`05.product-discovery-roadmap` -> `product-discovery-roadmap`).
+    (`10.product-brief` -> `product-brief`).
 
     Path resolution order (first non-empty value wins):
       1. Command-line parameter

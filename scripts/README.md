@@ -19,8 +19,8 @@
 {
   "skills": [
     {
-      "source": "coding/20.project-map",
-      "name": "project-map"
+      "source": "skills/coding/10.product-brief",
+      "name": "product-brief"
     }
   ]
 }
@@ -39,14 +39,14 @@
 ## 项目级安装
 
 ```powershell
-# 在项目根目录，链接 coding 预设的 8 个 skill
+# 在项目根目录，链接 coding 预设的 4 个 skill
 d:\code\personal-projects\skill-collection\scripts\Install-Skills.ps1
 
 # 先看会装什么，不写任何文件
 .\Install-Skills.ps1 -List
 
 # 指定项目、只装一部分
-.\Install-Skills.ps1 -ProjectPath D:\code\work-projects\wms -Preset coding-minimal
+.\Install-Skills.ps1 -ProjectPath D:\code\work-projects\wms -Skill skills/coding/10.product-brief,skills/coding/20.feature-map
 
 # 拆掉
 .\Install-Skills.ps1 -Uninstall
@@ -77,7 +77,7 @@ d:\code\personal-projects\skill-collection\scripts\Install-Skills.ps1
 
 ```json
 "presets": {
-  "coding": ["coding/05.product-discovery-roadmap", "..."],
+  "coding": ["skills/coding/10.product-brief", "..."],
   "writing": ["writing/xxx"]
 }
 ```
@@ -85,7 +85,7 @@ d:\code\personal-projects\skill-collection\scripts\Install-Skills.ps1
 也可以绕过预设直接点名：
 
 ```powershell
-.\Install-Skills.ps1 -Skill coding/20.project-map, coding/spec-sync
+.\Install-Skills.ps1 -Skill skills/coding/30.feature-plan,skills/coding/40.feature-delivery
 ```
 
 `targets` 里只有 `claude` 的路径是确认过的。用 `-Tool copilot` 或 `-Tool agents`
@@ -96,13 +96,12 @@ d:\code\personal-projects\skill-collection\scripts\Install-Skills.ps1
 仓库里的目录带排序前缀，安装时自动去掉，使目录名和 `SKILL.md` 里的 `name` 一致：
 
 ```text
-coding/05.product-discovery-roadmap  ->  .claude/skills/product-discovery-roadmap
+skills/coding/10.product-brief  ->  .claude/skills/product-brief
 ```
 
 新增 skill 时保持 `<数字>.<name>` 或直接 `<name>` 都可以。
 
-## 操作指南不参与部署
+## 归档内容不参与部署
 
-`coding/00_instructions/` 里的六份场景指南是给人看的，留在本仓库
-读即可。它们内部链接指向各 skill 的 reference 文件，复制进项目会断链，而且会在每个
-项目里留下一份还在演进的文档副本。
+`skills/coding/_obsolete/` 只保存旧流程作为历史证据。部署和项目安装都只读取显式
+mapping，不会扫描或安装归档内容。

@@ -2,7 +2,7 @@
     "SourceRoots": [
         {
             "Ref": "1",
-            "Path": "D:\\code\\personal-projects\\skill-collection\\skills\\coding\\00_instructions"
+            "Path": "D:\\code\\personal-projects\\skill-collection\\skills\\coding"
         }
     ],
     "TargetRoots": [
@@ -15,7 +15,7 @@
         {
             "SourceDir": "--1",
             "DestinationDir": "--1",
-            "IncludeSubfolders": true
+            "IncludeSubfolders": false
         }
     ]
 }
