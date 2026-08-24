@@ -22,4 +22,4 @@
 
 ## Open Questions
 
-- <Only a question that could change product direction.>
+- <A question that could change purpose, users, core flows, or MVP scope. Delete this section when none.>

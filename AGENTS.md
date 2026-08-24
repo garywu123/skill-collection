@@ -10,8 +10,8 @@ in the relevant `SKILL.md` and detailed material in that Skill's resources.
 
 ## Repository map
 
-- `coding/` contains Skills for programming and software delivery work. Read
-  `coding/README.md` before changing its workflows.
+- `skills/coding/` contains Skills for programming and software delivery work.
+  Read `skills/coding/README.md` before changing its workflows.
 - `scripts/` contains repository maintenance and deployment tools.
 - A future top-level collection may serve another domain, such as presentation
   or content work. Give each collection its own `README.md`; do not assume the
@@ -36,16 +36,20 @@ in the relevant `SKILL.md` and detailed material in that Skill's resources.
 ## Skill design
 
 - Give one Skill one clear, repeatable, on-demand responsibility.
-- Make frontmatter `name` match the folder name. Write a concrete `description`
-  that states when to use the Skill and important exclusions.
+- An ordered collection may name a folder `<ordinal>.<skill-name>`; otherwise
+  use `<skill-name>`. Make frontmatter `name` match the logical `<skill-name>`
+  after removing any ordinal prefix. Write a concrete `description` that states
+  when to use the Skill and important exclusions.
 - Keep the always-needed contract and procedure in `SKILL.md`. Move optional
   detail and edge cases to `references/`, reusable output material to `assets/`,
   and deterministic automation to `scripts/`.
 - Add a resource only when the workflow uses it. Do not prebuild agents,
   phases, state machines, templates, or validation machinery for hypothetical
   future needs.
-- Keep Skills independently invocable. Do not make one Skill silently invoke
-  another Skill or infer authorization from repository state.
+- Keep Skills independently invocable. A coordinator may select Skills from
+  natural-language intent and sequence several when the original request covers
+  each outcome. Do not make one Skill silently invoke another or infer
+  authorization from repository state.
 - Update the collection `README.md` when adding, removing, or materially
   changing a Skill's public capability.
 

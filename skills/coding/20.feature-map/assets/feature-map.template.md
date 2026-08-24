@@ -8,7 +8,9 @@
 |---|---|---|---|---|
 | F01 | <short name> | <one observable result> | None | planned |
 
-Use `planned`, `blocked`, or `verified`.
+Use `planned`, `in_progress`, `blocked`, or `verified`. Use `blocked` only when
+a named, concrete condition prevents progress; otherwise active work is
+`in_progress`.
 
 ## Technical Direction
 

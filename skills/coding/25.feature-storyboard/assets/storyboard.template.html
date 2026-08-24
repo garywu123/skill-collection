@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>F01 · Feature Storyboard</title>
+  <link rel="stylesheet" href="_storyboard.css">
+</head>
+<body>
+  <main class="sb-document" data-storyboard data-initial="S1">
+    <header class="sb-document__header">
+      <div>
+        <p class="sb-eyebrow">F01 · Feature Storyboard</p>
+        <h1>FEATURE NAME</h1>
+        <p>Review question: DOES THIS FLOW MATCH THE INTENDED BEHAVIOR?</p>
+      </div>
+      <button class="sb-button" type="button" data-reset data-interactive-control hidden>
+        Reset preview
+      </button>
+    </header>
+
+    <section class="sb-flow" aria-label="Storyboard states">
+      <article class="sb-frame sb-phone" id="S1" data-state data-active tabindex="-1">
+        <p class="sb-frame__label"><strong>S1</strong> · Initial</p>
+        <div class="sb-device">
+          <header class="sb-topbar">SCREEN TITLE</header>
+          <div class="sb-content sb-stack">
+            <label class="sb-field">
+              <span>FIELD LABEL</span>
+              <input value="Representative fixture" readonly>
+            </label>
+            <a class="sb-button sb-button--primary" href="#S2" data-go="S2" data-transition="T1">
+              Continue
+            </a>
+          </div>
+        </div>
+      </article>
+
+      <article class="sb-frame sb-phone" id="S2" data-state tabindex="-1">
+        <p class="sb-frame__label"><strong>S2</strong> · Confirm</p>
+        <div class="sb-device">
+          <header class="sb-topbar">CONFIRM ACTION</header>
+          <div class="sb-content sb-stack">
+            <div class="sb-card">
+              <strong>FIXTURE SUMMARY</strong>
+              <p>Explain the visible consequence before confirmation.</p>
+            </div>
+            <div class="sb-actions">
+              <a class="sb-button" href="#S1" data-go="S1" data-transition="T2">Back</a>
+              <a class="sb-button sb-button--primary" href="#S3" data-go="S3" data-transition="T3">
+                Confirm
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="sb-frame sb-phone" id="S3" data-state tabindex="-1">
+        <p class="sb-frame__label"><strong>S3</strong> · Completed</p>
+        <div class="sb-device">
+          <header class="sb-topbar">RESULT</header>
+          <div class="sb-content sb-stack">
+            <div class="sb-banner" role="status">VISIBLE COMPLETION FEEDBACK</div>
+            <a class="sb-button" href="#S1" data-go="S1" data-transition="T4">Start again</a>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="sb-inventory" aria-labelledby="inventory-title">
+      <h2 id="inventory-title">State and transition inventory</h2>
+      <table>
+        <thead><tr><th>ID</th><th>State</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>S1</code></td><td>Initial</td><td>Starting information and primary action.</td></tr>
+          <tr><td><code>S2</code></td><td>Confirm</td><td>Consequence is visible before commitment.</td></tr>
+          <tr><td><code>S3</code></td><td>Completed</td><td>Observable successful result.</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>ID</th><th>From</th><th>Action</th><th>To</th></tr></thead>
+        <tbody>
+          <tr><td><code>T1</code></td><td><code>S1</code></td><td>Continue</td><td><code>S2</code></td></tr>
+          <tr><td><code>T2</code></td><td><code>S2</code></td><td>Back</td><td><code>S1</code></td></tr>
+          <tr><td><code>T3</code></td><td><code>S2</code></td><td>Confirm</td><td><code>S3</code></td></tr>
+          <tr><td><code>T4</code></td><td><code>S3</code></td><td>Start again</td><td><code>S1</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

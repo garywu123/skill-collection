@@ -46,8 +46,9 @@ Otherwise, state the smallest reasonable assumption and proceed.
 3. Define one responsibility, its trigger boundary, output, and stop condition.
    Prefer updating an existing owner when a new Skill would overlap it.
 4. Write concise frontmatter. The `name` must be lowercase kebab-case and match
-   the folder. The `description` must say what the Skill does, when to use it,
-   and any exclusion needed to prevent false activation.
+   the logical folder name after an optional `<ordinal>.` prefix. The
+   `description` must say what the Skill does, when to use it, and any exclusion
+   needed to prevent false activation.
 5. Put only always-needed decisions and steps in `SKILL.md`. Add a supporting
    resource only when it reduces the core file or provides executable value.
 6. Update the collection capability map when the public Skill set or behavior
@@ -55,7 +56,9 @@ Otherwise, state the smallest reasonable assumption and proceed.
 7. Inventory active project Markdown and YAML files. Check the changed Skill,
    collection map, deployment documentation, and adjacent Skills for conflicting
    ownership, repeated rules, stale names, and broken paths. Fix mechanical
-   conflicts now; ask only when ownership requires a user decision.
+   conflicts inside the target Skill and collection `README.md`. Report
+   conflicts elsewhere and change them only when the original request includes
+   that scope.
 8. Validate the changed files and report scope, design choices, checks run, and
    remaining uncertainty. Stop without executing the new domain workflow.
 
@@ -75,7 +78,8 @@ future workflows.
 
 At minimum, verify:
 
-- the folder and frontmatter `name` match;
+- the folder's logical name after an optional ordinal prefix and frontmatter
+  `name` match;
 - `description` contains concrete discovery language and boundaries;
 - referenced relative paths exist and use forward slashes;
 - headings follow repository Markdown style;

@@ -1,7 +1,10 @@
 # <F01: Feature Name>
 
 **Status:** planned
+
 **Sources:** [Product Brief](../product-brief.md), [Feature Map](../feature-map.md) row `F01`
+
+**Storyboard:** None
 
 ## Outcome
 

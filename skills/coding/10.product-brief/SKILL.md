@@ -1,16 +1,32 @@
 ---
 name: product-brief
-description: Create or revise one concise Product Brief that defines product purpose, users, core flows, and MVP boundary. Use when starting a product, changing its direction, or simplifying existing discovery and requirements documents. Do not use for feature design or implementation planning.
+description: Explore, create, or revise one concise Product Brief that defines product purpose, users, core flows, and MVP boundary. Use when the user wants to clarify or record product direction in natural language, including a new product or direction change. Explore in chat; write only when the user clearly asks to create, finalize, or update the brief. Do not use for feature design or implementation planning.
 ---
 
 # Product Brief
 
-Create the shortest document that gives later work a stable product direction.
-Discovery and requirements are one conversation and one artifact.
+Clarify product direction in conversation and persist it only when requested.
+When written, create the shortest document that gives later work a stable
+direction.
+
+## Intent
+
+Infer the intent from natural language; the user does not need to name this
+Skill explicitly.
+
+- `explore`: Discuss purpose, users, core flows, and MVP scope in chat. Ask one
+  to three high-value questions per round and briefly summarize the current
+  understanding. Do not create or update a file.
+- `write`: Create, finalize, or update the brief when the user clearly requests
+  it. Ask first only when a missing answer would materially change product
+  direction; otherwise state a small assumption and write.
+
+Do not treat conversation length, repository state, or an existing draft as a
+request to write.
 
 ## Output
 
-Create or update `docs/product-brief.md` from
+For `write` intent, create or update `docs/product-brief.md` from
 [the template](assets/product-brief.template.md), unless the project already
 has one clear canonical brief.
 
@@ -22,26 +38,35 @@ Keep the whole brief under 40 lines. Include only:
 - what is inside and outside the MVP; and
 - open questions that could change product direction.
 
-Do not add requirement IDs, approval fields, interview history, architecture,
-feature design, or delivery process. Use plain language and short sentences.
+Do not add Domain Words, a glossary, requirement IDs, approval fields,
+interview history, architecture, feature design, or delivery process. Use plain
+language and short sentences.
 
 ## Workflow
 
-1. Read repository guidance and existing product documents. For an existing
-   product, inspect representative code only when documents do not explain what
-   the product currently does.
-2. Ask only questions whose answers would change purpose, users, core flows, or
-   MVP scope. Otherwise state a small assumption and continue.
-3. Write the brief. Prefer replacing duplicated discovery/PRD prose with links
-   or removing it when the user has authorized consolidation.
-4. Run the consistency check below.
+1. Read repository guidance and existing product documents. Read domain
+   documents only when the user identifies them; they are optional, read-only
+   inputs. Never create `docs/domain/`, modify those sources, or edit
+   `AGENTS.md` as part of this Skill. For an existing product, inspect
+   representative code only when documents do not explain current behavior.
+2. Follow the inferred intent. For `explore`, remain in chat and continue in
+   small question batches. For `write`, resolve only material gaps and write the
+   brief.
+3. For `write`, prefer replacing duplicated discovery/PRD prose with links or
+   removing it only when the user has authorized consolidation.
+4. After writing, run the consistency check below.
 
 ## Consistency Check
 
-Before finishing, re-read the feature map and any feature plan whose scope this
-brief changed. Keep purpose, users, flows, and MVP boundary only here; replace
-repeated product prose downstream with a link. Fix stale names, scope, and paths
-in the same task; ask the user only when the conflict needs a product decision.
+For `write` intent only, re-read the feature map and any Storyboard or Feature
+Plan whose scope this brief changed. Keep purpose, users, flows, and MVP boundary
+only here; replace repeated product prose downstream with a link. Fix stale
+names, scope, and paths in the same task. If changed product direction
+invalidates visible states or planned behavior, report the affected Storyboard
+or Plan for revision instead of redesigning it here.
 
-Report the file changed, assumptions, consistency edits, unresolved decisions,
-and validation performed.
+## Completion
+
+For `explore`, report the current understanding, assumptions, and next
+high-value questions. For `write`, report the file changed, assumptions,
+consistency edits, unresolved decisions, and validation performed.
