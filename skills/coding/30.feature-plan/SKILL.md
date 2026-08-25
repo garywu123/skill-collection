@@ -62,5 +62,7 @@ its Map row when the correction is mechanical. Report Storyboard behavior
 conflicts without editing the Storyboard; ask only when resolution needs a
 product, UI, or technical decision.
 
+## Completion
+
 Report the plan path, implementation outline, planned tests, consistency edits,
 open blockers, and validation performed.

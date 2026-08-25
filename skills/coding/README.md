@@ -21,6 +21,10 @@ Product Brief
 不要求独立的 discovery、PRD、roadmap、architecture baseline、project map、
 checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前事实。
 
+## 使用示例
+
+参见 [WMS 工作流示例](examples/wms-workflows.md)。
+
 ## Skills
 
 | Skill | 作用 | 默认产物 |

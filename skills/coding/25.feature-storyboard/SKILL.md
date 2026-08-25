@@ -32,9 +32,10 @@ fixture values only.
 ## Visual Contract
 
 - Choose one generic `sb-phone` or `sb-desktop` shell unless the user needs both.
-- Use only the semantic primitives defined by the shared stylesheet. Do not add
-  feature-specific CSS, inline styles, a UI framework, web fonts, a CDN, or a
-  build step.
+- Use CSS classes provided by `_storyboard.css` and interaction data hooks
+  established by the template and optional runtime. Do not invent
+  feature-specific classes or runtime hooks, or add inline styles, a UI
+  framework, web fonts, a CDN, or a build step.
 - Keep the design deliberately low fidelity: layout, hierarchy, controls,
   feedback, and decisions matter; brand polish and production animation do not.
 - Default to a static board with every state visible. Links to `#S*` targets can
@@ -46,6 +47,41 @@ fixture values only.
 - Never use network calls, storage, random outcomes, real delays, authentication,
   domain calculations, or product validation logic. Show each deterministic
   outcome as a declared state instead.
+
+Keep the template scaffold: `.sb-document` contains `.sb-document__header`,
+`.sb-flow`, and `.sb-inventory`; the header may use `.sb-eyebrow`, and each
+state is an `.sb-frame` inside `.sb-flow`. Preserve the scaffold classes and
+inventory structure while changing labels, fixtures, and the number of state
+frames. Inside each frame, use one of these public shells:
+
+```text
+phone:
+article.sb-frame.sb-phone [id=S*, data-state, tabindex=-1]
+├─ p.sb-frame__label
+└─ .sb-device
+   ├─ .sb-topbar
+   └─ .sb-content
+desktop:
+article.sb-frame.sb-desktop [id=S*, data-state, tabindex=-1]
+├─ p.sb-frame__label
+└─ .sb-device
+   ├─ .sb-topbar
+   └─ .sb-window
+      ├─ .sb-sidebar
+      └─ .sb-content
+```
+
+Feature content belongs inside `.sb-content` or `.sb-sidebar`. Its public
+primitives are layout (`.sb-stack`, `.sb-row`, `.sb-actions`), blocks
+(`.sb-card`, `.sb-banner`, `.sb-dialog`, `.sb-list`, `.sb-list-item`), and muted
+text (`.sb-muted`). For controls, `.sb-field` can contain a native `input` or
+`select`; use `.sb-input` for the same control styling without that wrapper.
+Use `.sb-button` and optional `.sb-button--primary` for actions. Use only the
+established hooks that apply:
+`data-storyboard`, `data-initial`, `data-state`, `data-active`, `data-go`, and
+`data-transition`; click-through mode can also use `data-interactive`,
+`data-reset`, and `data-interactive-control`. `data-active` marks only the
+current or initial state and is managed by the optional runtime.
 
 If understanding the interaction requires a data model, asynchronous behavior,
 router, production component system, or custom script, stop and report that the
@@ -77,6 +113,8 @@ Fix stale IDs, names, and paths in this Storyboard. If its behavior conflicts
 with an existing Plan, the Plan does not link this HTML, or its referenced
 `S*`/`T*` IDs changed, report that the Plan needs revision instead of silently
 editing it.
+
+## Completion
 
 Report the Storyboard path, form factor, state and transition IDs, fixture
 assumptions, rendering checks, and unresolved visual decisions. Stop without

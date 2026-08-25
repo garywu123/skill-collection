@@ -27,6 +27,8 @@ Use only these statuses:
 - `blocked`: a named, concrete condition prevents further progress; and
 - `verified`: every planned scenario passes with no blocker remaining.
 
+Initialize each new feature row as `planned`.
+
 Do not use `blocked` for ordinary unfinished work. Do not add milestones or use
 `later` as a status; keep optional post-MVP ideas in `## Later` without delivery
 status.
@@ -62,9 +64,14 @@ planning. Ask the user only when the split changes the intended MVP.
 Before finishing, re-read the brief and any Storyboard or Feature Plan whose row
 changed. Keep feature outcomes, dependencies, shared technology, and
 architecture only here, and product meaning only in the brief. Fix stale IDs,
-names, status, and paths in this map. If a changed row invalidates visible states
-or planned behavior, report the affected Storyboard or Plan for revision instead
-of redesigning it here.
+names, and paths in this map. Copy a matching Feature Plan's explicit status to
+the Map row only when that Plan's recorded results and blockers support the
+status; otherwise report the conflict. Never infer delivery progress from code
+or repository state. If a changed row invalidates visible states or planned
+behavior, report the affected Storyboard or Plan for revision instead of
+redesigning it here.
+
+## Completion
 
 Report features added, removed, or changed; technical choices; consistency
 edits; unresolved decisions; and validation performed.

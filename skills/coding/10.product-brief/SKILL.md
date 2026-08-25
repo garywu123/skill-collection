@@ -21,6 +21,15 @@ Skill explicitly.
   it. Ask first only when a missing answer would materially change product
   direction; otherwise state a small assumption and write.
 
+Treat a request to save or checkpoint the current exploration as `write`, but
+persist only established facts. Put unresolved decisions that could change
+purpose, users, core flows, or MVP scope under `## Open Questions`; never invent
+an answer to complete the checkpoint.
+
+Treat a request to resume or continue an exploration as `explore`: read any
+existing brief for context, then continue in chat unless the user clearly asks
+to update the file.
+
 Do not treat conversation length, repository state, or an existing draft as a
 request to write.
 
