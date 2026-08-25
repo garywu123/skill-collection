@@ -2,6 +2,11 @@
 scripts/deploy-paths.json
 scripts/deploy-skills.json
 
+# Generated platform-specific project copies of this repository's maintenance skill.
+.github/skills/
+.claude/skills/
+.agents/skills/
+
 # Generated Python artifacts are never source or historical documentation.
 __pycache__/
 *.py[cod]

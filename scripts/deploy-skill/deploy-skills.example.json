@@ -2,7 +2,18 @@
     "_comment": [
         "Copy this file to deploy-skills.json (which is gitignored).",
         "Only listed skills are deployed. Source paths are repository-relative.",
-        "Each name must match the name field in that source folder's SKILL.md."
+        "Each name must match the name field in that source folder's SKILL.md.",
+        "retiredSkillNames is an explicit one-time or historical cleanup list; never add platform-owned or other-repository skills."
+    ],
+    "retiredSkillNames": [
+        "architecture-baseline",
+        "feature-implementation-plan",
+        "guided-tdd-pairing",
+        "product-discovery-roadmap",
+        "project-map",
+        "spec-sync",
+        "ui-prototype",
+        "ui-wireframe-spec"
     ],
     "skills": [
         {
@@ -12,6 +23,10 @@
         {
             "source": "skills/coding/20.feature-map",
             "name": "feature-map"
+        },
+        {
+            "source": "skills/coding/25.feature-storyboard",
+            "name": "feature-storyboard"
         },
         {
             "source": "skills/coding/30.feature-plan",

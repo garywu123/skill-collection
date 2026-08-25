@@ -1,4 +1,14 @@
 {
+    "retiredSkillNames": [
+        "architecture-baseline",
+        "feature-implementation-plan",
+        "guided-tdd-pairing",
+        "product-discovery-roadmap",
+        "project-map",
+        "spec-sync",
+        "ui-prototype",
+        "ui-wireframe-spec"
+    ],
     "skills": [
         {
             "source": "skills/coding/10.product-brief",
@@ -7,6 +17,10 @@
         {
             "source": "skills/coding/20.feature-map",
             "name": "feature-map"
+        },
+        {
+            "source": "skills/coding/25.feature-storyboard",
+            "name": "feature-storyboard"
         },
         {
             "source": "skills/coding/30.feature-plan",

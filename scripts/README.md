@@ -13,10 +13,17 @@
 ## 整机部署配置
 
 `Deploy-Skills.ps1` 不自动扫描仓库。它只部署本机
-`deploy-skills.json` 中明确列出的 mapping：
+`deploy-skills.json` 中明确列出的 mapping，并在每个目标目录中维护
+`.skill-collection-deployment.json`。后续部署只会删除该 manifest 记录的、
+已经不在 mapping 中的 Skill；不会扫描或删除其他来源的 Skill。
+
+首次从旧流程迁移时，使用 `retiredSkillNames` 明确列出此前由本仓库管理、现在
+需要清理的名字。这个名单是唯一允许在没有 manifest 时删除目录的途径，因此不要把
+Copilot、Claude、Codex 或其他仓库提供的 Skill 放进去。
 
 ```json
 {
+  "retiredSkillNames": ["old-collection-skill"],
   "skills": [
     {
       "source": "skills/coding/10.product-brief",
@@ -30,6 +37,27 @@
 忽略；新增 Skill 不会自动进入个人的全局环境，必须明确加入 mapping。
 `source` 是仓库相对路径，`name` 必须与对应 `SKILL.md` frontmatter
 一致，也是目标目录名。
+
+`skills/coding/skill-deployment` 是本仓库的维护指导，不属于任何全局或项目
+预设 mapping。它通过以下项目级发现路径安装，只在打开本仓库时可用：
+
+| 平台 | 此仓库内的路径 |
+|---|---|
+| GitHub Copilot | `.github/skills/skill-deployment/` |
+| Claude Code | `.claude/skills/skill-deployment/` |
+| Codex / Agents | `.agents/skills/skill-deployment/` |
+
+运行 `scripts/deploy-skill/Install-WorkspaceSkill.ps1` 会从
+`skills/coding/skill-deployment/` 同步到这三个路径。生成目录不提交；权威源始终是
+`skills/coding/skill-deployment/`。打开本仓库时，`AGENTS.md` 也会将部署请求路由到
+它；离开本仓库后，它不会作为可调用的已部署 Skill 存在。
+
+部署前先预览，确认显示的 `managed stale skill` 都属于本仓库，再执行实际同步：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1 -ListOnly
+powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1
+```
 
 目标目录仍由 `deploy-paths.json` 控制；未配置时使用
 `~/.copilot/skills`、`~/.claude/skills` 和 `~/.agents/skills`。运行

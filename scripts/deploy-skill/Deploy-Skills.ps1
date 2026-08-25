@@ -5,7 +5,10 @@
 .DESCRIPTION
     Reads an explicit source-to-name mapping from scripts/deploy-skills.json
     and copies those skills to the configured target directories. Existing
-    folders managed by this script are replaced.
+    folders managed by this script are replaced. A manifest in each target
+    records the deployed names, so a later run removes only this collection's
+    stale skills. Optional retiredSkillNames support one explicit migration
+    from a prior collection flow without deleting unrelated platform skills.
 
     The deployed folder name comes from the SKILL.md frontmatter `name` field,
     so repository ordering prefixes are not copied
@@ -85,6 +88,16 @@ if (-not (Test-Path -LiteralPath $SkillConfigPath -PathType Leaf)) {
 $skillConfig = Get-Content -LiteralPath $SkillConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if (-not $skillConfig.PSObject.Properties['skills'] -or @($skillConfig.skills).Count -eq 0) {
     throw "Skill deployment config must contain a non-empty 'skills' array: $SkillConfigPath"
+}
+
+$retiredSkillNames = @()
+if ($skillConfig.PSObject.Properties['retiredSkillNames']) {
+    foreach ($name in @($skillConfig.retiredSkillNames)) {
+        if ($name -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$') {
+            throw "Every retired skill name must be lowercase kebab-case: $name"
+        }
+        $retiredSkillNames += $name
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -175,6 +188,13 @@ if ($duplicateNames.Count -gt 0) {
     throw "Multiple source folders resolve to the same deployed skill name: $names"
 }
 
+$retiredSkillNames = @($retiredSkillNames | Sort-Object -Unique)
+$activeSkillNames = @($skillFolders.DeployName)
+$overlappingRetiredNames = @($retiredSkillNames | Where-Object { $_ -in $activeSkillNames })
+if ($overlappingRetiredNames.Count -gt 0) {
+    throw "A retired skill cannot also be active: $($overlappingRetiredNames -join ', ')"
+}
+
 Write-Host ""
 Write-Host "Configured skills:" -ForegroundColor Cyan
 $skillFolders | ForEach-Object { Write-Host "  - $($_.DeployName) <- $($_.SourceName)" }
@@ -202,12 +222,6 @@ foreach ($entry in $activeTargets) {
     Write-Host "  - $($entry.Key) -> $($entry.Value)"
 }
 
-if ($ListOnly) {
-    Write-Host ""
-    Write-Host "List-only mode: no files were deployed." -ForegroundColor Yellow
-    exit 0
-}
-
 function Remove-DeployedEntry {
     param([string]$Path)
 
@@ -226,6 +240,47 @@ function Remove-DeployedEntry {
     return $true
 }
 
+function Get-ManagedSkillNames {
+    param([string]$ManifestPath)
+
+    if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
+        return @()
+    }
+
+    try {
+        $manifest = Get-Content -LiteralPath $ManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        throw "Managed deployment manifest is invalid JSON: $ManifestPath"
+    }
+
+    if (-not $manifest.PSObject.Properties['managedSkillNames']) {
+        throw "Managed deployment manifest is missing managedSkillNames: $ManifestPath"
+    }
+
+    $names = @()
+    foreach ($name in @($manifest.managedSkillNames)) {
+        if ($name -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$') {
+            throw "Managed deployment manifest has an invalid skill name: $ManifestPath"
+        }
+        $names += $name
+    }
+    return @($names | Sort-Object -Unique)
+}
+
+function Write-ManagedSkillManifest {
+    param(
+        [string]$ManifestPath,
+        [string[]]$ManagedSkillNames
+    )
+
+    $manifest = [ordered]@{
+        schemaVersion = 1
+        managedSkillNames = @($ManagedSkillNames | Sort-Object -Unique)
+    }
+    $manifest | ConvertTo-Json | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
+}
+
 # ---------------------------------------------------------------------------
 # Deploy
 # ---------------------------------------------------------------------------
@@ -239,9 +294,32 @@ foreach ($entry in $activeTargets) {
     Write-Host "=== $toolName ===" -ForegroundColor Cyan
     Write-Host "    $targetRoot"
 
+    $manifestPath = Join-Path $targetRoot '.skill-collection-deployment.json'
+    $previousManagedSkillNames = Get-ManagedSkillNames -ManifestPath $manifestPath
+    $staleSkillNames = @($previousManagedSkillNames + $retiredSkillNames | Sort-Object -Unique | Where-Object { $_ -notin $activeSkillNames })
+
+    if ($ListOnly) {
+        foreach ($name in $staleSkillNames) {
+            if (Test-Path -LiteralPath (Join-Path $targetRoot $name)) {
+                Write-Host "    - $name (managed stale skill)" -ForegroundColor DarkYellow
+            }
+        }
+        foreach ($skill in $skillFolders) {
+            Write-Host "    + $($skill.DeployName)" -ForegroundColor Green
+        }
+        continue
+    }
+
     if (-not (Test-Path $targetRoot)) {
         Write-Host "    Creating target directory..." -ForegroundColor DarkGray
         New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
+    }
+
+    foreach ($name in $staleSkillNames) {
+        $staleDestination = Join-Path $targetRoot $name
+        if (Remove-DeployedEntry -Path $staleDestination) {
+            Write-Host "    - $name (managed stale skill)" -ForegroundColor DarkYellow
+        }
     }
 
     foreach ($skill in $skillFolders) {
@@ -259,6 +337,8 @@ foreach ($entry in $activeTargets) {
         Write-Host "    + $($skill.DeployName)" -ForegroundColor Green
         $deployedCount++
     }
+
+    Write-ManagedSkillManifest -ManifestPath $manifestPath -ManagedSkillNames $activeSkillNames
 }
 
 Write-Host ""

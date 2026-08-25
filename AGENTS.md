@@ -33,6 +33,19 @@ in the relevant `SKILL.md` and detailed material in that Skill's resources.
 6. Run the narrowest relevant validation. If validation cannot run, report the
    reason and remaining risk.
 
+## Collection Maintenance
+
+When the user asks to deploy, synchronize, preview, or clean this collection's
+machine-wide Skills, read `skills/coding/skill-deployment/SKILL.md` first.
+That workflow is repository-local guidance: do not deploy `skill-deployment`
+itself to GitHub Copilot, Claude Code, or Codex/Agents directories.
+
+Install this repository-local Skill into the platforms' project discovery paths
+with `scripts/deploy-skill/Install-WorkspaceSkill.ps1`. It writes only
+`.github/skills/skill-deployment/`, `.claude/skills/skill-deployment/`, and
+`.agents/skills/skill-deployment/` in this repository; never install it under
+the user's home directory.
+
 ## Skill design
 
 - Give one Skill one clear, repeatable, on-demand responsibility.
