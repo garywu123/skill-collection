@@ -21,6 +21,10 @@
             "name": "product-brief"
         },
         {
+            "source": "skills/coding/15.agent-instructions",
+            "name": "agent-instructions"
+        },
+        {
             "source": "skills/coding/20.feature-map",
             "name": "feature-map"
         },

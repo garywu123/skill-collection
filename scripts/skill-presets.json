@@ -18,6 +18,7 @@
     "presets": {
         "coding": [
             "skills/coding/10.product-brief",
+            "skills/coding/15.agent-instructions",
             "skills/coding/20.feature-map",
             "skills/coding/25.feature-storyboard",
             "skills/coding/30.feature-plan",

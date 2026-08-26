@@ -8,11 +8,16 @@ MVP Feature Map，以及每个 Feature 的计划与真实测试结果。有 UI �
 
 ```text
 Product Brief
+  -> [Agent Instructions: AGENTS.md + CLAUDE.md + Copilot]
   -> Feature Map + Technical Direction
   -> [optional Feature Storyboard]
   -> Feature Plan
   -> Feature Delivery (auto | guided)
 ```
+
+Agent Instructions 只写路由、优先级、已验证命令和工作规则，因此 Brief 定稿后即可
+生成。技术方向仍留在 Feature Map 中，由 `AGENTS.md` 链接。构建命令、目录约定或
+Feature Map 发生变化后，可以再次运行它刷新。
 
 这是常见路线，不是自动执行的阶段链。每个 Skill 都可以根据用户的自然语言意图自动
 选择，不要求用户点名。一个已有或缺失的产物本身不授权相邻 Skill；只有原始请求同时
@@ -30,6 +35,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | Skill | 作用 | 默认产物 |
 |---|---|---|
 | [`product-brief`](10.product-brief/SKILL.md) | 探索或记录产品目的、用户、核心流程和 MVP 边界 | 探索时仅对话；定稿时写 `docs/product-brief.md` |
+| [`agent-instructions`](15.agent-instructions/SKILL.md) | 生成或审计项目给编码 agent 的指令文件 | `AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md` |
 | [`feature-map`](20.feature-map/SKILL.md) | 确定 MVP Features、依赖、技术方向和整体架构 | `docs/feature-map.md` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 规划单个 Feature 的实现、happy path 和 failure path 验证 | `docs/features/<feature-id>-<slug>.md` |
@@ -41,6 +47,9 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 
 - Product Brief 只在用户要求创建、定稿或更新时保存产品目的、用户、核心流程和 MVP
   边界。用户指定的既有 domain knowledge 只是可选输入，不由该 Skill 创建或维护。
+- Agent Instructions 只保存路由、优先级、已验证命令和工作规则，不保存产品含义、
+  Feature 列表、Feature 状态、技术方向或测试结果。`AGENTS.md` 是唯一权威文件，
+  `CLAUDE.md` 和 Copilot 文件是派生的薄适配层。
 - Feature Map 只保存 Feature 结果、依赖、共享技术和整体架构。
 - Feature Storyboard 只保存一个 UI Feature 的可见状态和交互转换；它是可选产物，不
   保存实现设计、测试或生命周期状态。

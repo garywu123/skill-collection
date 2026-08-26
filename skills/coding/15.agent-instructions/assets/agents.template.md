@@ -1,0 +1,47 @@
+# <Project> Agent Instructions
+
+<One or two sentences: what this project is and who it serves.>
+
+## Documents
+
+| Need | Read |
+|---|---|
+| Product purpose, users, MVP boundary | `docs/product-brief.md` |
+| Features, dependencies, technical direction, architecture | `docs/feature-map.md` |
+| One feature's implementation, tests, and real results | `docs/features/<feature-id>-<slug>.md` |
+| One UI feature's visible states and transitions | `docs/storyboards/<feature-id>-<slug>.html` |
+
+Read only the route the current task needs. Do not load unrelated Feature Plans
+or reconstruct project state from conversation history. Delete a row whose
+document this project does not keep.
+
+## Precedence
+
+Resolve conflicts in this order: the current explicit user instruction, the
+Product Brief, the Feature Map, the selected Feature Plan, then repository
+evidence. Report a conflict instead of promoting current code behavior into
+intended behavior.
+
+## Commands
+
+- Setup: `<verified command>`
+- Run: `<verified command>`
+- Focused test: `<verified command>`
+- Full check: `<verified command>`
+
+<Keep only commands verified by a manifest, CI configuration, or an observed
+successful run. Delete this whole section when none is verified yet.>
+
+## Conventions
+
+- <A verified repository convention: directory layout, naming, formatting, or
+  tooling. Delete this section when the repository shows none.>
+
+## Working rules
+
+1. Make the smallest change that satisfies the named feature. Stay inside its
+   boundary and avoid unrelated refactors or dependency bumps.
+2. Add or update tests for changed behavior.
+3. Record only results that actually ran.
+4. Report unknowns, conflicts, assumptions, and remaining risk.
+5. Never commit secrets or real production data.

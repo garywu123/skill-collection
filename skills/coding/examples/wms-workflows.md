@@ -48,7 +48,19 @@
 
 预期：选择 Product Brief 的 `write`；更新 `docs/product-brief.md`；停止于定稿结果。
 
-### 5. 创建 MVP Feature Map
+### 5. 生成 agent 指令文件
+
+```text
+DockFlow WMS 的 Product Brief 已定稿。请生成项目的 agent 指令文件：权威的
+`AGENTS.md`，加上 `CLAUDE.md` 和 `.github/copilot-instructions.md` 两个薄适配层。
+只写路由、优先级、已验证命令和工作规则；仓库里还没有 manifest，不要编造命令。
+不要复制产品内容或创建 Feature Map。
+```
+
+预期：选择 Agent Instructions 的 `write`；输出三份文件，`AGENTS.md` 链接
+`docs/product-brief.md` 并预留其他路由；未验证的命令段被删除并报告；停止于指令文件。
+
+### 6. 创建 MVP Feature Map
 
 ```text
 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map 和共享技术方向。包含
@@ -57,7 +69,7 @@ F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；�
 
 预期：选择 Feature Map；输出 `docs/feature-map.md`，新行从 `planned` 开始；停止于地图。
 
-### 6. 按需创建 F02 Storyboard
+### 7. 按需创建 F02 Storyboard
 
 ```text
 为 F02 创建低保真手持设备 HTML Storyboard，展示扫描 ASN、确认实收数量和无效 ASN。
@@ -67,7 +79,7 @@ F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；�
 预期：选择 Feature Storyboard；输出 `docs/storyboards/F02-*.html` 和首次使用时的共享
 CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告未验证风险并停止。
 
-### 7. 创建 F02 Feature Plan
+### 8. 创建 F02 Feature Plan
 
 ```text
 为 F02 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用相关 S*、T*；
@@ -76,7 +88,7 @@ CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告�
 
 预期：选择 Feature Plan；输出 `docs/features/F02-*.md`，结果为 `not run`；停止于计划。
 
-### 8. 选择一种 Delivery 方式
+### 9. 选择一种 Delivery 方式
 
 自动实现：
 
