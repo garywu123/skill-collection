@@ -32,11 +32,14 @@ In `guided` mode, for each behavior:
 1. Normally write or update the focused test and fixtures, run them, and confirm
    the intended failure when practical.
 2. Tell the user the implementation file, symbol or signature, and required
-   behavior. Do not edit user-assigned implementation files or provide the full
-   body unless the user asks.
-3. Wait before advancing the implementation. Continue to answer questions or
-   give bounded hints; when the user is ready, inspect the relevant change and
-   rerun the focused test.
+   behavior. For a user-assigned function, provide a complete function-body
+   draft that the user can type into the file: include the expected control
+   flow, key calls, error handling, return values, and concise `TODO` markers
+   only where repository-specific details remain unknown. Keep it scoped to
+   the current behavior and consistent with nearby code.
+3. Do not edit user-assigned implementation files. Wait while the user types
+   the body, then inspect the relevant change and rerun the focused test.
+   Continue to answer questions or give bounded hints as needed.
 4. Explain a remaining mismatch concisely and repeat, or advance when it passes.
 
 ## Status
