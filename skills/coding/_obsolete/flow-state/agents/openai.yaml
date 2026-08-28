@@ -1,7 +1,0 @@
-interface:
-  display_name: "Flow State"
-  short_description: "Track human-gated delivery state"
-  default_prompt: "Use $flow-state to inspect the workflow pointer and report only the current gate and allowed next human actions."
-
-policy:
-  allow_implicit_invocation: false

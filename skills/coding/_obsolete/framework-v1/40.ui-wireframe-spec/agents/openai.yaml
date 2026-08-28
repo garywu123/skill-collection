@@ -1,7 +1,0 @@
-interface:
-  display_name: "UI Wireframe Spec"
-  short_description: "Create reviewable product and feature wireframes"
-  default_prompt: "Use $ui-wireframe-spec to create a product UI structure or one feature's low-fidelity wireframes from approved sources."
-
-policy:
-  allow_implicit_invocation: false

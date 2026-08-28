@@ -1,6 +1,0 @@
-interface:
-  display_name: "Feature Implementation Plan"
-  short_description: "Assess and plan one roadmap feature"
-  default_prompt: "Use $feature-implementation-plan to assess one approved roadmap feature and create its compact implementation plan and delivery checklist when it is cohesive."
-policy:
-  allow_implicit_invocation: false

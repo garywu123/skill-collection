@@ -1,7 +1,0 @@
-interface:
-  display_name: "UI Prototype"
-  short_description: "Build executable fake-data feature prototypes"
-  default_prompt: "Use $ui-prototype to build or extend one executable fake-data UI prototype from approved product and UI sources."
-
-policy:
-  allow_implicit_invocation: false

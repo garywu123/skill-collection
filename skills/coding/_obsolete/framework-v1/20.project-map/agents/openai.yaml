@@ -1,7 +1,0 @@
-interface:
-  display_name: "Project Map"
-  short_description: "Maintain AGENTS.md routing, roadmap.yaml state, and folder structure"
-  default_prompt: "Use $project-map to init, refresh, or audit this project's roadmap.yaml, AGENTS.md, and requested thin tool adapters from approved sources."
-
-policy:
-  allow_implicit_invocation: false

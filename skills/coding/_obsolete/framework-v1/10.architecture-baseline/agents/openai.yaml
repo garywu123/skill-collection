@@ -1,7 +1,0 @@
-interface:
-  display_name: "Architecture Baseline"
-  short_description: "Record cross-feature architecture decisions"
-  default_prompt: "Use $architecture-baseline for one explicitly authorized create, full, lite, assess, recover, resolve-spike, amend, or approve operation."
-
-policy:
-  allow_implicit_invocation: false
