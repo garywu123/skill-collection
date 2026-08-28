@@ -1,5 +1,8 @@
 # Coding Skill Collection
 
+Feature 规划和交付也支持保持行为不变的精简；所有编码工作流都先复用现有能力，
+只增加当前结果所需的最少代码，并保留必要验证。
+
 一套面向个人、小团队和 AI 主导开发的精简流程。默认维护三类核心文档：产品方向、
 MVP Feature Map，以及每个 Feature 的计划与真实测试结果。有 UI 的 Feature 可以按需
 增加一份低保真 Storyboard。
@@ -38,8 +41,8 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | [`agent-instructions`](15.agent-instructions/SKILL.md) | 生成或审计项目给编码 agent 的指令文件 | `AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md` |
 | [`feature-map`](20.feature-map/SKILL.md) | 确定 MVP Features、依赖、技术方向和整体架构 | `docs/feature-map.md` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
-| [`feature-plan`](30.feature-plan/SKILL.md) | 规划单个 Feature 的实现、happy path 和 failure path 验证 | `docs/features/<feature-id>-<slug>.md` |
-| [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现或指导用户实现 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
+| [`feature-plan`](30.feature-plan/SKILL.md) | 规划单个 Feature 的新实现或保持行为不变的精简，以及 happy path 和 failure path 验证 | `docs/features/<feature-id>-<slug>.md` |
+| [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 

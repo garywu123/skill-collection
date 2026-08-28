@@ -1,0 +1,12 @@
+{
+    "schemaVersion": 1,
+    "skills": [
+        {
+            "name": "ponytail",
+            "repository": "https://github.com/DietrichGebert/ponytail.git",
+            "branch": "main",
+            "skillPath": "skills/ponytail",
+            "licensePath": "LICENSE"
+        }
+    ]
+}

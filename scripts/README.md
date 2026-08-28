@@ -12,8 +12,10 @@
 
 ## 整机部署配置
 
-`Deploy-Skills.ps1` 不自动扫描仓库。它只部署本机
-`deploy-skills.json` 中明确列出的 mapping，并在每个目标目录中维护
+`Deploy-Skills.ps1` 不自动扫描仓库。它只部署
+`scripts/deploy-skill/deploy-skills.json` 中明确列出的本仓库 mapping，以及
+`scripts/external-skills/external-skills.json` 中明确列出的 public Git Skills，
+并在每个目标目录中维护
 `.skill-collection-deployment.json`。后续部署只会删除该 manifest 记录的、
 已经不在 mapping 中的 Skill；不会扫描或删除其他来源的 Skill。
 
@@ -33,10 +35,45 @@ Copilot、Claude、Codex 或其他仓库提供的 Skill 放进去。
 }
 ```
 
-从 `deploy-skills.example.json` 复制出真实配置。真实配置已被 Git
-忽略；新增 Skill 不会自动进入个人的全局环境，必须明确加入 mapping。
-`source` 是仓库相对路径，`name` 必须与对应 `SKILL.md` frontmatter
-一致，也是目标目录名。
+`deploy-skills.example.json` 展示本仓库 mapping 结构。新增 Skill 不会自动进入
+个人全局环境，必须明确加入实际 `deploy-skills.json`。`source` 是仓库相对路径，
+`name` 必须与对应 `SKILL.md` frontmatter 一致，也是目标目录名。
+
+## Public Git Skills
+
+Public Skills 使用独立配置和 machine-local cache：
+
+```json
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "name": "ponytail",
+      "repository": "https://github.com/DietrichGebert/ponytail.git",
+      "branch": "main",
+      "skillPath": "skills/ponytail",
+      "licensePath": "LICENSE"
+    }
+  ]
+}
+```
+
+`Sync-ExternalSkills.ps1` 将仓库克隆到
+`scripts/external-skills/cache/<name>/`。已有 cache 只有在 remote、branch 和配置
+一致且 worktree 干净时才执行 `git pull --ff-only`；本地改动、错误 remote、错误
+branch 或 non-fast-forward update 都会停止。配置删除后 cache 会保留，不会自动删除。
+
+单独同步或只查看 cache：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/external-skills/Sync-ExternalSkills.ps1 -ListOnly
+powershell -ExecutionPolicy Bypass -File scripts/external-skills/Sync-ExternalSkills.ps1
+```
+
+实际运行 `Deploy-Skills.ps1` 时会先自动同步 external Skills，再与本仓库 Skills 一起
+部署。`-ListOnly` 只读取当前 cache，不 clone、不 pull、也不写目标目录。首次 cache
+缺失时，可先运行上述同步脚本，再重新预览部署。配置 `licensePath` 后，上游许可证会
+作为 `UPSTREAM-LICENSE` 一起复制到目标 Skill 目录。
 
 `skills/coding/skill-deployment` 是本仓库的维护指导，不属于任何全局或项目
 预设 mapping。它通过以下项目级发现路径安装，只在打开本仓库时可用：
@@ -62,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1
 目标目录仍由 `deploy-paths.json` 控制；未配置时使用
 `~/.copilot/skills`、`~/.claude/skills` 和 `~/.agents/skills`。运行
 `Deploy-Skills.ps1 -ListOnly` 可查看最终 Skill mapping 和目标目录，且
-不会写文件。
+不会联网或写文件。
 
 ## 项目级安装
 

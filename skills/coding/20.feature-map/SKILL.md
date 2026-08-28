@@ -8,6 +8,12 @@ description: Create or revise a concise MVP Feature Map with feature outcomes, d
 Turn a Product Brief into a small build map. This is the only default document
 for MVP scope, shared technology, and cross-feature architecture.
 
+The map owns reassessing MVP outcomes, dependencies, and shared technical
+boundaries only. It never edits implementation. Keep direction minimal: a
+shared abstraction needs current MVP behavior, a repository convention, an
+external boundary, or an observed constraint; otherwise omit or defer it
+without adding decision metadata.
+
 ## Output
 
 Create or update `docs/feature-map.md` from
@@ -53,7 +59,10 @@ would be less clear.
    scope, report the missing decision and stop. Do not create or revise the
    Product Brief as part of this Skill.
 3. Identify the smallest coherent MVP feature set and its dependency order.
-4. Choose the simplest technical direction that supports those features.
+4. Choose the simplest technical direction that supports those features. Keep
+   a shared abstraction only when current MVP behavior, repository convention,
+   an external boundary, or an observed constraint requires it; otherwise omit
+   or defer it.
 5. Write or revise the map, then run the consistency check.
 
 If one row contains several independently useful outcomes, split it before

@@ -41,7 +41,11 @@ successful run. Delete this whole section when none is verified yet.>
 
 1. Make the smallest change that satisfies the named feature. Stay inside its
    boundary and avoid unrelated refactors or dependency bumps.
-2. Add or update tests for changed behavior.
-3. Record only results that actually ran.
-4. Report unknowns, conflicts, assumptions, and remaining risk.
-5. Never commit secrets or real production data.
+2. Before adding code, check reuse/delete/change of existing code, repository
+   facilities, standard library/framework/native platform, installed
+   dependencies, then use the minimum new code. Defer abstractions without a
+   current need or observed constraint.
+3. Add or update tests for changed behavior.
+4. Record only results that actually ran.
+5. Report unknowns, conflicts, assumptions, and remaining risk.
+6. Never commit secrets or real production data.

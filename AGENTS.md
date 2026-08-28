@@ -80,9 +80,12 @@ the user's home directory.
 
 ## Deployment
 
-`scripts/deploy-skill/Deploy-Skills.ps1` deploys only the explicit mappings in the local,
-gitignored `scripts/deploy-skills.json` to configured GitHub Copilot, Claude
-Code, and Codex/Agents locations. Run it with `-ListOnly` to inspect the mapping
-without writing to those locations.
+`scripts/deploy-skill/Deploy-Skills.ps1` deploys only explicit local mappings
+from `scripts/deploy-skill/deploy-skills.json` and public Git Skills from
+`scripts/external-skills/external-skills.json` to configured GitHub Copilot,
+Claude Code, and Codex/Agents locations. External repositories are cached under
+the gitignored `scripts/external-skills/cache/`. Run it with `-ListOnly` to
+inspect mappings and current cache revisions without cloning, pulling, or
+writing target locations.
 Do not assume a future top-level collection is deployed until the script is
 explicitly extended and validated for that collection.

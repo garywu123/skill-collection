@@ -1,12 +1,13 @@
 ---
 name: feature-plan
-description: Create or revise one concise Feature Plan that states what to implement and how happy and failure paths will be tested. Use when the user asks to plan or revise implementation or verification for one Feature Map item. Do not select it merely because planning is the next workflow stage, implement production code, or create separate checklists and task files.
+description: Create or revise one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests. Use when the user asks to plan, review, or simplify implementation or verification for one Feature Map item. Do not select it merely because planning is the next workflow stage, implement production code, or create separate checklists and task files.
 ---
 
 # Feature Plan
 
 Prepare one feature for implementation in one document. The plan holds both the
-planned checks and, later, their actual results.
+planned checks and, later, their actual results. It may cover new implementation
+or a behavior-preserving simplification.
 
 ## Output
 
@@ -44,10 +45,16 @@ revalidation begins. Pure wording or link corrections do not change status.
    constraints, nearby code and tests, and any related Storyboard.
 2. Confirm the feature has one independently useful outcome. If not, propose a
    Feature Map split and stop only when user input is needed.
-3. Define the smallest implementation sequence and concrete tests. Reference
-   relevant Storyboard states and transitions by ID. Prefer behavior-level
-   language over speculative class inventories.
-4. Write the plan and run the consistency check.
+3. Before proposing new code, check in order: delete, change, or reuse existing
+   code; an existing repository facility; the standard library, framework, or
+   native platform; an installed dependency; then the minimum new code. Stop at
+   the first option that satisfies the intended outcome and current constraints.
+4. Define the smallest implementation sequence and concrete tests. For a
+   behavior-preserving simplification, plan revalidation of the intended
+   observable behavior without promoting accidental code behavior into a
+   requirement. Reference relevant Storyboard states and transitions by ID.
+   Prefer behavior-level language over speculative class inventories.
+5. Write the plan and run the consistency check.
 
 Do not require or start a Storyboard solely because one is absent. Stop and
 report the unresolved UI decision only when it prevents a reliable plan.

@@ -2,6 +2,9 @@
 scripts/deploy-paths.json
 scripts/deploy-skills.json
 
+# Machine-local clones of explicitly configured public Skills.
+scripts/external-skills/cache/
+
 # Generated platform-specific project copies of this repository's maintenance skill.
 .github/skills/
 .claude/skills/

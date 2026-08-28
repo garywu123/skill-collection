@@ -3,8 +3,10 @@
     Deploy all skills in this repository to AI tool skill directories.
 
 .DESCRIPTION
-    Reads an explicit source-to-name mapping from scripts/deploy-skills.json
-    and copies those skills to the configured target directories. Existing
+    Reads explicit local mappings from deploy-skills.json and public Git
+    mappings from ../external-skills/external-skills.json. Before a real
+    deployment it clones or fast-forwards each external repository, then copies
+    local and external Skills to the configured target directories. Existing
     folders managed by this script are replaced. A manifest in each target
     records the deployed names, so a later run removes only this collection's
     stale skills. Optional retiredSkillNames support one explicit migration
@@ -19,15 +21,17 @@
       2. scripts/deploy-paths.json  (machine-local, gitignored)
       3. $env:USERPROFILE defaults  (~\.copilot\skills, ~\.claude\skills, ~\.agents\skills)
 
-    Copy scripts/deploy-paths.example.json to scripts/deploy-paths.json and
-    edit it to override any path for this machine. Copy
-    scripts/deploy-skills.example.json to scripts/deploy-skills.json and edit
-    the explicit deployment set. Both real config files are machine-local and
-    gitignored.
+    Copy deploy-paths.example.json to deploy-paths.json and edit it to override
+    any path for this machine. Skill source mappings are explicit, versioned
+    configuration beside this script and in ../external-skills/.
 
 .PARAMETER SkillConfigPath
     Path to the explicit skill deployment mapping. Defaults to
-    scripts/deploy-skills.json.
+    deploy-skills.json beside this script.
+
+.PARAMETER ExternalSkillConfigPath
+    Path to public Git Skill mappings. Defaults to
+    ../external-skills/external-skills.json.
 
 .PARAMETER CopilotSkillsPath
     Target directory for GitHub Copilot skills. Overrides config file and default.
@@ -42,7 +46,8 @@
     Restrict deployment to a single tool: copilot | claude | agents | all (default).
 
 .PARAMETER ListOnly
-    List active skill folders without writing to any deployment target.
+    List active Skill folders and cached external revisions without cloning,
+    pulling, or writing to any deployment target.
 
 .EXAMPLE
     # Use config file / defaults — deploy to all tools
@@ -62,6 +67,7 @@ param(
     [string]$ClaudeSkillsPath  = "",
     [string]$AgentsSkillsPath  = "",
     [string]$SkillConfigPath = "",
+    [string]$ExternalSkillConfigPath = "",
     [ValidateSet("all", "copilot", "claude", "agents")]
     [string]$Target = "all",
     [switch]$ListOnly
@@ -170,11 +176,42 @@ foreach ($mapping in @($skillConfig.skills)) {
     }
 
     $skillFolders += [pscustomobject]@{
-        Source     = $source
-        SourceName = Split-Path $source -Leaf
-        DeployName = $mapping.name
+        Source        = $source
+        SourceName    = Split-Path $source -Leaf
+        DeployName    = $mapping.name
+        SourceType    = 'local'
+        Available     = $true
+        Repository    = $null
+        Branch        = $null
+        Commit        = $null
+        LicenseSource = $null
     }
 }
+
+# ---------------------------------------------------------------------------
+# Synchronize and resolve explicitly configured public Git Skills.
+# -ListOnly validates only the current cache and never performs network writes.
+# ---------------------------------------------------------------------------
+$externalSyncScript = Join-Path (Split-Path -Parent $PSScriptRoot) 'external-skills\Sync-ExternalSkills.ps1'
+if (-not $ExternalSkillConfigPath) {
+    $ExternalSkillConfigPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'external-skills\external-skills.json'
+}
+if (-not (Test-Path -LiteralPath $externalSyncScript -PathType Leaf)) {
+    throw "External Skill sync script is missing: $externalSyncScript"
+}
+if (-not (Test-Path -LiteralPath $ExternalSkillConfigPath -PathType Leaf)) {
+    throw "External Skill config is missing: $ExternalSkillConfigPath"
+}
+
+$externalSyncParameters = @{
+    ConfigPath = $ExternalSkillConfigPath
+    PassThru = $true
+}
+if ($ListOnly) {
+    $externalSyncParameters['ListOnly'] = $true
+}
+$externalSkillFolders = @(& $externalSyncScript @externalSyncParameters)
+$skillFolders += $externalSkillFolders
 
 $duplicateSources = @($skillFolders | Group-Object Source | Where-Object Count -gt 1)
 if ($duplicateSources.Count -gt 0) {
@@ -197,7 +234,21 @@ if ($overlappingRetiredNames.Count -gt 0) {
 
 Write-Host ""
 Write-Host "Configured skills:" -ForegroundColor Cyan
-$skillFolders | ForEach-Object { Write-Host "  - $($_.DeployName) <- $($_.SourceName)" }
+foreach ($skill in $skillFolders) {
+    if ($skill.SourceType -eq 'external') {
+        $externalState = "external $($skill.SourceName)"
+        if (-not $skill.Available) {
+            $externalState += ', cache missing'
+        }
+        elseif ($skill.Commit) {
+            $externalState += " at $($skill.Commit)"
+        }
+        Write-Host "  - $($skill.DeployName) <- $externalState"
+    }
+    else {
+        Write-Host "  - $($skill.DeployName) <- $($skill.SourceName)"
+    }
+}
 
 # ---------------------------------------------------------------------------
 # Build target map (skip empty paths)
@@ -305,7 +356,12 @@ foreach ($entry in $activeTargets) {
             }
         }
         foreach ($skill in $skillFolders) {
-            Write-Host "    + $($skill.DeployName)" -ForegroundColor Green
+            if ($skill.Available) {
+                Write-Host "    + $($skill.DeployName)" -ForegroundColor Green
+            }
+            else {
+                Write-Host "    + $($skill.DeployName) (external cache missing)" -ForegroundColor DarkYellow
+            }
         }
         continue
     }
@@ -323,6 +379,10 @@ foreach ($entry in $activeTargets) {
     }
 
     foreach ($skill in $skillFolders) {
+        if (-not $skill.Available) {
+            throw "Skill source is unavailable after synchronization: $($skill.DeployName)"
+        }
+
         $dest = Join-Path $targetRoot $skill.DeployName
         Remove-DeployedEntry -Path $dest | Out-Null
 
@@ -334,6 +394,9 @@ foreach ($entry in $activeTargets) {
         }
 
         Copy-Item -LiteralPath $skill.Source -Destination $dest -Recurse -Force
+        if ($skill.LicenseSource) {
+            Copy-Item -LiteralPath $skill.LicenseSource -Destination (Join-Path $dest 'UPSTREAM-LICENSE') -Force
+        }
         Write-Host "    + $($skill.DeployName)" -ForegroundColor Green
         $deployedCount++
     }
