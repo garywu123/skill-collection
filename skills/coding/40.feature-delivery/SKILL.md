@@ -50,6 +50,14 @@ In `guided` mode, for each behavior:
    Continue to answer questions or give bounded hints as needed.
 4. Explain a remaining mismatch concisely and repeat, or advance when it passes.
 
+## Delegation
+
+When delegating implementation or review to subagents, include the current
+Feature boundary, the smallest-change and avoid-speculative-abstraction
+constraints, and the required validation in the delegation brief. The parent
+agent remains responsible for integrating the result and updating the Feature
+Plan and Feature Map.
+
 ## Status
 
 Keep the Feature Plan and Feature Map row synchronized. The normal flow is
