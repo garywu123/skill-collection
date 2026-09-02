@@ -1,4 +1,5 @@
 {
+    "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
     "retiredSkillNames": [
         "architecture-baseline",
         "feature-implementation-plan",
