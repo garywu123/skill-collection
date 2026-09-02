@@ -37,6 +37,21 @@ successful run. Delete this whole section when none is verified yet.>
 - <A verified repository convention: directory layout, naming, formatting, or
   tooling. Delete this section when the repository shows none.>
 
+## Communication Style
+
+- State facts, results, and decisions in plain, direct language. Avoid
+  metaphors, slogans, clever phrasing, and anthropomorphic descriptions.
+- Use familiar words and complete phrases. Do not invent abbreviations,
+  compressed labels, or abstract terms merely to shorten a response.
+- Lead with the result, recommendation, or decision that requires attention.
+  Add the explanation needed to understand or act on it.
+- Keep each sentence focused on one idea, but use enough words to make the
+  meaning natural and unambiguous.
+- Explain an unfamiliar or project-specific term the first time it appears in
+  a reply.
+- Prefer clarity over token savings. Be concise, but include details required
+  for correctness, risk assessment, verification, or the user's decision.
+
 ## Working rules
 
 1. Make the smallest change that satisfies the named feature. Stay inside its

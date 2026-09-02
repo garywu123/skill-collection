@@ -38,7 +38,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | Skill | 作用 | 默认产物 |
 |---|---|---|
 | [`product-brief`](10.product-brief/SKILL.md) | 探索或记录产品目的、用户、核心流程和 MVP 边界 | 探索时仅对话；定稿时写 `docs/product-brief.md` |
-| [`agent-instructions`](15.agent-instructions/SKILL.md) | 生成或审计项目给编码 agent 的指令文件 | `AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md` |
+| [`agent-instructions`](15.agent-instructions/SKILL.md) | 生成或审计编码 agent 的项目指令和通用沟通规则 | `AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md` |
 | [`feature-map`](20.feature-map/SKILL.md) | 确定 MVP Features、依赖、技术方向和整体架构 | `docs/feature-map.md` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 规划单个 Feature 的新实现或保持行为不变的精简，以及 happy path 和 failure path 验证 | `docs/features/<feature-id>-<slug>.md` |
@@ -50,7 +50,8 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 
 - Product Brief 只在用户要求创建、定稿或更新时保存产品目的、用户、核心流程和 MVP
   边界。用户指定的既有 domain knowledge 只是可选输入，不由该 Skill 创建或维护。
-- Agent Instructions 只保存路由、优先级、已验证命令和工作规则，不保存产品含义、
+- Agent Instructions 只保存路由、优先级、已验证命令、沟通规则和工作规则，
+  不保存产品含义、
   Feature 列表、Feature 状态、技术方向或测试结果。`AGENTS.md` 是唯一权威文件，
   `CLAUDE.md` 和 Copilot 文件是派生的薄适配层。
 - Feature Map 只保存 Feature 结果、依赖、共享技术和整体架构。

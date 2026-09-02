@@ -34,7 +34,12 @@ targets one.
 | `.github/copilot-instructions.md` | A pointer to `AGENTS.md` plus Copilot-only rules |
 
 Create or update `AGENTS.md` from [the template](assets/agents.template.md) and
-keep it under 60 lines. Write the adapters as derived wrappers:
+keep it within 100 source lines. At 80 lines, review duplicated explanations,
+nonexistent routes, empty sections, and rules that belong in a linked document
+or scoped `AGENTS.md`. Do not meet the limit by removing required
+communication, precedence, safety, scope, verification, or reporting rules, or
+by compressing natural language, commands, or paths. Write the adapters as
+derived wrappers:
 
 ```markdown
 @AGENTS.md
@@ -91,7 +96,9 @@ brief, technical direction and feature status in the map, and implementation and
 results in Feature Plans; replace repeated prose here with a route. Remove any
 adapter rule that duplicates or contradicts `AGENTS.md`. Fix stale names, paths,
 and commands in these files when the correction is mechanical, and report a
-conflict that needs a product, technical, or ownership decision.
+conflict that needs a product, technical, or ownership decision. Count the
+generated `AGENTS.md` source lines. Review it at 80 lines and reject output over
+100 lines without weakening its protected rules or natural language.
 
 ## Completion
 
