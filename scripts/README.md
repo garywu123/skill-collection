@@ -13,8 +13,9 @@
 ## 整机部署配置
 
 `Deploy-Skills.ps1` 不自动扫描仓库。它只部署
-`scripts/deploy-skill/deploy-skills.json` 中明确列出的本仓库 mapping，以及
-`scripts/external-skills/external-skills.json` 中明确列出的 public Git Skills，
+`scripts/deploy-skill/deploy-skills.json` 中明确列出的本仓库 mapping，以及由
+其中 `externalSkillConfigPath` 指定（省略时默认为
+`scripts/external-skills/external-skills.json`）的 public Git Skills，
 并在每个目标目录中维护
 `.skill-collection-deployment.json`。后续部署只会删除该 manifest 记录的、
 已经不在 mapping 中的 Skill；不会扫描或删除其他来源的 Skill。
@@ -25,6 +26,7 @@ Copilot、Claude、Codex 或其他仓库提供的 Skill 放进去。
 
 ```json
 {
+  "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
   "retiredSkillNames": ["old-collection-skill"],
   "skills": [
     {

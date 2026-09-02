@@ -22,10 +22,12 @@ Use only from this Skill Collection repository, identified by
 `scripts/deploy-skill/Deploy-Skills.ps1` and `scripts/deploy-skill/deploy-skills.json`.
 For a single project's local Skills, use `scripts/Install-Skills.ps1` instead.
 
-Public Git Skills are explicitly configured in
-`scripts/external-skills/external-skills.json` and cached under the gitignored
-`scripts/external-skills/cache/`. `Deploy-Skills.ps1 -ListOnly` never clones or
-pulls. A real deployment automatically runs the external sync first.
+Public Git Skills are explicitly configured in the repository-relative path
+from `externalSkillConfigPath` in `deploy-skills.json`; when omitted, the
+default is `scripts/external-skills/external-skills.json`. They are cached under
+the gitignored `scripts/external-skills/cache/`. `Deploy-Skills.ps1 -ListOnly`
+never clones or pulls. A real deployment automatically runs the external sync
+first.
 
 Before relying on slash-command discovery in a platform, run:
 
@@ -44,10 +46,10 @@ say otherwise:
 
 ## Procedure
 
-1. Read `scripts/deploy-skill/deploy-skills.json` and
-   `scripts/external-skills/external-skills.json`, then run both sync and deploy
-   scripts with `-ListOnly`. Report local and external Skills, cached external
-   revisions, target directories, and any `managed stale skill` entries.
+1. Read `scripts/deploy-skill/deploy-skills.json` and the configured external
+   Skill config path, then run both sync and deploy scripts with `-ListOnly`.
+   Report local and external Skills, cached external revisions, target
+   directories, and any `managed stale skill` entries.
 2. When an intended external cache is missing, run
    `Sync-ExternalSkills.ps1` after its preview, then repeat both previews. Stop
    if the cache remote or branch differs, the worktree is dirty, the update is
