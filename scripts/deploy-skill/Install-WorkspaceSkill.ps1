@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Copies skills/coding/skill-deployment to the project-local discovery paths
-    for GitHub Copilot, Claude Code, and Codex / Agents. It does not modify
+    for Claude Code and Codex / Agents. It does not modify
     user-level skill directories and it installs no globally reusable skills.
 #>
 
@@ -24,7 +24,6 @@ if (-not (Test-Path -LiteralPath $skillFile -PathType Leaf)) {
 }
 
 $targets = [ordered]@{
-    'GitHub Copilot' = Join-Path $repoRoot '.github\skills\skill-deployment'
     'Claude Code' = Join-Path $repoRoot '.claude\skills\skill-deployment'
     'Codex / Agents' = Join-Path $repoRoot '.agents\skills\skill-deployment'
 }
@@ -57,4 +56,4 @@ foreach ($target in $targets.GetEnumerator()) {
 }
 
 Write-Host ''
-Write-Host 'Installed workspace-only skill into 3 platform directories.' -ForegroundColor Yellow
+Write-Host 'Installed workspace-only skill into 2 platform directories.' -ForegroundColor Yellow

@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-    Deploy all skills in this repository to AI tool skill directories.
+    Deploy all skills in this repository to the Claude Code and Codex / Agents
+    skill directories.
 
 .DESCRIPTION
     Reads explicit local mappings from deploy-skills.json and public Git
     mappings from ../external-skills/external-skills.json. Before a real
     deployment it clones or fast-forwards each external repository, then copies
-    local and external Skills to the configured target directories. Existing
-    folders managed by this script are replaced. A manifest in each target
-    records the deployed names, so a later run removes only this collection's
-    stale skills. Optional retiredSkillNames support one explicit migration
-    from a prior collection flow without deleting unrelated platform skills.
+    local and external Skills to the configured target directories. Each target
+    is exclusively managed by this collection: immediately before copying, the
+    script removes every existing entry in that target directory. This includes
+    skills not previously deployed by this collection.
 
     The deployed folder name comes from the SKILL.md frontmatter `name` field,
     so repository ordering prefixes are not copied
@@ -19,7 +19,7 @@
     Path resolution order (first non-empty value wins):
       1. Command-line parameter
       2. scripts/deploy-paths.json  (machine-local, gitignored)
-      3. $env:USERPROFILE defaults  (~\.copilot\skills, ~\.claude\skills, ~\.agents\skills)
+      3. $env:USERPROFILE defaults  (~\.claude\skills, ~\.agents\skills)
 
     Copy deploy-paths.example.json to deploy-paths.json and edit it to override
     any path for this machine. Skill source mappings are explicit, versioned
@@ -33,9 +33,6 @@
     Path to public Git Skill mappings. Defaults to
     ../external-skills/external-skills.json.
 
-.PARAMETER CopilotSkillsPath
-    Target directory for GitHub Copilot skills. Overrides config file and default.
-
 .PARAMETER ClaudeSkillsPath
     Target directory for Claude Code skills. Overrides config file and default.
 
@@ -43,7 +40,7 @@
     Target directory for Codex / OpenAI Agents skills. Overrides config file and default.
 
 .PARAMETER Target
-    Restrict deployment to a single tool: copilot | claude | agents | all (default).
+    Restrict deployment to a single tool: claude | agents | all (default).
 
 .PARAMETER ListOnly
     List active Skill folders and cached external revisions without cloning,
@@ -54,21 +51,20 @@
     .\Deploy-Skills.ps1
 
 .EXAMPLE
-    # Deploy to GitHub Copilot only
-    .\Deploy-Skills.ps1 -Target copilot
+    # Deploy to Codex / Agents only
+    .\Deploy-Skills.ps1 -Target agents
 
 .EXAMPLE
     # Override a single path on the command line
-    .\Deploy-Skills.ps1 -CopilotSkillsPath "D:\my-skills\copilot"
+    .\Deploy-Skills.ps1 -AgentsSkillsPath "D:\my-skills\agents"
 #>
 
 param(
-    [string]$CopilotSkillsPath = "",
     [string]$ClaudeSkillsPath  = "",
     [string]$AgentsSkillsPath  = "",
     [string]$SkillConfigPath = "",
     [string]$ExternalSkillConfigPath = "",
-    [ValidateSet("all", "copilot", "claude", "agents")]
+    [ValidateSet("all", "claude", "agents")]
     [string]$Target = "all",
     [switch]$ListOnly
 )
@@ -114,7 +110,6 @@ $configFile = Join-Path $PSScriptRoot "deploy-paths.json"
 if (Test-Path $configFile) {
     Write-Host "Loading paths from $(Split-Path $configFile -Leaf)" -ForegroundColor DarkGray
     $cfg = Get-Content $configFile -Raw | ConvertFrom-Json
-    if (-not $CopilotSkillsPath -and $cfg.PSObject.Properties["CopilotSkillsPath"]) { $CopilotSkillsPath = $cfg.CopilotSkillsPath }
     if (-not $ClaudeSkillsPath  -and $cfg.PSObject.Properties["ClaudeSkillsPath"])  { $ClaudeSkillsPath  = $cfg.ClaudeSkillsPath  }
     if (-not $AgentsSkillsPath  -and $cfg.PSObject.Properties["AgentsSkillsPath"])  { $AgentsSkillsPath  = $cfg.AgentsSkillsPath  }
 }
@@ -128,7 +123,6 @@ if (-not $userProfile) {
     throw "Unable to resolve the current user's profile directory."
 }
 
-if (-not $CopilotSkillsPath) { $CopilotSkillsPath = Join-Path $userProfile '.copilot\skills' }
 if (-not $ClaudeSkillsPath)  { $ClaudeSkillsPath  = Join-Path $userProfile '.claude\skills'  }
 if (-not $AgentsSkillsPath)  { $AgentsSkillsPath  = Join-Path $userProfile '.agents\skills'  }
 
@@ -136,7 +130,6 @@ if (-not $AgentsSkillsPath)  { $AgentsSkillsPath  = Join-Path $userProfile '.age
 # Apply -Target filter (blank out paths not in scope)
 # ---------------------------------------------------------------------------
 if ($Target -ne "all") {
-    if ($Target -ne "copilot") { $CopilotSkillsPath = "" }
     if ($Target -ne "claude")  { $ClaudeSkillsPath  = "" }
     if ($Target -ne "agents")  { $AgentsSkillsPath  = "" }
 }
@@ -254,7 +247,6 @@ foreach ($skill in $skillFolders) {
 # Build target map (skip empty paths)
 # ---------------------------------------------------------------------------
 $targets = [ordered]@{
-    "GitHub Copilot" = $CopilotSkillsPath
     "Claude Code"    = $ClaudeSkillsPath
     "Codex / Agents" = $AgentsSkillsPath
 }
@@ -289,6 +281,27 @@ function Remove-DeployedEntry {
         Remove-Item -LiteralPath $Path -Recurse -Force
     }
     return $true
+}
+
+function Clear-SkillTarget {
+    param([string]$Path)
+
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $rootPath = [System.IO.Path]::GetPathRoot($fullPath)
+    if ($fullPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) -eq $rootPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)) {
+        throw "Refusing to clear filesystem root as a skill target: $Path"
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        New-Item -ItemType Directory -Path $Path -Force | Out-Null
+        return @()
+    }
+
+    $entries = @(Get-ChildItem -LiteralPath $Path -Force)
+    foreach ($entry in $entries) {
+        Remove-DeployedEntry -Path $entry.FullName | Out-Null
+    }
+    return @($entries.Name)
 }
 
 function Get-ManagedSkillNames {
@@ -350,9 +363,9 @@ foreach ($entry in $activeTargets) {
     $staleSkillNames = @($previousManagedSkillNames + $retiredSkillNames | Sort-Object -Unique | Where-Object { $_ -notin $activeSkillNames })
 
     if ($ListOnly) {
-        foreach ($name in $staleSkillNames) {
-            if (Test-Path -LiteralPath (Join-Path $targetRoot $name)) {
-                Write-Host "    - $name (managed stale skill)" -ForegroundColor DarkYellow
+        if (Test-Path -LiteralPath $targetRoot -PathType Container) {
+            foreach ($existingEntry in @(Get-ChildItem -LiteralPath $targetRoot -Force)) {
+                Write-Host "    - $($existingEntry.Name) (will be cleared)" -ForegroundColor DarkYellow
             }
         }
         foreach ($skill in $skillFolders) {
@@ -366,16 +379,9 @@ foreach ($entry in $activeTargets) {
         continue
     }
 
-    if (-not (Test-Path $targetRoot)) {
-        Write-Host "    Creating target directory..." -ForegroundColor DarkGray
-        New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
-    }
-
-    foreach ($name in $staleSkillNames) {
-        $staleDestination = Join-Path $targetRoot $name
-        if (Remove-DeployedEntry -Path $staleDestination) {
-            Write-Host "    - $name (managed stale skill)" -ForegroundColor DarkYellow
-        }
+    $clearedEntries = @(Clear-SkillTarget -Path $targetRoot)
+    foreach ($name in $clearedEntries) {
+        Write-Host "    - $name (cleared)" -ForegroundColor DarkYellow
     }
 
     foreach ($skill in $skillFolders) {

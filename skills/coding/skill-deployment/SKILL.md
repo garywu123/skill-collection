@@ -1,12 +1,14 @@
 ---
 name: skill-deployment
-description: Repository-local guidance for deploying this Skill Collection's explicitly configured skills to GitHub Copilot, Claude Code, and Codex/Agents, while pruning only the collection's recorded or explicitly retired skills. Use only while working in this Skill Collection when the user asks to deploy, synchronize, preview, or clean its machine-wide skills. Do not deploy this Skill itself, use it from another workspace, or use it for arbitrary skill directories.
+description: Repository-local guidance for deploying this Skill Collection's explicitly configured skills to Claude Code and Codex/Agents. Each deployment clears the selected target directory before copying Skills. Use only while working in this Skill Collection when the user asks to deploy, synchronize, preview, or clean its machine-wide skills. Do not deploy this Skill itself, use it from another workspace, or use it for arbitrary skill directories.
 ---
 
 # Skill Deployment
 
 Synchronize the machine-wide Skills explicitly managed by this repository,
-including configured public Git Skills. This is a workspace-only Skill:
+including configured public Git Skills, to Claude Code and Codex / Agents.
+Each target directory is exclusively managed: every deployment clears all of
+its entries before copying the configured Skills. This is a workspace-only Skill:
 `deploy-skills.json` must never map
 `skills/coding/skill-deployment`, and this folder must not appear in any global
 or reusable project preset. `Install-WorkspaceSkill.ps1` copies this Skill into
@@ -38,7 +40,6 @@ say otherwise:
 
 | Platform | Default target |
 |---|---|
-| GitHub Copilot | `~/.copilot/skills` |
 | Claude Code | `~/.claude/skills` |
 | Codex / Agents | `~/.agents/skills` |
 
@@ -53,10 +54,9 @@ say otherwise:
    if the cache remote or branch differs, the worktree is dirty, the update is
    not fast-forward, or the configured Skill name does not match its
    `SKILL.md`.
-3. Confirm each stale entry is either in the target's
-   `.skill-collection-deployment.json` or explicitly listed in
-   `retiredSkillNames`. Do not infer ownership from a matching name, content,
-   or platform directory.
+3. Confirm that each target directory is intended to be exclusively managed by
+   this collection. The deployment removes all its entries, including skills
+   that are not recorded in `.skill-collection-deployment.json`.
 4. If an intended local Skill is missing from `skills`, add its explicit
    `source` and frontmatter `name`. Add a public Skill only with an HTTPS
    repository, branch, repository-relative `skillPath`, matching frontmatter
@@ -64,14 +64,13 @@ say otherwise:
    Skill needs an initial cleanup, add only its verified name to
    `retiredSkillNames`.
 5. Run `Deploy-Skills.ps1` after the preview is accepted. It fast-forwards
-   external caches, replaces active managed Skill folders, copies configured
-   upstream licenses, removes only verified stale managed folders, and writes
-   the target manifest.
+   external caches, clears each selected target, copies configured Skills and
+   upstream licenses, and writes the target manifest.
 6. Re-run `-ListOnly` and verify the deployed external revision, desired active
    set, and absence of unexpected stale entries. Report
    retained third-party or platform Skill directories separately.
 
-Use `-Target copilot`, `-Target claude`, or `-Target agents` when the user
+Use `-Target claude` or `-Target agents` when the user
 requests one platform only. Do not use a blanket deletion command, or delete a
 Skill that is not recorded by the manifest or explicit retirement list.
 
@@ -85,5 +84,5 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1 
 ```
 
 After sync or deployment, run both previews again. The result must show the
-expected external revision, desired active set, and no unexpected
-`managed stale skill` entries. Stop after reporting the verification result.
+expected external revision, desired active set, and no unexpected target
+entries. Stop after reporting the verification result.

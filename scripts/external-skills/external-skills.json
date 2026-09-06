@@ -7,6 +7,13 @@
             "branch": "main",
             "skillPath": "skills/ponytail",
             "licensePath": "LICENSE"
+        },
+        {
+            "name": "archify",
+            "repository": "https://github.com/tt-a1i/archify.git",
+            "branch": "main",
+            "skillPath": "archify",
+            "licensePath": "LICENSE"
         }
     ]
 }
