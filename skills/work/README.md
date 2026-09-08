@@ -1,6 +1,7 @@
 # Work Skills
 
-This collection contains reusable Skills for presentations and other workplace communication artifacts.
+This collection contains reusable Skills for presentations and other workplace
+communication and administrative artifacts.
 
 ## Crown PPT Workflow
 
@@ -92,3 +93,4 @@ When an input is unknown, the Skill should make the smallest reasonable assumpti
 | Skill | Capability |
 |---|---|
 | [`crown-ppt`](crown-ppt/SKILL.md) | Create reviewable Crown design-reference PNGs from text, pictures, or mixed slide content, or implement approved designs as editable PowerPoint decks from the bundled template on a 960 x 540 point canvas using Microsoft PowerPoint COM. |
+| [`it-ticket-submission`](it-ticket-submission/SKILL.md) | Operate the Crown IT Self-Serve Portal (Cherwell) to submit a software/website access-request ticket, asking the requester for the needed details first. |

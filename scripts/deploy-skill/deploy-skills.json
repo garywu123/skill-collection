@@ -46,6 +46,10 @@
         {
             "source": "skills/work/crown-ppt",
             "name": "crown-ppt"
+        },
+        {
+            "source": "skills/work/it-ticket-submission",
+            "name": "it-ticket-submission"
         }
     ]
 }
