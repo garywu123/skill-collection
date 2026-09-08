@@ -40,6 +40,10 @@
             "name": "skill-authoring"
         },
         {
+            "source": "skills/coding/markdown-reflow",
+            "name": "markdown-reflow"
+        },
+        {
             "source": "skills/work/crown-ppt",
             "name": "crown-ppt"
         }
