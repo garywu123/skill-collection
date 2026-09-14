@@ -1,17 +1,17 @@
 ---
 name: agent-instructions
-description: Create, refresh, or audit a project's coding-agent instruction files - the canonical AGENTS.md plus the thin CLAUDE.md and .github/copilot-instructions.md adapters - from the Product Brief, existing documents, and verified repository evidence. Use when the user asks to set up, update, or check agent guidance, custom instructions, memory, or context files for Claude Code, Codex, or GitHub Copilot. Do not use it to decide product scope or technical direction, plan or implement a feature, or author reusable Skills.
+description: Create, refresh, or audit a project's agent instruction files - the canonical AGENTS.md plus thin CLAUDE.md and .github/copilot-instructions.md adapters - for software, documentation, analysis, presentation, operations, and mixed repositories. Use when the user asks to set up, update, or check project agent guidance, custom instructions, memory, or context files for Claude Code, Codex, or GitHub Copilot. Do not use it to create product direction, feature plans, code, presentations, reports, or reusable Skills.
 ---
 
 # Agent Instructions
 
-Give every coding agent working in a project one short routing contract.
+Give every project agent working in a repository one short routing contract.
 `AGENTS.md` is canonical. The other files are thin adapters and never hold a
 second editable copy of a universal rule.
 
-Route to the project's documents instead of copying them. This Skill can run as
-soon as a Product Brief exists, because product meaning stays in the brief and
-technical direction stays in the Feature Map.
+Route to applicable project documents instead of copying them. Product Briefs,
+Feature Maps, and other lifecycle documents are routes only when the repository
+actually uses them. This Skill creates agent instructions, not project content.
 
 ## Intent
 
@@ -27,11 +27,16 @@ Infer the intent from natural language.
 Write all three files, unless the user names fewer tools or the project clearly
 targets one.
 
+This Skill may create, refresh, or audit only these instruction files. It may
+read code-quality configuration as evidence, but it must not modify that
+configuration.
+
 | File | Holds |
 |---|---|
-| `AGENTS.md` | Canonical routing, precedence, verified commands, working rules |
+| `AGENTS.md` | Canonical routing, precedence, verified commands and checks, working rules |
 | `CLAUDE.md` | An `@AGENTS.md` import plus verified Claude-only differences |
 | `.github/copilot-instructions.md` | A pointer to `AGENTS.md` plus Copilot-only rules |
+| Optional scoped instructions | Only a user-requested or verified subtree/surface difference; never a second universal rule set |
 
 Create or update `AGENTS.md` from [the template](assets/agents.template.md) and
 keep it within 100 source lines. At 80 lines, review duplicated explanations,
@@ -59,50 +64,76 @@ derived wrappers:
 - Add only Copilot-specific rules below this line.
 ```
 
-Do not copy product purpose, user lists, MVP boundary, feature tables, feature
-status, technical direction, architecture, or test results into any of these
-files. Do not add approval metadata, stage gates, a state file, or a second
-process description.
+Do not copy project purpose, domain content, plans, status, technical direction,
+architecture, or results into these files. Do not create product direction,
+feature plans, code, presentations, or reports. Do not add approval metadata,
+stage gates, a state file, or a second process description.
 
-State a command only when a manifest, CI configuration, or an observed
-successful run verifies it. Omit every unverified command instead of guessing.
+State a command or check only when project configuration, automation, or an
+observed successful run verifies it. Omit every unverified item instead of
+guessing.
 
 ## Workflow
 
-1. Read repository guidance, `docs/product-brief.md`, `docs/feature-map.md` when
-   present, the existing instruction files, and the manifests, CI, and test
-   configuration needed to verify commands and paths. Do not open every Feature
-   Plan.
-2. Classify each candidate statement as approved by a document, verified by
-   repository evidence, or unknown. Write the first two, omit unknowns, and
-   report conflicts. Never promote current code behavior into intended behavior
-   without an approving document.
-3. When no Product Brief and no stated product direction exist, omit the product
-   line and report the gap. Do not invent product purpose or create the brief
-   here.
-4. Preserve human-written sections that are still valid, and reconcile a
+1. Read repository guidance, existing instruction files, applicable governing
+   and task documents, and only the configuration needed to verify paths,
+   commands, and checks. Read Product Briefs or Feature Maps only when present
+   and relevant. When branch naming, merge/rebase, release, hotfix, tag,
+   worktree, or cross-repository branch coordination is material, read the
+   [branch policy guidance](references/branch-style.md). It is independent of
+   language and applies to code and non-code Git repositories.
+2. Classify the project surface from user, document, and repository evidence:
+   `non-code` for documentation, analysis, presentation, or operations outputs;
+   `software` for code, packages, or services; `mixed` when both are material.
+   If evidence is ambiguous, report the gap and do not guess.
+3. For `software` and `mixed` projects, detect relevant language and tooling
+   surfaces, then read only the matching references. Read the
+   [EditorConfig comparison baseline](references/editorconfig-baseline.md) when
+   `.editorconfig` is present or formatting, encoding, indentation, or
+   code-quality enforcement is material.
+   Read the [C# code-style guidance](references/code-style-csharp.md) only when
+   C# or .NET project evidence is present. Treat all code-style configuration as
+   read-only evidence. Read the
+   [Python code-style guidance](references/code-style-python.md) only when
+   Python project evidence is present. Report missing or conflicting
+   enforcement instead of creating or updating configuration or tool
+   dependencies. Read the
+   [frontend code-style guidance](references/code-style-frontend.md) only when
+   HTML, CSS, JavaScript, TypeScript, or frontend framework evidence is present.
+4. Classify each candidate statement as explicit user direction, approved by a
+   document or configuration, verified by repository evidence, or unknown. Use
+   evidence in that order; omit inferred defaults and unknowns, and report
+   conflicts. Never promote observed behavior into intended behavior without
+   approval.
+5. Route Product Briefs, Feature Maps, and Feature Plans only for projects that
+   use them. When no governing project-purpose document or stated direction
+   exists, omit that route and report the gap; do not invent or create it.
+6. Preserve human-written sections that are still valid, and reconcile a
    conflicting rule visibly instead of deleting it silently.
-5. Write `AGENTS.md`, then derive the adapters from it.
-6. Run the consistency check.
+7. Write `AGENTS.md`, then derive the adapters from it.
+8. Run the consistency check.
 
 Read [tool compatibility](references/tool-compatibility.md) only when the user
-needs nested, path-scoped, or surface-specific files beyond these three.
+requests nested, path-scoped, or surface-specific files, or verified repository
+differences require them. Otherwise write only the three root instruction files.
 
 ## Consistency Check
 
-Before finishing, confirm every routed path exists, every listed command is
-verified, and `CLAUDE.md` imports `@AGENTS.md`. Keep product meaning in the
-brief, technical direction and feature status in the map, and implementation and
-results in Feature Plans; replace repeated prose here with a route. Remove any
+Before finishing, confirm every routed path exists, every listed command or
+check is verified, and `CLAUDE.md` imports `@AGENTS.md`. Keep project meaning,
+domain content, direction, task status, implementation, and results in their
+applicable documents; replace repeated prose here with a route. Remove any
 adapter rule that duplicates or contradicts `AGENTS.md`. Fix stale names, paths,
-and commands in these files when the correction is mechanical, and report a
-conflict that needs a product, technical, or ownership decision. Count the
-generated `AGENTS.md` source lines. Review it at 80 lines and reject output over
-100 lines without weakening its protected rules or natural language.
+commands, and checks in these files when the correction is mechanical, and
+report a conflict that needs a project, domain, technical, or ownership
+decision. Count the generated `AGENTS.md` source lines. Review it at 80 lines
+and reject output over 100 lines without weakening its protected rules or
+natural language.
 
 ## Completion
 
 Report the files written or audited, the sources used, the statements omitted as
 unverified, unresolved conflicts, and remaining gaps. Recommend a refresh when
-the Feature Map, build commands, or directory conventions later change. Stop
-without planning or implementing a feature.
+governing documents, verified commands or checks, or repository conventions
+later change. Stop without creating product direction, feature plans, code,
+presentations, or reports.

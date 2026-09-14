@@ -7,7 +7,6 @@ scripts/external-skills/cache/
 
 # Generated platform-specific project copies of this repository's maintenance skill.
 .github/skills/
-.claude/skills/
 .agents/skills/
 
 # Generated Python artifacts are never source or historical documentation.
