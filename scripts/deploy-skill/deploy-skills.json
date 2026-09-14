@@ -1,4 +1,5 @@
 {
+    "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
     "retiredSkillNames": [
         "architecture-baseline",
         "feature-implementation-plan",
@@ -39,8 +40,16 @@
             "name": "skill-authoring"
         },
         {
+            "source": "skills/coding/markdown-reflow",
+            "name": "markdown-reflow"
+        },
+        {
             "source": "skills/work/crown-ppt",
             "name": "crown-ppt"
+        },
+        {
+            "source": "skills/work/it-ticket-submission",
+            "name": "it-ticket-submission"
         }
     ]
 }

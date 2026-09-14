@@ -10,12 +10,20 @@ in the relevant `SKILL.md` and detailed material in that Skill's resources.
 
 ## Repository map
 
+- `README.md` is the human-facing repository overview; keep it short and let
+  it link into `docs/` and each collection's `README.md` rather than
+  duplicating them.
+- `docs/` holds onboarding guides with one real worked example per collection
+  (for example `docs/coding-skill-kit.md`). These are tutorials, not the
+  source of truth — the capability list and ownership rules stay in each
+  collection's own `README.md`.
 - `skills/coding/` contains Skills for programming and software delivery work.
   Read `skills/coding/README.md` before changing its workflows.
+- `skills/work/` contains Skills for presentations and other workplace
+  communication artifacts. Read `skills/work/README.md` before changing its
+  workflows. A further top-level collection may serve another domain; give it
+  its own `README.md` and do not assume the `coding/` workflow applies there.
 - `scripts/` contains repository maintenance and deployment tools.
-- A future top-level collection may serve another domain, such as presentation
-  or content work. Give each collection its own `README.md`; do not assume the
-  `coding/` workflow applies outside `coding/`.
 - `_obsolete/` directories are retained as historical evidence. Do not deploy,
   modify, or restore their contents unless the user explicitly requests it.
 
@@ -81,9 +89,10 @@ the user's home directory.
 ## Deployment
 
 `scripts/deploy-skill/Deploy-Skills.ps1` deploys only explicit local mappings
-from `scripts/deploy-skill/deploy-skills.json` and public Git Skills from
-`scripts/external-skills/external-skills.json` to configured Claude Code and
-Codex/Agents locations. External repositories are cached under
+from `scripts/deploy-skill/deploy-skills.json` and public Git Skills from the
+configured `externalSkillConfigPath` (defaulting to
+`scripts/external-skills/external-skills.json`) to configured GitHub Copilot,
+Claude Code, and Codex/Agents locations. External repositories are cached under
 the gitignored `scripts/external-skills/cache/`. Run it with `-ListOnly` to
 inspect mappings and current cache revisions without cloning, pulling, or
 writing target locations.

@@ -92,6 +92,16 @@ if (-not $skillConfig.PSObject.Properties['skills'] -or @($skillConfig.skills).C
     throw "Skill deployment config must contain a non-empty 'skills' array: $SkillConfigPath"
 }
 
+$configuredExternalSkillConfigPath = $null
+if ($skillConfig.PSObject.Properties['externalSkillConfigPath'] -and
+    -not [string]::IsNullOrWhiteSpace($skillConfig.externalSkillConfigPath)) {
+    $configuredExternalSkillConfigPath = [string]$skillConfig.externalSkillConfigPath
+    if ([System.IO.Path]::IsPathRooted($configuredExternalSkillConfigPath) -or
+        $configuredExternalSkillConfigPath -match '(^|[\\/])\.\.([\\/]|$)') {
+        throw "externalSkillConfigPath must be a repository-relative path without '..': $configuredExternalSkillConfigPath"
+    }
+}
+
 $retiredSkillNames = @()
 if ($skillConfig.PSObject.Properties['retiredSkillNames']) {
     foreach ($name in @($skillConfig.retiredSkillNames)) {
@@ -187,7 +197,12 @@ foreach ($mapping in @($skillConfig.skills)) {
 # ---------------------------------------------------------------------------
 $externalSyncScript = Join-Path (Split-Path -Parent $PSScriptRoot) 'external-skills\Sync-ExternalSkills.ps1'
 if (-not $ExternalSkillConfigPath) {
-    $ExternalSkillConfigPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'external-skills\external-skills.json'
+    if ($configuredExternalSkillConfigPath) {
+        $ExternalSkillConfigPath = Join-Path $repoRoot $configuredExternalSkillConfigPath
+    }
+    else {
+        $ExternalSkillConfigPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'external-skills\external-skills.json'
+    }
 }
 if (-not (Test-Path -LiteralPath $externalSyncScript -PathType Leaf)) {
     throw "External Skill sync script is missing: $externalSyncScript"
