@@ -1,6 +1,7 @@
 ---
 name: product-brief
-description: Explore, create, or revise one concise Product Brief that defines product purpose, users, core flows, and MVP boundary. Use when the user wants to clarify or record product direction in natural language, including a new product or direction change. Explore in chat; write only when the user clearly asks to create, finalize, or update the brief. Do not use for feature design or implementation planning.
+description: Explore, create, or revise one concise Product Brief that defines product purpose, users, core flows, and MVP boundary. Invoke explicitly, by name, to clarify or record product direction, including a new product or direction change. Explore in chat; write only when the user clearly asks to create, finalize, or update the brief. Do not use for requirements, feature design, or implementation planning.
+disable-model-invocation: true
 ---
 
 # Product Brief
@@ -11,8 +12,7 @@ direction.
 
 ## Intent
 
-Infer the intent from natural language; the user does not need to name this
-Skill explicitly.
+Infer the intent from the request once the Skill has been invoked.
 
 - `explore`: Discuss purpose, users, core flows, and MVP scope in chat. Ask one
   to three high-value questions per round and briefly summarize the current
@@ -67,8 +67,9 @@ language and short sentences.
 
 ## Consistency Check
 
-For `write` intent only, re-read the feature map and any Storyboard or Feature
-Plan whose scope this brief changed. Keep purpose, users, flows, and MVP boundary
+For `write` intent only, re-read the Functional Specification when present,
+the feature map, and any Storyboard or Feature Plan whose scope this brief
+changed. Keep purpose, users, flows, and MVP boundary
 only here; replace repeated product prose downstream with a link. Fix stale
 names, scope, and paths in the same task. If changed product direction
 invalidates visible states or planned behavior, report the affected Storyboard

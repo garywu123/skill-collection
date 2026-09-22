@@ -1,6 +1,7 @@
 ---
 name: feature-map
-description: Create or revise a concise MVP Feature Map with feature outcomes, dependencies, shared technical direction, and a small architecture sketch. Use when the user wants to define, split, or revise MVP Features, their dependencies, shared technical choices, or cross-feature architecture. Do not create milestones, post-MVP roadmap rows, or per-feature implementation plans.
+description: Create or revise a concise MVP Feature Map with feature outcomes, dependencies, shared technical direction, and a small architecture sketch; at scale, a Roadmap of child maps with shared General Designs. Invoke explicitly, by name, to define, split, or revise MVP Features, their dependencies, shared technical choices, or cross-feature architecture. Do not create per-feature implementation plans or requirements.
+disable-model-invocation: true
 ---
 
 # Feature Map
@@ -24,7 +25,32 @@ Keep the whole map under 60 lines. Keep each feature independently useful and
 small enough to plan in one feature document. Use stable IDs such as `F01`. Put
 only MVP features in the main table; mention later ideas in one short section
 when needed. If the table passes about eight rows the MVP is too large: cut
-scope instead of lengthening the table.
+scope, or, when a Functional Specification exists, split into the scale layout
+below.
+
+When a `docs/functional-spec.md` exists, add a `Requirements` column listing
+the `FS-*` IDs each row delivers. A requirement may appear on several rows;
+it is delivered when every row that cites it is `verified`. Do not copy
+requirement wording into the map.
+
+### Scale layout
+
+Use this layout only when one map cannot hold the MVP within eight rows and a
+Functional Specification exists:
+
+| Document | Path | Holds |
+|---|---|---|
+| Roadmap | `docs/feature-maps/00.roadmap.md` | One row per child map: ID, outcome, dependencies, link, status |
+| Child Feature Map | `docs/feature-maps/<NN>.<slug>.md` | The template table for one delivery stage; link the designs it uses |
+| General Design | `docs/design/<stack>-general-design.md` | The Technical Direction, Architecture, and Shared Constraints that several child maps share |
+
+Slice child maps by user outcome or delivery stage, not by subsystem; one child
+map may span frontend, backend, and computation. Write one General Design per
+independently buildable stack, such as a backend Host and a browser App, and
+keep it under 200 lines of ownership, contracts, invariants, and worked
+examples. A General Design holds no requirements, delivery order, status, or
+tests. Child maps keep only stage-specific direction and link the rest. Write a
+child map only when preparing its stage; do not create empty maps in advance.
 
 Use only these statuses:
 
@@ -53,11 +79,12 @@ would be less clear.
 
 ## Workflow
 
-1. Read repository guidance, the Product Brief, existing map, manifests, and a
-   representative repository structure.
+1. Read repository guidance, the Product Brief, the Functional Specification
+   when present, existing maps and designs, manifests, and a representative
+   repository structure.
 2. If product direction is missing or too unclear to map without inventing MVP
    scope, report the missing decision and stop. Do not create or revise the
-   Product Brief as part of this Skill.
+   Product Brief or Functional Specification as part of this Skill.
 3. Identify the smallest coherent MVP feature set and its dependency order.
 4. Choose the simplest technical direction that supports those features. Keep
    a shared abstraction only when current MVP behavior, repository convention,
@@ -70,10 +97,11 @@ planning. Ask the user only when the split changes the intended MVP.
 
 ## Consistency Check
 
-Before finishing, re-read the brief and any Storyboard or Feature Plan whose row
-changed. Keep feature outcomes, dependencies, shared technology, and
-architecture only here, and product meaning only in the brief. Fix stale IDs,
-names, and paths in this map. Copy a matching Feature Plan's explicit status to
+Before finishing, re-read the brief, the cited `FS-*` requirements, and any
+Storyboard or Feature Plan whose row changed. Keep feature outcomes,
+dependencies, shared technology, and architecture only here or in the linked
+General Design, product meaning only in the brief, and requirements only in the
+specification. Fix stale IDs, names, and paths in this map. Copy a matching Feature Plan's explicit status to
 the Map row only when that Plan's recorded results and blockers support the
 status; otherwise report the conflict. Never infer delivery progress from code
 or repository state. If a changed row invalidates visible states or planned

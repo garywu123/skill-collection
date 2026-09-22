@@ -10,6 +10,7 @@
 | Domain or operating guidance | `<path-if-maintained>` |
 | Current task requirements and acceptance criteria | `<path-if-maintained>` |
 | Evidence, decisions, or source materials | `<path-if-maintained>` |
+| Code style for every language in this repository | `docs/code-style.md` |
 
 Read only the route the current task needs. Do not reconstruct project state
 from conversation history. Rename placeholders to match project terminology,
@@ -35,8 +36,9 @@ an observed successful run. Delete this whole section when none is verified.>
 
 ## Conventions
 
-- <A verified project convention: structure, naming, formatting, workflow, or
-  tooling. Delete this section when the repository shows none.>
+- <A verified project convention: structure, naming, workflow, or tooling.
+  Code-style rules belong in `docs/code-style.md`, not here. Delete this
+  section when the repository shows none.>
 
 ## Communication Style
 

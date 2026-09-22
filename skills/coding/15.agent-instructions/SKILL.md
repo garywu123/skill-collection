@@ -1,6 +1,7 @@
 ---
 name: agent-instructions
-description: Create, refresh, or audit a project's agent instruction files - the canonical AGENTS.md plus thin CLAUDE.md and .github/copilot-instructions.md adapters - for software, documentation, analysis, presentation, operations, and mixed repositories. Use when the user asks to set up, update, or check project agent guidance, custom instructions, memory, or context files for Claude Code, Codex, or GitHub Copilot. Do not use it to create product direction, feature plans, code, presentations, reports, or reusable Skills.
+description: Create, refresh, or audit a project's agent instruction files - the canonical AGENTS.md, its docs/code-style.md for software projects, and thin CLAUDE.md and .github/copilot-instructions.md adapters - for software, documentation, analysis, presentation, operations, and mixed repositories. Invoke explicitly, by name, to set up, update, or check project agent guidance, custom instructions, memory, or context files for Claude Code, Codex, or GitHub Copilot. Do not use it to create product direction, feature plans, code, presentations, reports, or reusable Skills.
+disable-model-invocation: true
 ---
 
 # Agent Instructions
@@ -15,7 +16,7 @@ actually uses them. This Skill creates agent instructions, not project content.
 
 ## Intent
 
-Infer the intent from natural language.
+Infer the intent from the request once the Skill has been invoked.
 
 - `write`: create or refresh the instruction files. This is the default.
 - `audit`: report broken routes, unverified commands, duplicated rules, and
@@ -24,19 +25,26 @@ Infer the intent from natural language.
 
 ## Output
 
-Write all three files, unless the user names fewer tools or the project clearly
-targets one.
+Write all three instruction files, unless the user names fewer tools or the
+project clearly targets one. For a `software` or `mixed` project, also write
+`docs/code-style.md`.
 
-This Skill may create, refresh, or audit only these instruction files. It may
-read code-quality configuration as evidence, but it must not modify that
+This Skill may create, refresh, or audit only these files. It may read
+code-quality configuration as evidence, but it must not modify that
 configuration.
 
 | File | Holds |
 |---|---|
 | `AGENTS.md` | Canonical routing, precedence, verified commands and checks, working rules |
+| `docs/code-style.md` | Every verified code-style rule for the project, one section per language, from [the template](assets/code-style.template.md); `AGENTS.md` routes to it and holds no code-style rule itself |
 | `CLAUDE.md` | An `@AGENTS.md` import plus verified Claude-only differences |
 | `.github/copilot-instructions.md` | A pointer to `AGENTS.md` plus Copilot-only rules |
 | Optional scoped instructions | Only a user-requested or verified subtree/surface difference; never a second universal rule set |
+
+Code style always lives in `docs/code-style.md`, even for one language, so
+that agents have one place to look. Keep it under 80 lines; route to
+`.editorconfig`, formatter, and analyzer configuration instead of restating a
+large rule set.
 
 Create or update `AGENTS.md` from [the template](assets/agents.template.md) and
 keep it within 100 source lines. At 80 lines, review duplicated explanations,
@@ -110,7 +118,8 @@ guessing.
    exists, omit that route and report the gap; do not invent or create it.
 6. Preserve human-written sections that are still valid, and reconcile a
    conflicting rule visibly instead of deleting it silently.
-7. Write `AGENTS.md`, then derive the adapters from it.
+7. Write `AGENTS.md` and, for `software` or `mixed` projects,
+   `docs/code-style.md`, then derive the adapters from `AGENTS.md`.
 8. Run the consistency check.
 
 Read [tool compatibility](references/tool-compatibility.md) only when the user
@@ -120,7 +129,8 @@ differences require them. Otherwise write only the three root instruction files.
 ## Consistency Check
 
 Before finishing, confirm every routed path exists, every listed command or
-check is verified, and `CLAUDE.md` imports `@AGENTS.md`. Keep project meaning,
+check is verified, `CLAUDE.md` imports `@AGENTS.md`, and no code-style rule
+remains in `AGENTS.md` or an adapter once `docs/code-style.md` exists. Keep project meaning,
 domain content, direction, task status, implementation, and results in their
 applicable documents; replace repeated prose here with a route. Remove any
 adapter rule that duplicates or contradicts `AGENTS.md`. Fix stale names, paths,

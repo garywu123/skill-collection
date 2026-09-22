@@ -2,17 +2,23 @@
 
 **Product direction:** [Product Brief](product-brief.md)
 
+<When a Functional Specification or General Design exists, link them here and
+add the `Requirements` column. Otherwise delete this note and that column.>
+
 ## MVP Features
 
-| ID | Feature | User outcome | Depends on | Status |
-|---|---|---|---|---|
-| F01 | <short name> | <one observable result> | None | planned |
+| ID | Feature | User outcome | Requirements | Depends on | Status |
+|---|---|---|---|---|---|
+| F01 | <short name> | <one observable result> | `FS-AAA-001` | None | planned |
 
 Use `planned`, `in_progress`, `blocked`, or `verified`. Use `blocked` only when
 a named, concrete condition prevents progress; otherwise active work is
 `in_progress`.
 
 ## Technical Direction
+
+<When a General Design exists, link it and keep only direction specific to
+this map.>
 
 - **Application shape:** <one sentence>
 - **Stack:** <language, framework, and important versions only when required>

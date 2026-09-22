@@ -2,7 +2,7 @@
 
 **Status:** planned
 
-**Sources:** [Product Brief](../product-brief.md), [Feature Map](../feature-map.md) row `F01`
+**Sources:** [Product Brief](../product-brief.md), [Feature Map](../feature-map.md) row `F01`, requirements `FS-AAA-001` <delete when the map has no Requirements column>
 
 **Storyboard:** None
 

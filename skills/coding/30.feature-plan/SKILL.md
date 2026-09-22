@@ -1,6 +1,7 @@
 ---
 name: feature-plan
-description: Create or revise one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests. Use when the user asks to plan, review, or simplify implementation or verification for one Feature Map item. Do not select it merely because planning is the next workflow stage, implement production code, or create separate checklists and task files.
+description: Create or revise one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests. Invoke explicitly, by name, to plan, review, or simplify implementation or verification for one Feature Map item. Do not implement production code or create separate checklists and task files.
+disable-model-invocation: true
 ---
 
 # Feature Plan
@@ -23,8 +24,10 @@ Keep the whole plan under 60 lines, focused on:
 - relevant failure-path tests second; and
 - executable validation commands and their results.
 
-Link to the Product Brief and Feature Map instead of copying them. When a
-related `docs/storyboards/<feature-id>-*.html` exists, link it and reference its
+Link to the Product Brief and Feature Map instead of copying them. When the
+map row cites `FS-*` requirements, list those IDs on the Sources line and
+restate them in the Outcome as testable behaviour; never edit the Functional
+Specification from a Plan. When a related `docs/storyboards/<feature-id>-*.html` exists, link it and reference its
 stable `S*` state and `T*` transition IDs where relevant; do not copy its visual
 content. A Storyboard is otherwise optional and this Skill does not create one.
 
@@ -41,8 +44,9 @@ revalidation begins. Pure wording or link corrections do not change status.
 
 ## Workflow
 
-1. Read repository guidance, the brief, the target map row, shared technical
-   constraints, nearby code and tests, and any related Storyboard.
+1. Read repository guidance, the brief, the target map row and its cited
+   requirements, the linked General Design or map technical direction, nearby
+   code and tests, and any related Storyboard.
 2. Confirm the feature has one independently useful outcome. If not, propose a
    Feature Map split and stop only when user input is needed.
 3. Before proposing new code, check in order: delete, change, or reuse existing
@@ -61,9 +65,11 @@ report the unresolved UI decision only when it prevents a reliable plan.
 
 ## Consistency Check
 
-Before finishing, re-read the brief, this feature's map row, and any linked
-Storyboard. Keep only feature-specific implementation, tests, and results here;
-link instead of repeating product, shared architecture, or visual-flow content.
+Before finishing, re-read the brief, this feature's map row and cited
+requirements, and any linked Storyboard. Keep only feature-specific
+implementation, tests, and results here; link instead of repeating product,
+requirement, shared architecture, or visual-flow content. Report a requirement
+the row cites but this Plan cannot deliver; do not weaken it.
 Fix stale references, names, dependencies, commands, and paths in this Plan and
 its Map row when the correction is mechanical. Report Storyboard behavior
 conflicts without editing the Storyboard; ask only when resolution needs a

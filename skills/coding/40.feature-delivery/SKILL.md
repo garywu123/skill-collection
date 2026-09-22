@@ -1,6 +1,7 @@
 ---
 name: feature-delivery
-description: Implement or behavior-preservingly simplify one planned feature, test happy paths before relevant failure paths, and record real results in its Feature Plan. Use when the user asks to build, complete, fix, simplify, refactor, or be coached through a planned feature. Work automatically by default or let the user write core implementation when that intent is clear. Do not invent product scope, clean up the whole repository, or create additional lifecycle documents.
+description: Implement or behavior-preservingly simplify one planned feature, test happy paths before relevant failure paths, and record real results in its Feature Plan. Invoke explicitly, by name, to build, complete, fix, simplify, refactor, or be coached through a planned feature. Work automatically by default or let the user write core implementation when that intent is clear. Do not invent product scope, clean up the whole repository, or create additional lifecycle documents.
+disable-model-invocation: true
 ---
 
 # Feature Delivery
@@ -15,15 +16,20 @@ data-loss protections.
 
 ## Required Input
 
-Read repository guidance, `docs/product-brief.md`, `docs/feature-map.md`, the
-target `docs/features/<feature-id>-<slug>.md`, any Storyboard linked by that
-plan, and only the code and tests needed for the feature.
+Read repository guidance, `docs/product-brief.md`, the Feature Map that owns
+the row, the target `docs/features/<feature-id>-<slug>.md`, any Storyboard
+linked by that plan, and only the code and tests needed for the feature. Read
+a cited `FS-*` requirement, General Design section, or Roadmap only when the
+Plan leaves its intended behaviour unclear.
 
 For behavior-preserving simplification, these sources define intended behavior;
 existing code is evidence, not authority.
 
 Stop and report the missing item when the feature has no plan, its sources
-conflict, or an unresolved decision changes observable behavior. Do not start
+conflict, or an unresolved decision changes observable behavior. Delivery never
+edits the Functional Specification, General Design, or Roadmap; when
+implementation shows one of them is wrong, report the conflict and stop so the
+user can revise it, then the map row, then the Plan. Do not start
 an adjacent workflow merely because an input is missing. Use multiple Skills
 only when the user's original request covers their outcomes.
 
@@ -98,7 +104,8 @@ when it clears. Remove the resolved blocker or restore `- None.` at that time.
 
 Before finishing, re-read this feature's map row, plan, and any linked
 Storyboard. Record each result once, in the plan, and keep the map row to status
-only. Keep visual flow in the Storyboard and reference stable `S*` and `T*` IDs
+only; a cited requirement is delivered when every row that cites it is
+`verified`, so do not mark requirements anywhere else. Keep visual flow in the Storyboard and reference stable `S*` and `T*` IDs
 instead of copying it. Fix stale references, names, commands, and paths in the
 Plan, Map status, or implementation when the correction is mechanical. Report
 Storyboard behavior conflicts without editing the Storyboard; ask only when

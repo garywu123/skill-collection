@@ -1,6 +1,7 @@
 ---
 name: feature-storyboard
-description: Create or revise one low-fidelity HTML Storyboard that shows a UI Feature's key screens, states, and transitions. Use when the user asks in natural language to visualize, wireframe, preview, or confirm a desktop or mobile interaction. Do not use for non-UI work, production UI, implementation planning, or high-fidelity prototypes.
+description: Create or revise one low-fidelity HTML Storyboard that shows a UI Feature's key screens, states, and transitions. Invoke explicitly, by name, to visualize, wireframe, preview, or confirm a desktop or mobile interaction. Do not use for non-UI work, production UI, implementation planning, or high-fidelity prototypes.
+disable-model-invocation: true
 ---
 
 # Feature Storyboard
@@ -120,5 +121,4 @@ Report the Storyboard path, form factor, state and transition IDs, fixture
 assumptions, rendering checks, and unresolved visual decisions. Stop without
 creating a Feature Plan or implementation. Do not add approval metadata or a
 separate approval gate. Pause when an unresolved visual decision would change
-observable behavior; otherwise a coordinator may continue only when the user's
-original request already covers another outcome.
+observable behavior.

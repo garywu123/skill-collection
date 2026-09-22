@@ -1,33 +1,33 @@
 # Coding Skill Collection
 
-Feature 规划和交付也支持保持行为不变的精简；所有编码工作流都先复用现有能力，
-只增加当前结果所需的最少代码，并保留必要验证。
-
 一套面向个人、小团队和 AI 主导开发的精简流程。默认维护三类核心文档：产品方向、
 MVP Feature Map，以及每个 Feature 的计划与真实测试结果。有 UI 的 Feature 可以按需
-增加一份低保真 Storyboard。
+增加一份低保真 Storyboard；MVP 大到一张 Feature Map 放不下时，再增加 Functional
+Specification、Roadmap 和 General Design。Feature 规划和交付也支持保持行为不变的
+精简；所有编码工作流都先复用现有能力，只增加当前结果所需的最少代码，并保留必要验证。
 
 ## 开发流程
 
 ```text
 Product Brief
-  -> [Agent Instructions: AGENTS.md + CLAUDE.md + Copilot]
-  -> Feature Map + Technical Direction
+  -> Agent Instructions (AGENTS.md + docs/code-style.md + CLAUDE.md + Copilot)
+  -> [scale only: Functional Spec -> Roadmap + General Design]
+  -> Feature Map
   -> [optional Feature Storyboard]
   -> Feature Plan
   -> Feature Delivery (auto | guided)
 ```
 
-Agent Instructions 只写路由、优先级、已验证命令和工作规则，因此 Brief 定稿后即可
-生成。技术方向仍留在 Feature Map 中，由 `AGENTS.md` 链接。构建命令、目录约定或
-Feature Map 发生变化后，可以再次运行它刷新。
+生命周期 Skill 只由人显式点名调用（Claude Code 中为 `/skill-name`），不由 AI 根据
+对话自动选择；`SKILL.md` 用 `disable-model-invocation: true` 声明这一点。Copilot 和
+Codex 目前没有等价开关，只能依赖 description 中的 "Invoke explicitly, by name"。
+一个已有或缺失的产物本身不授权相邻 Skill；一条指令明确覆盖多个结果时，才依次调用
+多个 Skill。
 
-这是常见路线，不是自动执行的阶段链。每个 Skill 都可以根据用户的自然语言意图自动
-选择，不要求用户点名。一个已有或缺失的产物本身不授权相邻 Skill；只有原始请求同时
-覆盖多个可观察结果时，协调器才可以依次选择多个 Skill。
-
-不要求独立的 discovery、PRD、roadmap、architecture baseline、project map、
-checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前事实。
+变更只向下传播：Brief -> Spec -> Design -> Roadmap -> Map -> Plan -> 代码。交付发现
+上游文档有误时，Delivery 停下报告，由人先改上游，再改 Map 行，再改 Plan。除本
+README 的流程图外，不需要独立的 workflow、discovery、PRD、checklist、spec sync 或审批
+文档。Git 保存历史；文档只保存当前事实。
 
 ## 使用示例
 
@@ -38,8 +38,9 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | Skill | 作用 | 默认产物 |
 |---|---|---|
 | [`product-brief`](10.product-brief/SKILL.md) | 探索或记录产品目的、用户、核心流程和 MVP 边界 | 探索时仅对话；定稿时写 `docs/product-brief.md` |
-| [`agent-instructions`](15.agent-instructions/SKILL.md) | 为软件、文档、分析、演示、运维和混合仓库生成或审计项目 agent 指令 | 三份根指令文件；按需增加受控的 scoped instructions |
-| [`feature-map`](20.feature-map/SKILL.md) | 确定 MVP Features、依赖、技术方向和整体架构 | `docs/feature-map.md` |
+| [`agent-instructions`](15.agent-instructions/SKILL.md) | 为软件、文档、分析、演示、运维和混合仓库生成或审计项目 agent 指令 | 三份根指令文件；软件项目另有 `docs/code-style.md`；按需增加 scoped instructions |
+| [`functional-spec`](17.functional-spec/SKILL.md) | 仅当 MVP 需要多张 Feature Map 时，列出编号的可观察需求 | `docs/functional-spec.md` |
+| [`feature-map`](20.feature-map/SKILL.md) | 确定 MVP Features、依赖、技术方向和整体架构；规模大时拆为 Roadmap、子 Map 和 General Design | `docs/feature-map.md`，或 `docs/feature-maps/` 与 `docs/design/` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 规划单个 Feature 的新实现或保持行为不变的精简，以及 happy path 和 failure path 验证 | `docs/features/<feature-id>-<slug>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
@@ -49,19 +50,20 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 
 ## 文档边界
 
-- Product Brief 只在用户要求创建、定稿或更新时保存产品目的、用户、核心流程和 MVP
-  边界。用户指定的既有 domain knowledge 只是可选输入，不由该 Skill 创建或维护。
-- Agent Instructions 为软件、文档、分析、演示、运维和混合仓库保存路由、优先级、
-  已验证命令、沟通规则和工作规则；可按仓库证据选用 C#、Python、frontend、
-  EditorConfig 比较和分支策略参考。除三份根指令文件，以及用户要求或已验证的
-  subtree/surface 差异所需的 scoped instructions 外，它不创建代码、项目产物或样式
-  配置，也不制定分支策略。`AGENTS.md` 是唯一权威文件，适配层和 scoped instructions
-  不得复制通用规则。
-- Feature Map 只保存 Feature 结果、依赖、共享技术和整体架构。
-- Feature Storyboard 只保存一个 UI Feature 的可见状态和交互转换；它是可选产物，不
-  保存实现设计、测试或生命周期状态。
-- Feature Plan 只保存该 Feature 的实现步骤、测试设计和真实结果。
-- 下游文档链接上游文档，不复制上游内容。
+| 文档 | 只保存 | 不保存 |
+|---|---|---|
+| Product Brief | 产品目的、用户、核心流程、MVP 边界 | 需求编号、架构、流程 |
+| Agent Instructions | 路由、优先级、已验证命令、沟通与工作规则；`AGENTS.md` 唯一权威，适配层不复制通用规则 | 产品内容、技术方向、代码风格规则 |
+| `docs/code-style.md` | 仓库所有语言的代码风格规则，每种语言一节，工具已强制的规则只路由不复述 | 产品或流程内容 |
+| Functional Spec | 编号的可观察需求、排除项、未决决策 | 状态、追溯表、架构、交付顺序 |
+| General Design | 多张子 Map 共享的职责、契约、不变量和示例，每个可独立构建的栈一份 | 需求、顺序、状态、测试 |
+| Roadmap | 子 Map 的顺序、依赖、链接和状态 | 需求原文、设计 |
+| Feature Map | Feature 结果、引用的 FS ID、依赖、状态；单 Map 项目还包含技术方向和架构 | 需求原文、实现细节 |
+| Feature Storyboard | 一个 UI Feature 的可见状态和转换 | 实现设计、测试、状态 |
+| Feature Plan | 该 Feature 的实现步骤、测试设计和真实结果 | 上游内容的复制 |
+
+下游文档链接上游文档，不复制上游内容。用户指定的既有 domain knowledge 只是可选
+输入，不由任何 Skill 创建或维护。
 
 ## Feature 状态
 
@@ -71,7 +73,8 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 - `blocked`：存在一个具体条件，使当前无法继续。
 - `verified`：所有计划场景已实际通过且没有 blocker。
 
-每个 Skill 在创建或修改文档后，都必须扫描项目中的相关文档，检查冲突、重复、过期
-名称、路径和状态。机械问题在同一轮修正；只有会改变产品行为、UI 交互、技术方向或
-职责边界的语义决定才询问用户。
-各项能力的详细契约以对应 `SKILL.md` 为准；本文件只维护公开能力和文档边界。
+状态只写在 Feature Plan 和 Feature Map 行。一个 FS 需求在引用它的所有 Map 行都
+`verified` 时视为交付；Spec 本身不打勾。每个 Skill 在创建或修改文档后，都必须扫描
+项目中的相关文档，检查冲突、重复、过期名称、路径和状态。机械问题在同一轮修正；只有
+会改变产品行为、UI 交互、技术方向或职责边界的语义决定才询问用户。各项能力的详细
+契约以对应 `SKILL.md` 为准；本文件只维护公开能力和文档边界。

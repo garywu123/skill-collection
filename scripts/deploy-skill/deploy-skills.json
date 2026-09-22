@@ -20,6 +20,10 @@
             "name": "agent-instructions"
         },
         {
+            "source": "skills/coding/17.functional-spec",
+            "name": "functional-spec"
+        },
+        {
             "source": "skills/coding/20.feature-map",
             "name": "feature-map"
         },
