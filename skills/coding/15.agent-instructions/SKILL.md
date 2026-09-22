@@ -25,9 +25,10 @@ Infer the intent from the request once the Skill has been invoked.
 
 ## Output
 
-Write all three instruction files, unless the user names fewer tools or the
-project clearly targets one. For a `software` or `mixed` project, also write
-`docs/code-style.md`.
+For `write` intent, write all three instruction files unless the user names
+fewer tools or the project clearly targets one. For a `software` or `mixed`
+project, also write `docs/code-style.md`. For `audit` intent, inspect the same
+applicable files but do not change them.
 
 This Skill may create, refresh, or audit only these files. It may read
 code-quality configuration as evidence, but it must not modify that
@@ -118,8 +119,9 @@ guessing.
    exists, omit that route and report the gap; do not invent or create it.
 6. Preserve human-written sections that are still valid, and reconcile a
    conflicting rule visibly instead of deleting it silently.
-7. Write `AGENTS.md` and, for `software` or `mixed` projects,
-   `docs/code-style.md`, then derive the adapters from `AGENTS.md`.
+7. For `write`, write `AGENTS.md` and, for `software` or `mixed` projects,
+   `docs/code-style.md`, then derive the adapters from `AGENTS.md`. For
+   `audit`, report findings without writing any file.
 8. Run the consistency check.
 
 Read [tool compatibility](references/tool-compatibility.md) only when the user

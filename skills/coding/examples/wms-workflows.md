@@ -227,18 +227,30 @@ Spec，不创建 Roadmap 或 Map。
 
 ```text
 /feature-map 基于 FleetDock 的 Brief 和 Functional Spec 建立规模化布局：
-docs/feature-maps/00.roadmap.md 列出各阶段子 Map 的顺序和依赖；
+docs/feature-maps/00.roadmap.md 列出各阶段子 Map 的顺序、分配的 FS ID 和依赖；
 docs/design/backend-general-design.md 与 docs/design/web-general-design.md 保存多张
 子 Map 共享的职责、契约和不变量；只写第一阶段的子 Map 01.foundation.md，每行填
 Requirements 列引用的 FS ID。后续阶段的子 Map 留到准备交付时再写。
 ```
 
 预期：Feature Map 按 scale layout 输出 Roadmap、两份 General Design 和一张子 Map；
-子 Map 只保留阶段特有的技术方向，其余链接 General Design；停止于地图。
+Roadmap 不保存交付状态，尚未创建的子 Map 只显示代码形式的预定路径；子 Map 只保留
+阶段特有的技术方向，其余链接 General Design；停止于地图。
 
 ### 3. 之后的流程与单 Map 项目相同
 
 每个子 Map 行按 `/feature-plan` 和 `/feature-delivery` 推进。Delivery 只更新 Plan 和
-Map 行；某个 FS 需求在引用它的所有 Map 行都 `verified` 后视为交付。交付中发现 Spec
+Map 行；Roadmap 分配不算交付，某个 FS 需求至少被一行 Map 引用、且所有引用它的 Map
+行都 `verified` 后才视为交付。交付中发现 Spec
 或 Design 有误时，Delivery 停下报告，由人依次 `/functional-spec`、`/feature-map`、
 `/feature-plan` 修订后再继续。
+
+## 场景五：重开任务、增加 Feature、修改共享 Design
+
+- 修复或扩展同一个用户结果时，`/feature-plan` 重开原 Plan，复用原 Feature ID；失效
+  结果回到 `not run`，Plan 与 Map 回到 `planned`，再由 `/feature-delivery` 实现。
+- 出现可独立交付的新用户结果时，先用 `/feature-map` 分配全项目唯一的新 Feature ID，
+  再创建新 Plan；不要把它塞进旧 Plan 或创建 `F02-v2`。
+- 修改 General Design 时，先用 `/feature-map` 更新设计并列出全部受影响行。旧证据不再
+  证明当前设计的行回到 `planned`；随后分别用 `/feature-plan` 协调受影响 Plan，再重新
+  Delivery。未受影响且证据仍有效的 Feature 保持原状态。

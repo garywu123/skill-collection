@@ -19,8 +19,9 @@ data-loss protections.
 Read repository guidance, `docs/product-brief.md`, the Feature Map that owns
 the row, the target `docs/features/<feature-id>-<slug>.md`, any Storyboard
 linked by that plan, and only the code and tests needed for the feature. Read
-a cited `FS-*` requirement, General Design section, or Roadmap only when the
-Plan leaves its intended behaviour unclear.
+every cited `FS-*` requirement and linked General Design section. Read the
+Roadmap only when dependency order is material. Resolve the owning Map from the
+Plan link rather than assuming `docs/feature-map.md`.
 
 For behavior-preserving simplification, these sources define intended behavior;
 existing code is evidence, not authority.
@@ -32,6 +33,12 @@ implementation shows one of them is wrong, report the conflict and stop so the
 user can revise it, then the map row, then the Plan. Do not start
 an adjacent workflow merely because an input is missing. Use multiple Skills
 only when the user's original request covers their outcomes.
+
+For a reopened Feature, require the existing Plan and Map row to describe the
+current behavior and design before implementation. Reuse that Feature ID. If
+the request is actually a separate independently useful outcome, stop and
+report that it needs a new Map row and Plan; do not hide it inside the reopened
+task.
 
 ## Mode
 
@@ -102,10 +109,12 @@ when it clears. Remove the resolved blocker or restore `- None.` at that time.
 
 ## Consistency Check
 
-Before finishing, re-read this feature's map row, plan, and any linked
-Storyboard. Record each result once, in the plan, and keep the map row to status
-only; a cited requirement is delivered when every row that cites it is
-`verified`, so do not mark requirements anywhere else. Keep visual flow in the Storyboard and reference stable `S*` and `T*` IDs
+Before finishing, re-read this feature's map row, plan, cited requirements,
+linked General Designs, and any linked Storyboard. Record each result once, in
+the plan, and keep the map row to status only; a cited requirement is delivered
+only when at least one Map row cites it and every citing Map row is `verified`,
+so do not mark requirements anywhere else. Keep visual flow in the Storyboard
+and reference stable `S*` and `T*` IDs
 instead of copying it. Fix stale references, names, commands, and paths in the
 Plan, Map status, or implementation when the correction is mechanical. Report
 Storyboard behavior conflicts without editing the Storyboard; ask only when

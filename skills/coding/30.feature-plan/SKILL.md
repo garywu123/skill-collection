@@ -1,6 +1,6 @@
 ---
 name: feature-plan
-description: Create or revise one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests. Invoke explicitly, by name, to plan, review, or simplify implementation or verification for one Feature Map item. Do not implement production code or create separate checklists and task files.
+description: Create, revise, or reopen one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests. Invoke explicitly, by name, to plan, review, reopen, or simplify implementation or verification for one Feature Map item. Do not implement production code or create separate checklists and task files.
 disable-model-invocation: true
 ---
 
@@ -24,10 +24,13 @@ Keep the whole plan under 60 lines, focused on:
 - relevant failure-path tests second; and
 - executable validation commands and their results.
 
-Link to the Product Brief and Feature Map instead of copying them. When the
-map row cites `FS-*` requirements, list those IDs on the Sources line and
-restate them in the Outcome as testable behaviour; never edit the Functional
-Specification from a Plan. When a related `docs/storyboards/<feature-id>-*.html` exists, link it and reference its
+Link to the Product Brief, the owning Feature Map, and any applicable General
+Design instead of copying them. Use the owning Map's actual path; a child map is
+under `docs/feature-maps/`, not `docs/feature-map.md`. When the map row cites
+`FS-*` requirements, list those IDs on the Sources line and express only this
+Feature's observable contribution in the Outcome; never copy or edit the
+Functional Specification from a Plan. When a related
+`docs/storyboards/<feature-id>-*.html` exists, link it and reference its
 stable `S*` state and `T*` transition IDs where relevant; do not copy its visual
 content. A Storyboard is otherwise optional and this Skill does not create one.
 
@@ -36,17 +39,22 @@ result to one short table-cell outcome and never paste raw logs into the plan.
 List a failure path only when this feature can actually cause it or must handle
 it; two to four rows is normal. Do not work through a category checklist.
 
-A new Plan starts as `planned`. When revising an existing Plan, keep its status
-synchronized with the Feature Map and preserve results only when the verified
-behavior and expected result are unchanged. Reset affected results to `not run`;
-if this invalidates `verified`, set both documents to `planned` until delivery or
-revalidation begins. Pure wording or link corrections do not change status.
+A new Plan starts as `planned`. Reopen the existing Plan when the user asks to
+correct, extend, or revalidate the same Feature outcome; do not create a second
+Plan or a versioned Feature ID. Keep its status synchronized with the Feature
+Map and preserve results only when the tested behavior, source requirements,
+design contracts, and evidence remain valid. Reset affected results to
+`not run`; if this invalidates `verified`, set both documents to `planned` until
+delivery or revalidation begins. Pure wording or link corrections do not change
+status. A separate independently useful outcome belongs in a new Map row before
+it is planned.
 
 ## Workflow
 
 1. Read repository guidance, the brief, the target map row and its cited
-   requirements, the linked General Design or map technical direction, nearby
-   code and tests, and any related Storyboard.
+   requirements, every linked General Design or map technical direction, nearby
+   code and tests, and any related Storyboard. Resolve links from the actual
+   owning Map rather than assuming `docs/feature-map.md`.
 2. Confirm the feature has one independently useful outcome. If not, propose a
    Feature Map split and stop only when user input is needed.
 3. Before proposing new code, check in order: delete, change, or reuse existing
@@ -66,10 +74,11 @@ report the unresolved UI decision only when it prevents a reliable plan.
 ## Consistency Check
 
 Before finishing, re-read the brief, this feature's map row and cited
-requirements, and any linked Storyboard. Keep only feature-specific
-implementation, tests, and results here; link instead of repeating product,
-requirement, shared architecture, or visual-flow content. Report a requirement
-the row cites but this Plan cannot deliver; do not weaken it.
+requirements, every linked General Design, and any linked Storyboard. Keep only
+feature-specific implementation, tests, and results here; link instead of
+repeating product, requirement, shared architecture, or visual-flow content.
+Report a requirement the row cites but this Plan cannot deliver; do not weaken
+it.
 Fix stale references, names, dependencies, commands, and paths in this Plan and
 its Map row when the correction is mechanical. Report Storyboard behavior
 conflicts without editing the Storyboard; ask only when resolution needs a

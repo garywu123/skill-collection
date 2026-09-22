@@ -68,12 +68,13 @@ language and short sentences.
 ## Consistency Check
 
 For `write` intent only, re-read the Functional Specification when present,
-the feature map, and any Storyboard or Feature Plan whose scope this brief
-changed. Keep purpose, users, flows, and MVP boundary
-only here; replace repeated product prose downstream with a link. Fix stale
-names, scope, and paths in the same task. If changed product direction
+every Feature Map, and any Storyboard or Feature Plan whose scope this brief
+changed. Keep purpose, users, flows, and MVP boundary only here; replace
+repeated product prose downstream with a link. Fix stale names, scope, and
+paths in the same task. If changed product direction
 invalidates visible states or planned behavior, report the affected Storyboard
-or Plan for revision instead of redesigning it here.
+or Plan and its status as stale for downstream revision instead of redesigning
+it here.
 
 ## Completion
 

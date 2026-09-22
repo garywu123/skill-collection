@@ -3,7 +3,8 @@
 **Product direction:** [Product Brief](product-brief.md)
 
 <When a Functional Specification or General Design exists, link them here and
-add the `Requirements` column. Otherwise delete this note and that column.>
+add the `Requirements` column. In a child map, use paths relative to that file.
+Otherwise delete this note and that column.>
 
 ## MVP Features
 

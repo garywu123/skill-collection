@@ -47,8 +47,11 @@ Retire a requirement by marking it `retired` in place with one line of reason.
 
 Do not add status checkboxes, verification notes, traceability tables,
 architecture, component ownership, technology, delivery order, or test design.
-Delivery status lives only in the Feature Map row that lists the requirement
-ID; design lives in the General Design; order lives in the Roadmap.
+Delivery status lives only in Feature Map rows that list the requirement ID;
+design lives in the General Design; order lives in the Roadmap. Every active
+requirement must be assigned to an existing Map row or a future Roadmap row. It
+is delivered only when at least one Map row cites it and every citing Map row
+is `verified`.
 
 ## Workflow
 
@@ -63,10 +66,15 @@ ID; design lives in the General Design; order lives in the Roadmap.
 ## Consistency Check
 
 For `write` intent only, re-read the Product Brief, Roadmap, and every Feature
-Map that cites a changed or removed requirement ID. Keep what the product must
-do only here, and product meaning only in the brief. Report a Feature Map row
-whose outcome no longer matches its cited requirements instead of editing the
-row here. Fix stale IDs, names, and paths in this document.
+Map. Compare every active requirement with the Roadmap and all Map rows: report
+an active ID assigned to neither, a retired or missing ID still cited, and a
+row whose outcome no longer matches its cited requirements. An ID assigned
+only to a future Roadmap row is planned but not delivered. Do not edit a Map or
+Roadmap here. When a requirement change invalidates a `verified` row, report
+that its Map status and Plan evidence are stale and must be reconciled through
+`feature-map` and `feature-plan`. Keep what the product must do only here, keep
+product meaning only in the brief, and fix
+stale IDs, names, and paths in this document.
 
 ## Completion
 

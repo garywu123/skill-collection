@@ -4,7 +4,9 @@
 
 This document lists what the product must do. It carries no status: delivery
 status lives in the Feature Map row that cites a requirement ID, technical
-design in the General Design, and delivery order in the Roadmap.
+design in the General Design, and delivery order in the Roadmap. Every active
+requirement must be assigned to a Map or future Roadmap row; only verified Map
+rows count toward delivery.
 
 ## Functional areas
 

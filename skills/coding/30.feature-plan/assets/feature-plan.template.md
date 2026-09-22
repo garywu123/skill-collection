@@ -2,7 +2,9 @@
 
 **Status:** planned
 
-**Sources:** [Product Brief](../product-brief.md), [Feature Map](../feature-map.md) row `F01`, requirements `FS-AAA-001` <delete when the map has no Requirements column>
+**Sources:** [Product Brief](../product-brief.md), [Owning Feature Map](<actual-relative-map-path>) row `F01`
+
+<Add cited requirement IDs and applicable General Design links; delete this note when absent.>
 
 **Storyboard:** None
 
