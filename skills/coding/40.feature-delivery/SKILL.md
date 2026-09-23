@@ -85,8 +85,8 @@ other units build on stays in the parent.
 
 Apply the same test at both levels: several independent rows of one Feature Map
 when the user's request covers all of them, and independent implementation steps
-inside one plan. Keep concurrent subagents few, and reduce the count before
-their boundaries start overlapping.
+inside one plan. Run at most three subagents at once, and use fewer when their
+boundaries are close to overlapping.
 
 Each brief states the Feature or step boundary, the files the subagent owns and
 must not leave, the smallest-change and avoid-speculative-abstraction
