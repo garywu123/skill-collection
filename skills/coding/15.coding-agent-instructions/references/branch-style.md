@@ -2,7 +2,7 @@
 
 Infer and audit only approved project policy. Never turn a few historical
 branch names into a rule. This guidance is independent of programming language
-and applies to code and non-code Git repositories.
+and applies to any Git repository.
 
 ## Evidence Precedence
 

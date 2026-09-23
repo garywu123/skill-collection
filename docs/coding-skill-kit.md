@@ -42,16 +42,28 @@ Writes `docs/product-brief.md` and stops.
 ### 3. Generate agent instruction files
 
 ```text
-/agent-instructions DockFlow WMS 的 Product Brief 已定稿。请生成项目的 agent 指令
-文件：权威的 `AGENTS.md`、`docs/code-style.md`，以及 `CLAUDE.md` 和
-`.github/copilot-instructions.md` 两个薄适配层。仓库里还没有 manifest，不要编造命令。
+/coding-agent-instructions DockFlow WMS 的 Product Brief 已定稿。请生成项目的 agent
+指令文件：权威的 `AGENTS.md`，以及 `CLAUDE.md` 和 `.github/copilot-instructions.md`
+两个薄适配层。仓库里还没有 manifest，不要编造命令。
 ```
 
 Produces the same pattern this repository itself uses: one authoritative
-`AGENTS.md`, one `docs/code-style.md` holding every code-style rule, and two
-thin adapters.
+`AGENTS.md` plus two thin adapters. Code-style rules are not written here; the
+next step owns them.
 
-### 4. Create the MVP Feature Map
+### 4. Write the code-style contract
+
+```text
+/code-style 为 DockFlow WMS 写 `docs/code-style.md`。后端是 C#，前端是 TypeScript，
+报表查询是 SQL。工具已强制的规则只路由，重点写模块边界、文件结构、注释意图、公共 API
+文档，以及关键算法要解释到什么程度。写完把 `AGENTS.md` 的路由补上。
+```
+
+Asks you to confirm the language set, then writes `docs/code-style.md` with one
+section per confirmed language plus the cross-language module, structure,
+comment, and documentation rules, and updates the `AGENTS.md` route to it.
+
+### 5. Create the MVP Feature Map
 
 ```text
 /feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map 和共享技术方向。
@@ -62,7 +74,7 @@ Writes `docs/feature-map.md` with the new Feature row starting at status
 `planned`. DockFlow fits one map, so no Functional Specification, Roadmap, or
 General Design is created; the example file shows the scale variant.
 
-### 5. Plan one Feature, then deliver it
+### 6. Plan one Feature, then deliver it
 
 ```text
 /feature-plan 为 F02 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用

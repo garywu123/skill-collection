@@ -8,8 +8,9 @@ template. Treat every inspected configuration surface as read-only evidence.
 
 Existing repository configuration and approved project documents outrank this
 baseline. Explicit user-selected defaults also outrank generic best practice.
-When evidence is absent, omit the rule from agent instructions or report the
-gap; do not silently change project configuration.
+When evidence is absent, propose the baseline rule to the user; write it into
+`docs/code-style.md` only once they approve it, and never change project
+configuration to match.
 
 ## Inspect
 
@@ -39,9 +40,8 @@ compilers, linters, and analyzers remain authoritative for language semantics.
 
 ## Audit Decision
 
-- Existing and consistent: route to it or summarize only the universal rule
-  needed by agents.
+- Existing and consistent: route to it from the style file's tooling table.
 - Existing but different from the baseline: preserve it unless the user
   approves a change; report a conflict only when repository evidence disagrees.
-- Missing: report an optional baseline where useful, but do not create it in
-  this Skill.
+- Missing: offer the baseline as a written rule in `docs/code-style.md`, but
+  never create or edit `.editorconfig` itself.

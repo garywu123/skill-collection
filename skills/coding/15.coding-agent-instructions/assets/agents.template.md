@@ -42,8 +42,17 @@ an observed successful run. Delete this whole section when none is verified.>
 
 ## Communication Style
 
-- Lead with the result, recommendation, or decision in plain, direct language.
-- Be concise without omitting facts, risks, verification, assumptions, or explanations needed to act.
+- Be concise and information-dense.
+- Lead with the answer.
+- Do not restate my question.
+- Do not summarize what you just did unless necessary.
+- Avoid introductory filler, praise, reassurance, and obvious explanations.
+- Prefer 3 concise bullets over 3 paragraphs.
+- Explain reasoning only when it materially affects the decision.
+- For coding tasks, report only:
+  1. what changed
+  2. important caveats
+  3. test/result
 
 ## Working rules
 

@@ -52,17 +52,30 @@
 ### 5. 生成 agent 指令文件
 
 ```text
-/agent-instructions DockFlow WMS 的 Product Brief 已定稿。请生成项目的 agent 指令
-文件：权威的 `AGENTS.md`、`docs/code-style.md`，加上 `CLAUDE.md` 和
-`.github/copilot-instructions.md` 两个薄适配层。只写路由、优先级、已验证命令和工作
-规则；仓库里还没有 manifest，不要编造命令。不要复制产品内容或创建 Feature Map。
+/coding-agent-instructions DockFlow WMS 的 Product Brief 已定稿。请生成项目的 agent
+指令文件：权威的 `AGENTS.md`，加上 `CLAUDE.md` 和 `.github/copilot-instructions.md`
+两个薄适配层。只写路由、优先级、已验证命令和工作规则；仓库里还没有 manifest，不要
+编造命令。不要复制产品内容、不要写 code style、不要创建 Feature Map。
 ```
 
-预期：Agent Instructions 的 `write`；输出三份指令文件和 `docs/code-style.md`，
-`AGENTS.md` 链接 `docs/product-brief.md` 与 `docs/code-style.md` 并预留其他路由；
-未验证的命令段被删除并报告；停止于指令文件。
+预期：Coding Agent Instructions 的 `write`；输出三份指令文件，`AGENTS.md` 链接
+`docs/product-brief.md` 并预留其他路由；未验证的命令段被删除并报告；`docs/code-style.md`
+尚不存在，因此省略该路由并报告应运行 `code-style`；停止于指令文件。
 
-### 6. 创建 MVP Feature Map
+### 6. 写 code style 契约
+
+```text
+/code-style 为 DockFlow WMS 写 `docs/code-style.md`。后端 C#、前端 TypeScript、报表
+查询 SQL。工具已强制的规则只路由不复述；重点写模块边界、文件与函数结构、注释要解释
+意图、公共 API 文档，以及关键步骤和算法需要解释到什么程度。写完补上 `AGENTS.md` 的
+路由行。
+```
+
+预期：Code Style 的 `write`；先就语言集合向你确认一次，再输出 `docs/code-style.md`
+——每种确认语言一节，外加跨语言的模块边界、结构、注释、文档四节；最后把 `AGENTS.md`
+的 code-style 路由补上，其余内容不动；停止于该文件与那一行路由。
+
+### 7. 创建 MVP Feature Map
 
 ```text
 /feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map 和共享技术方向。包含
@@ -71,7 +84,7 @@ F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；�
 
 预期：Feature Map；输出 `docs/feature-map.md`，新行从 `planned` 开始；停止于地图。
 
-### 7. 按需创建 F02 Storyboard
+### 8. 按需创建 F02 Storyboard
 
 ```text
 /feature-storyboard 为 F02 创建低保真手持设备 HTML Storyboard，展示扫描 ASN、确认实收数量和无效 ASN。
@@ -81,7 +94,7 @@ F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；�
 预期：Feature Storyboard；输出 `docs/storyboards/F02-*.html` 和首次使用时的共享
 CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告未验证风险并停止。
 
-### 8. 创建 F02 Feature Plan
+### 9. 创建 F02 Feature Plan
 
 ```text
 /feature-plan 为 F02 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用相关 S*、T*；
@@ -90,7 +103,7 @@ CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告�
 
 预期：Feature Plan；输出 `docs/features/F02-*.md`，结果为 `not run`；停止于计划。
 
-### 9. 选择一种 Delivery 方式
+### 10. 选择一种 Delivery 方式
 
 自动实现：
 

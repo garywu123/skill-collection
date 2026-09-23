@@ -1,6 +1,7 @@
 {
     "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
     "retiredSkillNames": [
+        "agent-instructions",
         "architecture-baseline",
         "feature-implementation-plan",
         "guided-tdd-pairing",
@@ -16,8 +17,12 @@
             "name": "product-brief"
         },
         {
-            "source": "skills/coding/15.agent-instructions",
-            "name": "agent-instructions"
+            "source": "skills/coding/15.coding-agent-instructions",
+            "name": "coding-agent-instructions"
+        },
+        {
+            "source": "skills/coding/16.code-style",
+            "name": "code-style"
         },
         {
             "source": "skills/coding/17.functional-spec",

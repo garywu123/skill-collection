@@ -10,7 +10,8 @@ Specification、Roadmap 和 General Design。Feature 规划和交付也支持保
 
 ```text
 Product Brief
-  -> Agent Instructions (AGENTS.md + docs/code-style.md + CLAUDE.md + Copilot)
+  -> Coding Agent Instructions (AGENTS.md + CLAUDE.md + Copilot)
+  -> Code Style (docs/code-style.md)
   -> [scale only: Functional Spec -> Roadmap + General Design]
   -> Feature Map
   -> [optional Feature Storyboard]
@@ -40,7 +41,8 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | Skill | 作用 | 默认产物 |
 |---|---|---|
 | [`product-brief`](10.product-brief/SKILL.md) | 探索或记录产品目的、用户、核心流程和 MVP 边界 | 探索时仅对话；定稿时写 `docs/product-brief.md` |
-| [`agent-instructions`](15.agent-instructions/SKILL.md) | 为软件、文档、分析、演示、运维和混合仓库生成或审计项目 agent 指令 | 三份根指令文件；软件项目另有 `docs/code-style.md`；按需增加 scoped instructions |
+| [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库生成或审计项目 agent 指令；纯非代码仓库交由所属集合的同类 Skill | 三份根指令文件；按需增加 scoped instructions |
+| [`code-style`](16.code-style/SKILL.md) | 确认项目实际使用的语言，写出模块边界、结构、注释意图、文档和关键算法说明的规范，并回写 `AGENTS.md` 路由 | `docs/code-style.md` 及 `AGENTS.md` 中的一行路由 |
 | [`functional-spec`](17.functional-spec/SKILL.md) | 仅当 MVP 需要多张 Feature Map 时，列出编号的可观察需求 | `docs/functional-spec.md` |
 | [`feature-map`](20.feature-map/SKILL.md) | 确定 MVP Features、依赖、技术方向和整体架构；规模大时拆为 Roadmap、子 Map 和 General Design | `docs/feature-map.md`，或 `docs/feature-maps/` 与 `docs/design/` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
@@ -55,8 +57,8 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | 文档 | 只保存 | 不保存 |
 |---|---|---|
 | Product Brief | 产品目的、用户、核心流程、MVP 边界 | 需求编号、架构、流程 |
-| Agent Instructions | 路由、优先级、已验证命令、沟通与工作规则；`AGENTS.md` 唯一权威，适配层不复制通用规则 | 产品内容、技术方向、代码风格规则 |
-| `docs/code-style.md` | 仓库所有语言的代码风格规则，每种语言一节，工具已强制的规则只路由不复述 | 产品或流程内容 |
+| Coding Agent Instructions | 路由、优先级、已验证命令、沟通与工作规则；`AGENTS.md` 唯一权威，适配层不复制通用规则 | 产品内容、技术方向、代码风格规则 |
+| `docs/code-style.md` | 仓库所有语言的代码风格规则，每种语言一节，外加模块边界、结构、注释、文档等跨语言规范；工具已强制的规则只路由不复述 | 产品或流程内容、工具配置本身 |
 | Functional Spec | 编号的可观察需求、排除项、未决决策 | 状态、追溯表、架构、交付顺序 |
 | General Design | 多张子 Map 共享的职责、契约、不变量和示例，每个可独立构建的栈一份 | 需求、顺序、状态、测试 |
 | Roadmap | 子 Map 的顺序、分配的 FS ID、依赖和路径；文件存在后才使用链接 | 需求原文、设计、交付状态 |

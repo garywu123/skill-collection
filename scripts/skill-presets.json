@@ -18,7 +18,8 @@
     "presets": {
         "coding": [
             "skills/coding/10.product-brief",
-            "skills/coding/15.agent-instructions",
+            "skills/coding/15.coding-agent-instructions",
+            "skills/coding/16.code-style",
             "skills/coding/17.functional-spec",
             "skills/coding/20.feature-map",
             "skills/coding/25.feature-storyboard",

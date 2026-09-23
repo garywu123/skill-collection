@@ -65,11 +65,37 @@ In `guided` mode, for each behavior:
 
 ## Delegation
 
-When delegating implementation or review to subagents, include the current
-Feature boundary, the smallest-change and avoid-speculative-abstraction
-constraints, and the required validation in the delegation brief. The parent
-agent remains responsible for integrating the result and updating the Feature
-Plan and Feature Map.
+Work in the current context by default. Subagents are not free: each one repays
+its cost only when it replaces work that the parent would otherwise do serially,
+and a brief plus re-reading the feature's sources is itself real cost. Do not
+launch a subagent to isolate context, to look parallel, or to split a single
+plan step.
+
+Delegate only when every condition holds:
+
+- Two or more units are genuinely independent: their Map rows do not list each
+  other under `Depends on`, and their plan steps touch disjoint files and
+  symbols.
+- Each unit is verifiable on its own with its own focused test command.
+- Each unit is substantial enough that the delegation brief is a small part of
+  its work, not a one-file edit or a single test row.
+
+Otherwise implement serially. A dependency chain, a shared file, or a migration
+other units build on stays in the parent.
+
+Apply the same test at both levels: several independent rows of one Feature Map
+when the user's request covers all of them, and independent implementation steps
+inside one plan. Keep concurrent subagents few, and reduce the count before
+their boundaries start overlapping.
+
+Each brief states the Feature or step boundary, the files the subagent owns and
+must not leave, the smallest-change and avoid-speculative-abstraction
+constraints, and the focused command that must pass. When two subagents turn out
+to need the same file, stop that split and finish it in the parent.
+
+The parent always keeps integration, the broader validation run, the consistency
+check, and every Feature Plan and Feature Map status update. Report a delegated
+result only after the parent has seen the diff and the real command output.
 
 ## Status
 
