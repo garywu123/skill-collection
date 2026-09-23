@@ -241,12 +241,13 @@ Spec，不创建 Roadmap 或 Map。
 ```text
 /feature-map 基于 FleetDock 的 Brief 和 Functional Spec 建立规模化布局：
 docs/feature-maps/00.roadmap.md 列出各阶段子 Map 的顺序、分配的 FS ID 和依赖；
-docs/design/backend-general-design.md 与 docs/design/web-general-design.md 保存多张
-子 Map 共享的职责、契约和不变量；只写第一阶段的子 Map 01.foundation.md，每行填
-Requirements 列引用的 FS ID。后续阶段的子 Map 留到准备交付时再写。
+docs/design/system-general-design.md 保存多张子 Map 共享的系统上下文、组件职责、
+跨栈契约、数据所有权和质量约束；只写第一阶段可用流程的子 Map
+01.vehicle-configuration.md，每行填 Requirements 列引用的 FS ID。后续阶段的子 Map
+留到准备交付时再写。DTO、schema 和注册等内部基础不单独成为 Feature。
 ```
 
-预期：Feature Map 按 scale layout 输出 Roadmap、两份 General Design 和一张子 Map；
+预期：Feature Map 按 scale layout 输出 Roadmap、一份 General Design 和一张子 Map；
 Roadmap 不保存交付状态，尚未创建的子 Map 只显示代码形式的预定路径；子 Map 只保留
 阶段特有的技术方向，其余链接 General Design；停止于地图。
 

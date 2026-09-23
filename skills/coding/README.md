@@ -44,7 +44,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库生成或审计项目 agent 指令；纯非代码仓库交由所属集合的同类 Skill | 三份根指令文件；按需增加 scoped instructions |
 | [`code-style`](16.code-style/SKILL.md) | 确认项目实际使用的语言，写出模块边界、结构、注释意图、文档和关键算法说明的规范，并回写 `AGENTS.md` 路由 | `docs/code-style.md` 及 `AGENTS.md` 中的一行路由 |
 | [`functional-spec`](17.functional-spec/SKILL.md) | 仅当 MVP 需要多张 Feature Map 时，列出编号的可观察需求 | `docs/functional-spec.md` |
-| [`feature-map`](20.feature-map/SKILL.md) | 确定 MVP Features、依赖、技术方向和整体架构；规模大时拆为 Roadmap、子 Map 和 General Design | `docs/feature-map.md`，或 `docs/feature-maps/` 与 `docs/design/` |
+| [`feature-map`](20.feature-map/SKILL.md) | 选择合适规模的 MVP 交付结构：小项目维护一张含共享设计的 Map，大项目拆为 Roadmap、子 Map 和 General Design | `docs/feature-map.md`，或 `docs/feature-maps/` 与 `docs/design/` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划 | `docs/features/<feature-id>-<slug>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
@@ -60,7 +60,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | Coding Agent Instructions | 路由、优先级、已验证命令、沟通与工作规则；`AGENTS.md` 唯一权威，适配层不复制通用规则 | 产品内容、技术方向、代码风格规则 |
 | `docs/code-style.md` | 仓库所有语言的代码风格规则，每种语言一节，外加模块边界、结构、注释、文档等跨语言规范；工具已强制的规则只路由不复述 | 产品或流程内容、工具配置本身 |
 | Functional Spec | 编号的可观察需求、排除项、未决决策 | 状态、追溯表、架构、交付顺序 |
-| General Design | 多张子 Map 共享的职责、契约、不变量和示例，每个可独立构建的栈一份 | 需求、顺序、状态、测试 |
+| General Design | 多张子 Map 共享的系统或栈上下文、职责、契约、数据所有权、质量约束、不变量和示例；仅在需要大量独立指导时按栈拆分 | 需求原文、顺序、状态、测试、穷举依赖 |
 | Roadmap | 子 Map 的顺序、分配的 FS ID、依赖和路径；文件存在后才使用链接 | 需求原文、设计、交付状态 |
 | Feature Map | Feature 结果、引用的 FS ID、依赖、状态；单 Map 项目还包含技术方向和架构 | 需求原文、实现细节 |
 | Feature Storyboard | 一个 UI Feature 的可见状态和转换 | 实现设计、测试、状态 |

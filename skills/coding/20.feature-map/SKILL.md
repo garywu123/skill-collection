@@ -1,6 +1,6 @@
 ---
 name: feature-map
-description: Create or revise a concise MVP Feature Map with feature outcomes, dependencies, shared technical direction, and a small architecture sketch; at scale, a Roadmap of child maps with shared General Designs. Invoke explicitly, by name, to define, split, or revise MVP Features, their dependencies, shared technical choices, or cross-feature architecture. Do not create per-feature implementation plans or requirements.
+description: Create the right-sized MVP delivery structure - one concise Feature Map with shared technical direction, or at scale a Roadmap of child Feature Maps with shared General Designs. Invoke explicitly, by name, to define, split, or revise MVP Features, delivery stages, dependencies, shared technical choices, or cross-feature architecture. Do not create per-feature implementation plans or requirements.
 disable-model-invocation: true
 ---
 
@@ -17,16 +17,26 @@ without adding decision metadata.
 
 ## Output
 
-Create or update `docs/feature-map.md` from
+For a single-map project, create or update `docs/feature-map.md` from
 [the template](assets/feature-map.template.md), unless the project already has
-one clear canonical map.
+one clear canonical map. For a scale project, create the Roadmap, shared
+General Design, and current child map described below.
 
 Keep the whole map under 60 lines. Keep each feature independently useful and
 small enough to plan in one feature document. Use stable IDs such as `F01` that
 are unique across every child map and never reuse or renumber them. Put only
 MVP features in the main table; mention later ideas in one short section when
-needed. If the table passes about eight rows the MVP is too large: cut scope,
-or, when a Functional Specification exists, split into the scale layout below.
+needed. Use one map when the coherent MVP fits in about eight rows with its
+shared direction and architecture. When it does not, first cut optional scope;
+if the remaining MVP still needs several delivery stages or maps, use the scale
+layout below.
+
+When scale is clear but `docs/functional-spec.md` is absent, report why one map
+would lose useful boundaries or exceed these limits, recommend that the user
+explicitly invoke `functional-spec`, and stop without creating the
+specification, Roadmap, designs, or child maps. Do not ask the user to choose a
+document shape when the evidence is clear. Ask only when cutting MVP scope
+versus adopting the scale layout would change the intended product boundary.
 
 When a `docs/functional-spec.md` exists, add a `Requirements` column listing
 the `FS-*` IDs each row delivers. Assign every active requirement to an
@@ -44,17 +54,29 @@ Functional Specification exists:
 |---|---|---|
 | Roadmap | `docs/feature-maps/00.roadmap.md` | One row per child map: ID, outcome, assigned requirement IDs, dependencies, and path |
 | Child Feature Map | `docs/feature-maps/<NN>.<slug>.md` | The template table for one delivery stage; link the designs it uses |
-| General Design | `docs/design/<stack>-general-design.md` | The Technical Direction, Architecture, and Shared Constraints that several child maps share |
+| General Design | `docs/design/<scope>-general-design.md` | The system or stack context, responsibilities, contracts, data ownership, quality constraints, and invariants that several child maps share |
 
 Slice child maps by user outcome or delivery stage, not by subsystem; one child
-map may span frontend, backend, and computation. Write one General Design per
-independently buildable stack, such as a backend Host and a browser App, and
-keep it under 200 lines of ownership, contracts, invariants, and worked
-examples. A General Design holds no requirements, delivery order, status, or
-tests. Child maps keep only stage-specific direction and link the rest. The
-Roadmap carries no delivery status. For a future child map, show its planned
-path as code; turn it into a link only after that file exists. Write a child
-map only when preparing its stage; do not create empty maps in advance.
+map may span frontend, backend, and computation. Start with the smallest shared
+General Design from [the template](assets/general-design.template.md). Split it
+by independently buildable stack only when each stack needs substantial
+distinct guidance, and give every cross-stack contract exactly one owner. Keep
+each design under 200 lines. A General Design holds no requirement wording,
+delivery order, status, or tests. Child maps keep only stage-specific direction
+and link the rest. The Roadmap carries no delivery status. For a future child
+map, show its planned path as code; turn it into a link only after that file
+exists. Write a child map only when preparing its stage; do not create empty
+maps in advance.
+
+Decide shared contracts before planning dependent child maps, but keep delivery
+vertical. A DTO, schema, shared type, route, dependency registration, or other
+internal artifact is not a Feature or Roadmap item by itself. Put the durable
+cross-feature contract in the General Design and implement only the minimum
+needed by the earliest user-visible Feature. Add a dependency between Map rows
+only when one independently useful outcome must exist before another; do not
+use `Depends on` to schedule internal files or layers. A foundation stage is
+valid only when it provides a separately verifiable enabling capability used by
+several later stages.
 
 Treat lifecycle changes by outcome:
 
@@ -86,8 +108,11 @@ status.
 The technical direction should name only choices needed to begin work:
 
 - application shape and major boundaries;
-- language, framework, datastore, and test tools;
-- request or data flow; and
+- language, framework, datastore, test tools, and architecture-significant
+  dependencies;
+- request or data flow and material upstream, downstream, or external systems;
+- source-backed performance, security, reliability, or deployment constraints
+  that affect the design; and
 - shared constraints that every feature must follow.
 
 Prefer repository conventions for an existing codebase. Do not add class
@@ -106,11 +131,15 @@ would be less clear.
 3. Identify the smallest coherent MVP feature set and its dependency order.
    Preserve existing IDs; choose the next unused project-wide ID for a new
    outcome.
-4. Choose the simplest technical direction that supports those features. Keep
+4. Decide whether that set fits one map. Use the scale layout when the required
+   outcomes and shared design cannot remain clear within the single-map limits;
+   stop as described above when the required Functional Specification is
+   absent.
+5. Choose the simplest technical direction that supports those features. Keep
    a shared abstraction only when current MVP behavior, repository convention,
    an external boundary, or an observed constraint requires it; otherwise omit
    or defer it.
-5. Write or revise the map, then run the consistency check.
+6. Write or revise the map, then run the consistency check.
 
 If one row contains several independently useful outcomes, split it before
 planning. Ask the user only when the split changes the intended MVP.

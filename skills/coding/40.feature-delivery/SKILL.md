@@ -69,29 +69,35 @@ Work in the current context by default. Subagents are not free: each one repays
 its cost only when it replaces work that the parent would otherwise do serially,
 and a brief plus re-reading the feature's sources is itself real cost. Do not
 launch a subagent to isolate context, to look parallel, or to split a single
-plan step.
+plan step. Serial execution is the norm. Meeting the conditions below permits
+delegation; it does not make delegation preferable. Delegate only when the
+expected execution saving clearly exceeds briefing, rereading, review, and
+integration cost. Never reshape a Plan merely to create parallel work.
 
 Delegate only when every condition holds:
 
-- Two or more units are genuinely independent: their Map rows do not list each
-  other under `Depends on`, and their plan steps touch disjoint files and
-  symbols.
-- Each unit is verifiable on its own with its own focused test command.
-- Each unit is substantial enough that the delegation brief is a small part of
+- Two or more remaining Plan steps are genuinely independent and touch
+  disjoint files and symbols.
+- Shared contracts and shared change points are already stable. Database
+  migrations, shared types, API contracts, routes, dependency registration,
+  and other work that later steps build on stay in the parent.
+- Each delegated step is verifiable on its own with a focused command or a
+  bounded, inspectable output.
+- Each step is substantial enough that the delegation brief is a small part of
   its work, not a one-file edit or a single test row.
 
-Otherwise implement serially. A dependency chain, a shared file, or a migration
-other units build on stays in the parent.
+Otherwise implement serially. Run at most three subagents at once, and use fewer
+when their boundaries are close to overlapping. Do not concurrently run work
+that can modify the same files or generated outputs, or compete for a database,
+port, service, or other shared resource. When isolation is uncertain, serialize
+the affected edits or commands. The execution environment may use an isolated
+workspace when it provides one; this Skill does not require or manage a
+particular isolation mechanism.
 
-Apply the same test at both levels: several independent rows of one Feature Map
-when the user's request covers all of them, and independent implementation steps
-inside one plan. Run at most three subagents at once, and use fewer when their
-boundaries are close to overlapping.
-
-Each brief states the Feature or step boundary, the files the subagent owns and
-must not leave, the smallest-change and avoid-speculative-abstraction
-constraints, and the focused command that must pass. When two subagents turn out
-to need the same file, stop that split and finish it in the parent.
+Each brief states the Plan step boundary, the files the subagent owns and must
+not leave, the smallest-change and avoid-speculative-abstraction constraints,
+and the focused verification it must perform. When two subagents turn out to
+need the same file, stop that split and finish it in the parent.
 
 The parent always keeps integration, the broader validation run, the consistency
 check, and every Feature Plan and Feature Map status update. Report a delegated
