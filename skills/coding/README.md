@@ -10,7 +10,7 @@ Specification、Roadmap 和 General Design。Feature 规划和交付也支持保
 
 ```text
 Product Brief
-  -> Coding Agent Instructions (AGENTS.md + CLAUDE.md + Copilot)
+  -> Coding Agent Instructions (AGENTS.md)
   -> Code Style (docs/code-style.md)
   -> [scale only: Functional Spec -> Roadmap + General Design]
   -> Feature Map
@@ -41,7 +41,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | Skill | 作用 | 默认产物 |
 |---|---|---|
 | [`product-brief`](10.product-brief/SKILL.md) | 探索或记录产品目的、用户、核心流程和 MVP 边界 | 探索时仅对话；定稿时写 `docs/product-brief.md` |
-| [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库生成或审计项目 agent 指令；纯非代码仓库交由所属集合的同类 Skill | 三份根指令文件；按需增加 scoped instructions |
+| [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库创建、审计或持续校准 `AGENTS.md`；纯非代码仓库交由所属集合的同类 Skill | 根 `AGENTS.md`；只有真实局部差异时才增加 nested `AGENTS.md` |
 | [`code-style`](16.code-style/SKILL.md) | 确认项目实际使用的语言，写出模块边界、结构、注释意图、文档和关键算法说明的规范，并回写 `AGENTS.md` 路由 | `docs/code-style.md` 及 `AGENTS.md` 中的一行路由 |
 | [`functional-spec`](17.functional-spec/SKILL.md) | 仅当 MVP 需要多张 Feature Map 时，列出编号的可观察需求 | `docs/functional-spec.md` |
 | [`feature-map`](20.feature-map/SKILL.md) | 选择合适规模的 MVP 交付结构：小项目维护一张含共享设计的 Map，大项目拆为 Roadmap、子 Map 和 General Design | `docs/feature-map.md`，或 `docs/feature-maps/` 与 `docs/design/` |
@@ -57,7 +57,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | 文档 | 只保存 | 不保存 |
 |---|---|---|
 | Product Brief | 产品目的、用户、核心流程、MVP 边界 | 需求编号、架构、流程 |
-| Coding Agent Instructions | 路由、优先级、已验证命令、沟通与工作规则；`AGENTS.md` 唯一权威，适配层不复制通用规则 | 产品内容、技术方向、代码风格规则 |
+| Coding Agent Instructions | 路由、优先级、已验证命令、边界、工作与报告规则；基于权威证据持续校准 | 产品内容、技术方向、代码风格规则、一次性任务状态、工具专用适配层 |
 | `docs/code-style.md` | 仓库所有语言的代码风格规则，每种语言一节，外加模块边界、结构、注释、文档等跨语言规范；工具已强制的规则只路由不复述 | 产品或流程内容、工具配置本身 |
 | Functional Spec | 编号的可观察需求、排除项、未决决策 | 状态、追溯表、架构、交付顺序 |
 | General Design | 多张子 Map 共享的系统或栈上下文、职责、契约、数据所有权、质量约束、不变量和示例；仅在需要大量独立指导时按栈拆分 | 需求原文、顺序、状态、测试、穷举依赖 |

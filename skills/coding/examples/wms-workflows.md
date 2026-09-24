@@ -52,15 +52,14 @@
 ### 5. 生成 agent 指令文件
 
 ```text
-/coding-agent-instructions DockFlow WMS 的 Product Brief 已定稿。请生成项目的 agent
-指令文件：权威的 `AGENTS.md`，加上 `CLAUDE.md` 和 `.github/copilot-instructions.md`
-两个薄适配层。只写路由、优先级、已验证命令和工作规则；仓库里还没有 manifest，不要
-编造命令。不要复制产品内容、不要写 code style、不要创建 Feature Map。
+/coding-agent-instructions DockFlow WMS 的 Product Brief 已定稿。请生成权威的
+`AGENTS.md`。只写路由、优先级、已验证命令、边界和工作规则；仓库里还没有 manifest，
+不要编造命令。不要复制产品内容、不要写 code style、不要创建 Feature Map。
 ```
 
-预期：Coding Agent Instructions 的 `write`；输出三份指令文件，`AGENTS.md` 链接
-`docs/product-brief.md` 并预留其他路由；未验证的命令段被删除并报告；`docs/code-style.md`
-尚不存在，因此省略该路由并报告应运行 `code-style`；停止于指令文件。
+预期：Coding Agent Instructions 的 `write`；输出 `AGENTS.md`，链接
+`docs/product-brief.md`；未验证的命令段被删除并报告；`docs/code-style.md` 尚不存在，
+因此省略该路由并报告应运行 `code-style`；停止于指令文件。
 
 ### 6. 写 code style 契约
 

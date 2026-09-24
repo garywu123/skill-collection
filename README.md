@@ -26,8 +26,6 @@ they link back to the collection `README.md` rather than duplicating it.
 ```text
 skill-collection/
 ├── AGENTS.md                  # canonical contributor rules (read this first)
-├── CLAUDE.md                  # thin adapter -> AGENTS.md
-├── .github/copilot-instructions.md   # thin adapter -> AGENTS.md
 ├── docs/
 │   ├── coding-skill-kit.md    # onboarding guide + real example (coding collection)
 │   └── work-skill-kit.md      # onboarding guide + real example (work collection)
@@ -69,6 +67,4 @@ and a check for overlap with an existing Skill before creating a new folder.
 
 ## Repository rules
 
-[AGENTS.md](AGENTS.md) is the single authoritative instruction file. `CLAUDE.md`
-and `.github/copilot-instructions.md` are thin adapters that point back to it —
-edit `AGENTS.md`, not the adapters, when a rule changes.
+[AGENTS.md](AGENTS.md) is the single authoritative instruction file.

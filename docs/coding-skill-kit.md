@@ -43,13 +43,11 @@ Writes `docs/product-brief.md` and stops.
 
 ```text
 /coding-agent-instructions DockFlow WMS 的 Product Brief 已定稿。请生成项目的 agent
-指令文件：权威的 `AGENTS.md`，以及 `CLAUDE.md` 和 `.github/copilot-instructions.md`
-两个薄适配层。仓库里还没有 manifest，不要编造命令。
+指令文件：权威的 `AGENTS.md`。仓库里还没有 manifest，不要编造命令。
 ```
 
-Produces the same pattern this repository itself uses: one authoritative
-`AGENTS.md` plus two thin adapters. Code-style rules are not written here; the
-next step owns them.
+Produces one authoritative `AGENTS.md`. Code-style rules are not written here;
+the next step owns them.
 
 ### 4. Write the code-style contract
 

@@ -1,6 +1,13 @@
 # <Project> Agent Instructions
 
-<One or two sentences: what this project is and who it serves.>
+<One or two sentences: what this repository is and who it serves.>
+
+## Precedence
+
+Resolve conflicts in this order: the current explicit user instruction,
+applicable governing, project, and task documents, then verified repository
+evidence. Report a conflict instead of promoting observed behavior into
+intended behavior.
 
 ## Documents
 
@@ -12,54 +19,41 @@
 | Evidence, decisions, or source materials | `<path-if-maintained>` |
 | Code style for every language in this repository | `docs/code-style.md` |
 
-Read only the route the current task needs. Do not reconstruct project state
-from conversation history. Rename placeholders to match project terminology,
-delete rows the project does not keep, and delete this section when no document
-route exists.
-
-## Precedence
-
-Resolve conflicts in this order: the current explicit user instruction,
-applicable governing, project, and task documents, then repository evidence.
-Report a conflict instead of promoting observed behavior into intended
-behavior.
+Read only the route the current task needs. Rename placeholders to match
+project terminology, delete rows the project does not maintain, and delete this
+section when no document route exists.
 
 ## Verified Commands And Checks
 
-- Setup: `<verified command>`
-- Produce or run: `<verified command>`
-- Focused check: `<verified command>`
-- Full check: `<verified command>`
+- From `<directory>`, run `<setup command>` before `<condition>`.
+- From `<directory>`, run `<focused check>` after changing `<scope>`.
+- From `<directory>`, run `<full check>` only when `<condition>`.
 
-<Keep only commands or checks verified by project configuration, automation, or
-an observed successful run. Delete this whole section when none is verified.>
+Keep only commands verified by project configuration, automation, or an
+observed successful run. State the working directory, trigger, and relevant
+scope. Delete this section when no command is verified.
 
-## Conventions
+## Boundaries
 
-- <A verified project convention: structure, naming, workflow, or tooling.
-  Code-style rules belong in `docs/code-style.md`, not here. Delete this
-  section when the repository shows none.>
+- Do not create, amend, or push commits unless the user explicitly requests it.
+  When requested, include only task-scoped changes after applicable verified
+  checks.
+- Protect secrets and private or confidential data from commits and disclosure.
+- <State a verified file, dependency, schema, release, generated-output, or
+  authorization boundary and the correct alternative. Delete when none exists.>
 
-## Communication Style
-
-- Be concise and information-dense.
-- Lead with the answer.
-- Do not restate my question.
-- Do not summarize what you just did unless necessary.
-- Avoid introductory filler, praise, reassurance, and obvious explanations.
-- Prefer 3 concise bullets over 3 paragraphs.
-- Explain reasoning only when it materially affects the decision.
-- For coding tasks, report only:
-  1. what changed
-  2. important caveats
-  3. test/result
-
-## Working rules
+## Working Rules
 
 1. Make the smallest bounded change that satisfies the current task.
 2. Reuse existing artifacts, conventions, and tools before creating or replacing
-  them.
-3. Validate changed outputs with applicable verified checks.
-4. Report only results actually produced or observed.
-5. Report unknowns, conflicts, assumptions, and remaining risk.
-6. Protect secrets and private or confidential data from commits and disclosure.
+   them.
+3. Preserve unrelated user changes.
+4. Validate changed outputs with applicable verified checks.
+5. Report only results actually produced or observed.
+6. Report unknowns, conflicts, assumptions, and remaining risk.
+
+## Reporting
+
+- Lead with the result.
+- Report what changed, important caveats, and checks actually run.
+- State unresolved conflicts, omitted verification, and remaining risk.

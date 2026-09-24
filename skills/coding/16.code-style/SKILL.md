@@ -1,6 +1,6 @@
 ---
 name: code-style
-description: Create, refresh, or audit a project's docs/code-style.md - the single normative code-style contract covering module boundaries, file and code structure, comment intent, API documentation, and explanation of key steps and algorithms - with one section per language the repository actually uses, then update the AGENTS.md route to it. Invoke explicitly, by name, to set up, extend, or review coding conventions, comment rules, or documentation rules for a project. Do not use it to author AGENTS.md routing or tool adapters, to modify formatter, linter, or analyzer configuration, or to write product direction, feature plans, or application code.
+description: Create, refresh, or audit a project's docs/code-style.md - the single normative code-style contract covering module boundaries, file and code structure, comment intent, API documentation, and explanation of key steps and algorithms - with one section per language the repository actually uses, then update the AGENTS.md route to it. Invoke explicitly, by name, to set up, extend, or review coding conventions, comment rules, or documentation rules for a project. Do not use it to author general AGENTS.md guidance, modify formatter, linter, or analyzer configuration, or write product direction, feature plans, or application code.
 disable-model-invocation: true
 ---
 
@@ -34,9 +34,8 @@ Infer the intent from the request once the Skill has been invoked.
 | `AGENTS.md` | Only add or correct the single route to `docs/code-style.md`, and remove a code-style rule that the style file now owns |
 | Formatter, linter, analyzer, build, and package configuration | Read as evidence only; never create or modify |
 
-Everything else in `AGENTS.md`, the `CLAUDE.md` and Copilot adapters, and any
-scoped instruction file belongs to `coding-agent-instructions`. Report a
-needed change there instead of making it.
+Everything else in `AGENTS.md` and any nested `AGENTS.md` belongs to
+`coding-agent-instructions`. Report a needed change there instead of making it.
 
 Keep `docs/code-style.md` under 200 lines and each language section under about
 12 rules. Beyond that, route to configuration or to an existing project document

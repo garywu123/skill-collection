@@ -3,98 +3,96 @@
 ## Purpose
 
 This repository designs, maintains, and deploys reusable agent Skills. Treat it
-as a Skill authoring workspace, not as an application repository.
+as a Skill authoring workspace, not as an application repository. Keep this
+file as routing and repository-wide guidance; put task procedures in the
+applicable `SKILL.md` and detailed material in that Skill's resources.
 
-Keep this file as navigation and repository-wide guidance. Put task procedures
-in the relevant `SKILL.md` and detailed material in that Skill's resources.
+## Precedence
 
-## Repository map
+Resolve conflicts in this order: the current explicit user instruction,
+applicable repository and collection guidance, the target `SKILL.md`, then
+verified repository evidence. Report a conflict instead of promoting observed
+behavior into intended behavior.
 
-- `README.md` is the human-facing repository overview; keep it short and let
-  it link into `docs/` and each collection's `README.md` rather than
-  duplicating them.
-- `docs/` holds onboarding guides with one real worked example per collection
-  (for example `docs/coding-skill-kit.md`). These are tutorials, not the
-  source of truth — the capability list and ownership rules stay in each
-  collection's own `README.md`.
-- `skills/coding/` contains Skills for programming and software delivery work.
-  Read `skills/coding/README.md` before changing its workflows.
-- `skills/work/` contains Skills for presentations and other workplace
-  communication artifacts. Read `skills/work/README.md` before changing its
-  workflows. A further top-level collection may serve another domain; give it
-  its own `README.md` and do not assume the `coding/` workflow applies there.
+## Repository Map
+
+- `README.md` is the short human-facing overview and routes into `docs/` and
+  each collection's `README.md`.
+- `docs/` contains onboarding tutorials, not capability sources of truth.
+- `skills/coding/` contains software-delivery Skills. Read its `README.md`
+  before changing those workflows.
+- `skills/work/` contains workplace-artifact Skills. Read its `README.md`
+  before changing those workflows.
 - `scripts/` contains repository maintenance and deployment tools.
-- `_obsolete/` directories are retained as historical evidence. Do not deploy,
-  modify, or restore their contents unless the user explicitly requests it.
+- `_obsolete/` is historical evidence. Do not deploy, modify, or restore it
+  unless the user explicitly requests that scope.
 
-## Working rules
+## Boundaries
+
+- Do not create, amend, or push commits unless the user explicitly requests it.
+  When requested, include only task-scoped changes after applicable checks.
+- Preserve unrelated user changes and untracked files.
+- Keep machine-specific paths, credentials, tokens, and private configuration
+  out of version control and disclosure.
+
+## Working Rules
 
 1. Identify the target collection and read its `README.md`.
 2. Read the target `SKILL.md` before editing it. Load `references/`, `assets/`,
    or `scripts/` only when the current task needs them.
 3. Search for an existing or adjacent Skill before creating a new one. Prefer
-   extending clear ownership over introducing overlapping capabilities.
-4. Make the smallest change that satisfies the stated use case. Preserve
-   unrelated user changes and avoid speculative framework or workflow design.
-5. Keep machine-specific paths, credentials, tokens, and private configuration
-   out of version control.
-6. Run the narrowest relevant validation. If validation cannot run, report the
-   reason and remaining risk.
+   extending clear ownership over introducing overlap.
+4. Make the smallest change that satisfies the stated use case. Avoid
+   speculative framework or workflow design.
+5. Run the narrowest relevant validation. If it cannot run, report the reason
+   and remaining risk.
 
 ## Collection Maintenance
 
-When the user asks to deploy, synchronize, preview, or clean this collection's
-machine-wide Skills, read `skills/coding/skill-deployment/SKILL.md` first.
-That workflow is repository-local guidance: do not deploy `skill-deployment`
-itself to GitHub Copilot, Claude Code, or Codex/Agents directories.
+For deployment, synchronization, preview, or cleanup, first read
+`skills/coding/skill-deployment/SKILL.md`. Install that repository-local Skill
+only through `scripts/deploy-skill/Install-WorkspaceSkill.ps1`; it writes the
+project discovery copies and must never be installed under the user's home as
+a machine-wide Skill.
 
-Install this repository-local Skill into the platforms' project discovery paths
-with `scripts/deploy-skill/Install-WorkspaceSkill.ps1`. It writes only
-`.claude/skills/skill-deployment/` and `.agents/skills/skill-deployment/` in
-this repository; never install it under
-the user's home directory.
-
-## Skill design
+## Skill Design
 
 - Give one Skill one clear, repeatable, on-demand responsibility.
 - An ordered collection may name a folder `<ordinal>.<skill-name>`; otherwise
-  use `<skill-name>`. Make frontmatter `name` match the logical `<skill-name>`
-  after removing any ordinal prefix. Write a concrete `description` that states
-  when to use the Skill and important exclusions.
-- Keep the always-needed contract and procedure in `SKILL.md`. Move optional
-  detail and edge cases to `references/`, reusable output material to `assets/`,
-  and deterministic automation to `scripts/`.
+  use `<skill-name>`. Frontmatter `name` matches the logical name after removing
+  an ordinal prefix, and `description` states triggers and exclusions.
+- Keep always-needed decisions and steps in `SKILL.md`. Put optional guidance
+  in `references/`, reusable material in `assets/`, and deterministic
+  automation in `scripts/`.
 - Add a resource only when the workflow uses it. Do not prebuild agents,
-  phases, state machines, templates, or validation machinery for hypothetical
-  future needs.
-- Keep Skills independently invocable. A coordinator may select Skills from
-  natural-language intent and sequence several when the original request covers
-  each outcome. Do not make one Skill silently invoke another or infer
-  authorization from repository state.
-- Update the collection `README.md` when adding, removing, or materially
-  changing a Skill's public capability.
+  phases, state machines, templates, or validation for hypothetical needs.
+- Keep Skills independently invocable. Do not let one Skill silently invoke
+  another or infer authorization from repository state.
+- Update the collection `README.md` when public capability changes.
 
-## Markdown style
+## Markdown Style
 
-- Use one level-one title and ATX headings without skipping heading levels.
-- Separate paragraphs, lists, tables, and fenced code blocks with blank lines.
-- Add a language identifier to fenced code blocks.
-- Use backticks for paths, commands, field names, and literal status values.
-- Use relative links for repository files and descriptive link text.
-- Use tables only for genuinely tabular comparisons. Avoid deeply nested lists,
-  repeated explanations, and filler introductions.
+- Use one level-one title and ATX headings without skipping levels.
+- Separate paragraphs, lists, tables, and fenced code with blank lines; add a
+  language identifier to fenced code blocks.
+- Use backticks for paths, commands, fields, and literal statuses.
+- Use relative links with descriptive text. Use tables only for real tabular
+  comparisons; avoid deep nesting, repetition, and filler.
 - Write executable agent instructions in concise English. Human-facing guides
-  may use the language appropriate for their audience.
+  may use the audience's language.
 
 ## Deployment
 
-`scripts/deploy-skill/Deploy-Skills.ps1` deploys only explicit local mappings
-from `scripts/deploy-skill/deploy-skills.json` and public Git Skills from the
-configured `externalSkillConfigPath` (defaulting to
-`scripts/external-skills/external-skills.json`) to configured GitHub Copilot,
-Claude Code, and Codex/Agents locations. External repositories are cached under
-the gitignored `scripts/external-skills/cache/`. Run it with `-ListOnly` to
-inspect mappings and current cache revisions without cloning, pulling, or
-writing target locations.
-Do not assume a future top-level collection is deployed until the script is
-explicitly extended and validated for that collection.
+`scripts/deploy-skill/Deploy-Skills.ps1` deploys only mappings in
+`scripts/deploy-skill/deploy-skills.json` plus public Git Skills configured by
+`externalSkillConfigPath`. External repositories are cached under the ignored
+`scripts/external-skills/cache/`. Run it with `-ListOnly` to inspect mappings
+and cached revisions without cloning, pulling, or writing targets. A future
+collection is not deployed until the script is explicitly extended and
+validated for it.
+
+## Reporting
+
+- Lead with the result and report what changed, important caveats, and checks
+  actually run.
+- State unresolved conflicts, omitted verification, and remaining risk.
