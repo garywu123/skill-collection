@@ -47,10 +47,10 @@ does not hook into file save or edit events.
 
 1. Confirm the target file(s) or folder from the user's request. If
    unspecified and ambiguous, ask rather than guessing a wide glob.
-2. Preview the change:
+2. Preview the change, where `<skill-dir>` is this Skill's base directory:
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File skills/coding/markdown-reflow/scripts/Unwrap-Markdown.ps1 -Path <file-or-folder> -Preview
+   powershell -ExecutionPolicy Bypass -File <skill-dir>/scripts/Unwrap-Markdown.ps1 -Path <file-or-folder> -Preview
    ```
 
 3. Review the reported diff. Files with no paragraph-level hard wraps are
