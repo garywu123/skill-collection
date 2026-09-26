@@ -14,6 +14,13 @@ finalizing. Keep that split. A mechanism done by hand, such as launching
 `claude` or `codex` yourself or editing run state, silently loses the budget,
 the read-only guard, and recovery.
 
+The CLI ships inside this Skill. Run it from the project root as
+`python <skill-dir>/scripts/cross_agent.py <command>`, where `<skill-dir>` is
+this Skill's base directory; below, `cross-agent <command>` is short for that.
+Every command prints one JSON object. Settings come from
+`~/.cross-agent/config.toml` when it exists;
+[the example](assets/config.example.toml) lists every key.
+
 ## Inputs
 
 - **Stage**: `feature-map`, `feature-plan`, `feature-delivery`, or `general`.
@@ -40,8 +47,10 @@ this run never authorizes it.
 
 1. Work from the project root: the directory whose `AGENTS.md` governs the
    artifact, which may sit below the Git repository root. Run
-   `cross-agent status`. If the command is missing, report that the CLI is not
-   installed and stop.
+   `cross-agent status`; it needs Python 3.11 or later. If it cannot run,
+   report why and stop. Its output lists open runs and the effective settings,
+   such as `max_reviews` and whether rejected findings reach the backlog
+   (`backlog_rejected`).
 2. If `status` lists an open run for the same stage and artifact, continue it
    with `next`. If it lists an open run on this artifact for a different stage
    or request, report it and ask whether to continue or close it. The CLI
@@ -66,6 +75,7 @@ event again. Act on the event's phase:
 
 | Phase | Action |
 |---|---|
+| `produce` or `review` | Call `next` again; a worker step is due. |
 | `awaiting-decision` | Adjudicate every open finding, then run `cross-agent decide --run <id> --input <file>`. |
 | `awaiting-answer` | Relay the Producer's questions, then pass the user's reply with `cross-agent answer --run <id> --text "<answer>"`. |
 | `finalizing` | Follow Finalization. |
@@ -75,6 +85,10 @@ event again. Act on the event's phase:
 Relay an answer only when the user gave it explicitly, now or earlier in this
 chat, and quote it. Never supply your own answer: the question exists because
 the Producer's Skill requires a user decision.
+
+Talk to the user in the user's language. Workers and the backlog use English,
+so write decisions, rationales, and relayed answers in English, and translate
+the Producer's questions when you relay them.
 
 ## Adjudication
 
@@ -158,7 +172,8 @@ worker sessions. A current blocker never reaches the backlog silently: report
 every unfixed accepted finding to the user as open before closing.
 
 A `failed` or `blocked` run stays open, and blocks new runs on its artifact,
-until the user decides. Close it only when the user says to abandon it.
+until the user decides. Close it only when the user says to abandon it; a run
+stopped in any other unfinished phase also needs `--abandon`.
 
 ## Boundaries
 

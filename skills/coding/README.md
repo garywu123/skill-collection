@@ -26,9 +26,9 @@ Codex 目前没有等价开关，只能依赖 description 中的 "Invoke explici
 多个 Skill。
 
 `cross-agent` 可以包裹 Feature Map、Feature Plan、Feature Delivery 或一般任务中的
-一个阶段，做有限轮次的交叉审阅：当前会话做 Orchestrator，由单独安装的
-`cross-agent` CLI 启动 Producer 和只读 Reviewer，Claude Code 或 Codex 都可以担任
-任一角色。它同样只由人显式调用，每次只处理用户点名的一个阶段和一个 artifact；
+一个阶段，做有限轮次的交叉审阅：当前会话做 Orchestrator，由 Skill 自带的
+`cross-agent` CLI（需要 Python 3.11+）启动 Producer 和只读 Reviewer，Claude Code
+或 Codex 都可以担任任一角色。它同样只由人显式调用，每次只处理用户点名的一个阶段和一个 artifact；
 通过审阅也不授权进入下一阶段。
 
 变更只向下传播：Brief -> Spec -> Design -> Roadmap -> Map -> Plan -> 代码。交付发现
@@ -57,7 +57,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划 | `docs/features/<feature-id>-<slug>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
-| [`cross-agent`](cross-agent/SKILL.md) | 当前会话做 Orchestrator，通过 `cross-agent` CLI 让 Producer 按指定阶段的 Skill 产出、只读 Reviewer 审阅；限定审阅次数，由 Orchestrator 裁决 findings 并收尾。需要单独安装 CLI | 修订后的 artifact；非阻塞遗留项追加到 `docs/review-backlog.md` |
+| [`cross-agent`](cross-agent/SKILL.md) | 当前会话做 Orchestrator，通过 `cross-agent` CLI 让 Producer 按指定阶段的 Skill 产出、只读 Reviewer 审阅；限定审阅次数，由 Orchestrator 裁决 findings 并收尾。CLI 随 Skill 部署，需要 Python 3.11+ | 修订后的 artifact；非阻塞遗留项追加到 `docs/review-backlog.md` |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 | [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |

@@ -1,0 +1,36 @@
+# cross-agent configuration. Copy this file to ~/.cross-agent/config.toml, or
+# point CROSS_AGENT_CONFIG at another path, then edit. Every key is optional;
+# the values below are the defaults. A run keeps the settings it started with.
+
+# Reviews per run. Each review that leaves an accepted finding allows one
+# Producer revision.
+max_reviews = 2
+
+# Minutes before a worker call or a check command is stopped.
+timeout_minutes = 30
+
+# Start a fresh worker session when the previous call's context exceeded this
+# many tokens. 0 turns rotation off; Claude Code and Codex also compress
+# context on their own.
+rotate_at_tokens = 350000
+
+# Write rejected findings to docs/review-backlog.md when a run closes.
+backlog_rejected = true
+
+# A review fails when the changes it must read exceed this size.
+max_diff_kb = 200
+
+[defaults]
+# <provider>[:<model>[:<effort>]]. An empty model keeps the provider's default.
+producer = "claude"
+reviewer = "codex"
+
+# Stage Skills are found next to cross-agent. Override a path only when needed.
+# [stages.feature-plan]
+# skill = "C:/Users/<you>/.agents/skills/feature-plan/SKILL.md"
+
+# Project commands and directories, keyed by the project root.
+# [projects."D:/code/example/project"]
+# allowed_commands = ["dotnet build", "dotnet test"]           # the Producer may run these
+# delivery_checks = ["dotnet build Example.slnx", "dotnet test Example.slnx"]
+# extra_dirs = ["../shared-library"]                           # readable, and writable by the Producer
