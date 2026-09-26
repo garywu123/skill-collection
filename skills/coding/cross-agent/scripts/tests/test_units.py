@@ -10,7 +10,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from crossagent import config, schemas  # noqa: E402
+from crossagent import config, providers, schemas  # noqa: E402
 from crossagent.errors import UsageError  # noqa: E402
 
 
@@ -31,6 +31,22 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(skill.name, "SKILL.md")
         self.assertTrue(skill.parent.name.endswith("feature-plan"))
         self.assertIsNone(config.find_stage_skill(copy.deepcopy(config.DEFAULTS), "general"))
+
+
+class CodexCommandTests(unittest.TestCase):
+    def _command(self, role, session_id=None):
+        call = providers.Call(
+            role=role, model=None, effort=None, prompt="", schema={}, session_id=session_id, cwd=Path("."),
+            read_dirs=[], write_dirs=[], allowed_commands=[], timeout=1, work_dir=Path("."),
+        )
+        return providers.Codex().command(call, Path("schema.json"), Path("last.json"))
+
+    def test_workers_never_escalate_and_keep_their_sandbox_on_resume(self):
+        for role, mode in (("reviewer", "read-only"), ("producer", "workspace-write")):
+            for session_id in (None, "01a0dd98-2c86-75c1-b758-38c7fbcf9afd"):
+                command = self._command(role, session_id)
+                self.assertIn('approval_policy="never"', command)
+                self.assertIn(f'sandbox_mode="{mode}"', command)
 
 
 class SchemaTests(unittest.TestCase):

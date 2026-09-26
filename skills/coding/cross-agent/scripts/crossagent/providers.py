@@ -239,6 +239,10 @@ class Codex:
             "--skip-git-repo-check",
             "-c",
             f'sandbox_mode="{mode}"',
+            # Never escalate: a user config with on-request approvals and an automatic
+            # approvals reviewer would otherwise let a worker leave its sandbox.
+            "-c",
+            'approval_policy="never"',
             "--disable",
             "memories",
             "--output-schema",
