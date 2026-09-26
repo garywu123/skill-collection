@@ -25,12 +25,21 @@ Codex 目前没有等价开关，只能依赖 description 中的 "Invoke explici
 一个已有或缺失的产物本身不授权相邻 Skill；一条指令明确覆盖多个结果时，才依次调用
 多个 Skill。
 
+`cross-agent` 可以包裹 Feature Map、Feature Plan、Feature Delivery 或一般任务中的
+一个阶段，做有限轮次的交叉审阅：当前会话做 Orchestrator，由单独安装的
+`cross-agent` CLI 启动 Producer 和只读 Reviewer，Claude Code 或 Codex 都可以担任
+任一角色。它同样只由人显式调用，每次只处理用户点名的一个阶段和一个 artifact；
+通过审阅也不授权进入下一阶段。
+
 变更只向下传播：Brief -> Spec -> Design -> Roadmap -> Map -> Plan -> 代码。交付发现
 上游文档有误时，Delivery 停下报告，由人先改上游，再改 Map 行，再改 Plan。同一用户
 结果的修复、扩展或重新验证复用原 Feature ID 和 Plan；独立的新结果才增加新 Feature。
 共享 Design 变化由 Feature Map 找出受影响行、失效旧证据，再由 Feature Plan 修订需要
 重新验证的任务。除本 README 的流程图外，不需要独立的 workflow、discovery、PRD、
-checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前事实。
+checklist、spec sync 或审批文档。唯一例外是 `cross-agent` 追加的
+`docs/review-backlog.md`：它是人拥有的非权威待办，agent 只在用户明确要求审阅
+backlog 或点名条目时才读取；条目先由用户提升到当前请求或对应的 Feature Map 与
+Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 
 ## 使用示例
 
@@ -48,6 +57,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划 | `docs/features/<feature-id>-<slug>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
+| [`cross-agent`](cross-agent/SKILL.md) | 当前会话做 Orchestrator，通过 `cross-agent` CLI 让 Producer 按指定阶段的 Skill 产出、只读 Reviewer 审阅；限定审阅次数，由 Orchestrator 裁决 findings 并收尾。需要单独安装 CLI | 修订后的 artifact；非阻塞遗留项追加到 `docs/review-backlog.md` |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 | [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |
@@ -65,6 +75,7 @@ checklist、spec sync 或审批文档。Git 保存历史；文档只保存当前
 | Feature Map | Feature 结果、引用的 FS ID、依赖、状态；单 Map 项目还包含技术方向和架构 | 需求原文、实现细节 |
 | Feature Storyboard | 一个 UI Feature 的可见状态和转换 | 实现设计、测试、状态 |
 | Feature Plan | 该 Feature 的实现步骤、测试设计和真实结果 | 上游内容的复制 |
+| Review Backlog | `cross-agent` 裁决后未进入本次修订的非阻塞遗留项及其理由 | 未告知用户的当前 blocker、prompt、transcript、token 日志、快照、需求或计划内容 |
 
 下游文档链接上游文档，不复制上游内容。用户指定的既有 domain knowledge 只是可选
 输入，不由任何 Skill 创建或维护。

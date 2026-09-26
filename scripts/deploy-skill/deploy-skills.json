@@ -45,6 +45,10 @@
             "name": "feature-delivery"
         },
         {
+            "source": "skills/coding/cross-agent",
+            "name": "cross-agent"
+        },
+        {
             "source": "skills/coding/skill-authoring",
             "name": "skill-authoring"
         },

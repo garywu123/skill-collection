@@ -102,7 +102,10 @@ refactor when the repository contract did not change.
    authoritative and reconcile conflicts visibly instead of silently choosing
    from lower-precedence evidence.
 6. Route lifecycle documents only when the project maintains them. Do not copy
-   their content or reconstruct project state from conversation history.
+   their content or reconstruct project state from conversation history. Route
+   an existing `docs/review-backlog.md` only with its boundary: agents read or
+   search it only when the user asks for a backlog review or names an item ID.
+   Never create the backlog or copy its items into `AGENTS.md`.
 7. Create a nested `AGENTS.md` only for a real local difference. If the subtree
    inherits root commands and boundaries unchanged, create nothing.
 8. For `write`, update the applicable files. For `audit`, report findings and
