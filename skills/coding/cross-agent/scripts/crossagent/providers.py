@@ -12,11 +12,16 @@ import os
 import re
 import shutil
 import subprocess
+import queue
+import threading
+import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Callable
 from pathlib import Path
 
 from .errors import UsageError
+from .progress import Observer
 
 EXCERPT_CHARS = 4000
 SESSION_ID = re.compile(r"^[0-9A-Za-z][0-9A-Za-z_-]{7,}$")
@@ -36,6 +41,8 @@ class Call:
     allowed_commands: list[str]
     timeout: int  # seconds
     work_dir: Path
+    progress: Callable | None = None
+    telemetry: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -87,17 +94,87 @@ def _delete(paths) -> list[str]:
 
 
 def _run(command: list[str], call: Call, env: dict | None = None):
-    return subprocess.run(
-        command,
-        input=call.prompt,
-        cwd=call.cwd,
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=call.timeout,
-    )
+    observer = Observer(call)
+    process = subprocess.Popen(command, cwd=call.cwd, env=env, stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                               encoding="utf-8", errors="replace", bufsize=1)
+    lines = queue.Queue()
+    output = []
+
+    def read():
+        try:
+            for line in process.stdout:
+                lines.put(line)
+        finally:
+            lines.put(None)
+
+    def write():
+        try:
+            process.stdin.write(call.prompt)
+        except (BrokenPipeError, OSError):
+            pass
+        finally:
+            process.stdin.close()
+
+    threading.Thread(target=read, daemon=True).start()
+    threading.Thread(target=write, daemon=True).start()
+    deadline = time.monotonic() + call.timeout
+    heartbeat = time.monotonic() + 30
+    rollout_session = None
+    rollout_path = None
+    rollout_offset = 0
+    poll_at = 0
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(command, call.timeout, output="".join(output))
+            try:
+                line = lines.get(timeout=min(1, remaining))
+            except queue.Empty:
+                line = ""
+            if line is None:
+                break
+            if line:
+                output.append(line)
+                try:
+                    event = json.loads(line)
+                    observer.observe(event)
+                    if isinstance(event, dict) and event.get("type") == "thread.started":
+                        rollout_session = event.get("thread_id")
+                except json.JSONDecodeError:
+                    pass
+            if rollout_session and time.monotonic() >= poll_at:
+                poll_at = time.monotonic() + 5
+                try:
+                    if rollout_path is None:
+                        paths = _codex_rollouts(rollout_session)
+                        rollout_path = paths[-1] if paths else None
+                    if rollout_path:
+                        with rollout_path.open(encoding="utf-8", errors="replace") as handle:
+                            handle.seek(rollout_offset)
+                            while chunk := handle.readline():
+                                if not chunk.endswith("\n"):
+                                    break
+                                rollout_offset = handle.tell()
+                                try:
+                                    observer.observe(json.loads(chunk))
+                                except json.JSONDecodeError:
+                                    pass
+                except OSError:
+                    pass  # Private rollouts are optional observations, never a prerequisite.
+            if time.monotonic() >= heartbeat:
+                observer.emit("heartbeat")
+                heartbeat = time.monotonic() + 30
+        process.wait(timeout=max(0.01, deadline - time.monotonic()))
+    finally:
+        if process.poll() is None:
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True)
+            process.kill()
+            process.wait()
+        process.stdout.close()
+    return subprocess.CompletedProcess(command, process.returncode, "".join(output), "")
 
 
 class Claude:
@@ -132,7 +209,10 @@ class Claude:
         else:
             command += ["--permission-mode", "acceptEdits"]
             if call.allowed_commands:
-                command += ["--allowedTools", ",".join(f"Bash({item}:*)" for item in call.allowed_commands)]
+                tools = [f"Bash({item}:*)" for item in call.allowed_commands]
+                if os.name == "nt":
+                    tools += [f"PowerShell({item}:*)" for item in call.allowed_commands]
+                command += ["--allowedTools", ",".join(tools)]
         return command
 
     def run(self, call: Call) -> CallResult:
@@ -153,7 +233,7 @@ class Claude:
             kind = event.get("type")
             if kind == "system" and event.get("session_id"):
                 result.session_id = event["session_id"]
-            elif kind == "assistant":
+            elif kind == "assistant" and not event.get("parent_tool_use_id"):
                 usage = (event.get("message") or {}).get("usage") or {}
                 size = sum(
                     usage.get(key) or 0
@@ -253,6 +333,8 @@ class Codex:
         if call.role == "producer" and call.write_dirs:
             roots = [directory.replace("\\", "/") for directory in call.write_dirs]
             command += ["-c", "sandbox_workspace_write.writable_roots=" + json.dumps(roots)]
+        if call.role == "reviewer":
+            command += ["--disable", "multi_agent"]
         if call.model:
             command += ["-m", call.model]
         if call.effort:

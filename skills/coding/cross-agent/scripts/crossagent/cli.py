@@ -16,7 +16,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cross-agent",
         description="Run one bounded Producer and Reviewer loop for the cross-agent Skill, "
-        "from the project root. Every command prints one JSON object.",
+        "from the project root. Commands print JSON; next --stream emits progress JSONL.",
     )
     parser.add_argument("--version", action="version", version=f"cross-agent {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -30,9 +30,9 @@ def _parser() -> argparse.ArgumentParser:
     start.add_argument("--reviewer", help="<provider>[:<model>[:<effort>]]")
     start.add_argument("--dry-run", action="store_true", help="print the first prompt and command only")
 
-    commands.add_parser("next", help="run the next step or print the pending event").add_argument(
-        "--run", required=True
-    )
+    next_command = commands.add_parser("next", help="run the next step or print the pending event")
+    next_command.add_argument("--run", required=True)
+    next_command.add_argument("--stream", action="store_true", help="emit sanitized progress JSONL before the final result")
     decide = commands.add_parser("decide", help="record adjudications from a JSON file")
     decide.add_argument("--run", required=True)
     decide.add_argument("--input", required=True, help="JSON file outside the work tree")
@@ -73,7 +73,8 @@ def main(argv: list[str] | None = None) -> int:
                 dry_run=args.dry_run,
             )
         elif args.command == "next":
-            result = engine.next_step(root, args.run)
+            progress = (lambda event: print(json.dumps(event, ensure_ascii=True), flush=True)) if args.stream else None
+            result = engine.next_step(root, args.run, progress=progress)
         elif args.command == "decide":
             result = engine.decide(root, args.run, args.input)
         elif args.command == "answer":
@@ -85,5 +86,8 @@ def main(argv: list[str] | None = None) -> int:
     except (UsageError, GitError) as exc:
         _emit({"error": str(exc)})
         return 2
-    _emit(result)
+    if args.command == "next" and args.stream:
+        print(json.dumps({"event": "result", **result}, ensure_ascii=True), flush=True)
+    else:
+        _emit(result)
     return 0

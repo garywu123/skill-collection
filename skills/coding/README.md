@@ -25,11 +25,12 @@ Codex 目前没有等价开关，只能依赖 description 中的 "Invoke explici
 一个已有或缺失的产物本身不授权相邻 Skill；一条指令明确覆盖多个结果时，才依次调用
 多个 Skill。
 
-`cross-agent` 可以包裹 Feature Map、Feature Plan、Feature Delivery 或一般任务中的
-一个阶段，做有限轮次的交叉审阅：当前会话做 Orchestrator，由 Skill 自带的
-`cross-agent` CLI（需要 Python 3.11+）启动 Producer 和只读 Reviewer，Claude Code
-或 Codex 都可以担任任一角色。它同样只由人显式调用，每次只处理用户点名的一个阶段和一个 artifact；
-通过审阅也不授权进入下一阶段。
+`cross-agent`（Orch）让当前会话像 PM 一样理解任务、安排阶段并汇报实时进度，适用于
+设计、带总体设计的 Roadmap、重构计划与执行，以及指定 Features。Skill 自带的 CLI
+（Python 3.11+）每个 run 仍只处理一个阶段和一个 artifact，启动 Claude Code 或 Codex
+Producer 与只读 Reviewer。用户一次授权多个阶段时，Orch 在前一阶段通过后自动继续，
+每个阶段使用新 session；用户要求人工批准时等待回复。只请求规划不会自动授权执行。
+`next --stream` 提供活动、可获得的模型/context/sub-agent 信息和心跳；未知数据明确标注。
 
 变更只向下传播：Brief -> Spec -> Design -> Roadmap -> Map -> Plan -> 代码。交付发现
 上游文档有误时，Delivery 停下报告，由人先改上游，再改 Map 行，再改 Plan。同一用户
@@ -57,7 +58,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划 | `docs/features/<feature-id>-<slug>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
-| [`cross-agent`](cross-agent/SKILL.md) | 当前会话做 Orchestrator，通过 `cross-agent` CLI 让 Producer 按指定阶段的 Skill 产出、只读 Reviewer 审阅；限定审阅次数，由 Orchestrator 裁决 findings 并收尾。CLI 随 Skill 部署，需要 Python 3.11+ | 修订后的 artifact；非阻塞遗留项追加到 `docs/review-backlog.md` |
+| [`cross-agent`](cross-agent/SKILL.md) | PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；每阶段独立 Producer/Reviewer run，限定审阅次数并裁决 findings | 各阶段 artifact 与对话进度；非阻塞遗留项追加到 `docs/review-backlog.md` |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 | [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |

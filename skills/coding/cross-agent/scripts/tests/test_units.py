@@ -47,6 +47,20 @@ class CodexCommandTests(unittest.TestCase):
                 command = self._command(role, session_id)
                 self.assertIn('approval_policy="never"', command)
                 self.assertIn(f'sandbox_mode="{mode}"', command)
+                self.assertEqual("multi_agent" in command, role == "reviewer")
+
+
+class ClaudeCommandTests(unittest.TestCase):
+    def test_windows_producer_allows_configured_commands_in_powershell(self):
+        call = providers.Call(
+            role="producer", model=None, effort=None, prompt="", schema={}, session_id=None, cwd=Path("."),
+            read_dirs=[], write_dirs=[], allowed_commands=["python -m unittest"], timeout=1, work_dir=Path("."),
+        )
+        command = providers.Claude().command(call, "00000000-0000-0000-0000-000000000000", True)
+        allowed = command[command.index("--allowedTools") + 1]
+        self.assertIn("Bash(python -m unittest:*)", allowed)
+        if sys.platform == "win32":
+            self.assertIn("PowerShell(python -m unittest:*)", allowed)
 
 
 class SchemaTests(unittest.TestCase):

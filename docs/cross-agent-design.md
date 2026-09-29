@@ -1,5 +1,10 @@
 # Cross-Agent Review v1 Design
 
+Historical v1 design. The current contract is
+[Cross-Agent](../skills/coding/cross-agent/SKILL.md): it now supports PM-style
+orchestration across user-authorized stages and live progress. The manual
+single-stage invocation and buffered-output limitations below describe v1.
+
 Status: implemented as v0.1.0, revision 5, 2026-09-26. The Skill and its CLI
 live in `skill-collection/skills/coding/cross-agent/`: `SKILL.md`, the CLI in
 `scripts/`, and the configuration example in `assets/`. This folder is a

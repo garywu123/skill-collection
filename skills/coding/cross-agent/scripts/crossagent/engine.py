@@ -125,13 +125,13 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
     return _event(state, "Run started.")
 
 
-def next_step(project_root: Path, run_id: str) -> dict:
+def next_step(project_root: Path, run_id: str, progress=None) -> dict:
     state = store.load(project_root, run_id)
     try:
         if state["phase"] == "produce":
-            return _producer_step(state)
+            return _producer_step(state, progress)
         if state["phase"] == "review":
-            return _review_step(state)
+            return _review_step(state, progress)
         if state["phase"] == "finalizing":
             return _finish(state)
     except StepFailed as exc:
@@ -188,7 +188,7 @@ def decide(project_root: Path, run_id: str, input_path: str) -> dict:
         store.save(state)
         return _event(state, "Accepted findings go to the Producer.")
     state["phase"] = "done"
-    state["final_status"] = "independently-passed"
+    state["final_status"] = "needs-user-decision" if any(c["exit_code"] != 0 for c in state["checks"]) else "independently-passed"
     store.save(state)
     return _event(state, "No finding was accepted.")
 
@@ -262,11 +262,11 @@ def close(project_root: Path, run_id: str, abandon: bool) -> dict:
 # ---------------------------------------------------------------- steps
 
 
-def _producer_step(state: dict) -> dict:
+def _producer_step(state: dict, progress=None) -> dict:
     root = _root(state)
     label = f"P{state['reviews_done']}"
     work = _work_list(state)
-    data = _invoke(state, "producer", lambda summary: _producer_prompt(state, summary), schemas.PRODUCER)
+    data = _invoke(state, "producer", lambda summary: _producer_prompt(state, summary), schemas.PRODUCER, progress)
     state["answer"] = None
     if data["summary"].strip():
         state["producer_summaries"].append(f"{label}: {data['summary'].strip()}")
@@ -289,7 +289,7 @@ def _producer_step(state: dict) -> dict:
         finding["outcome"] = outcome["result"] if outcome else "not-fixed"
         finding["outcome_rationale"] = outcome["rationale"] if outcome else "The Producer reported no outcome."
     state["producer_steps"] += 1
-    if state["stage"] == "feature-delivery":
+    if state["stage"] in ("feature-delivery", "general"):
         state["checks"] = _run_checks(state, label)
     tree = gitops.snapshot(root, _index(state))
     changed = gitops.changed_files(root, _review_base(state), tree)
@@ -303,7 +303,7 @@ def _producer_step(state: dict) -> dict:
     return _event(state, f"{label} finished.", changed_files=changed)
 
 
-def _review_step(state: dict) -> dict:
+def _review_step(state: dict, progress=None) -> dict:
     root = _root(state)
     number = state["reviews_done"] + 1
     before = gitops.snapshot(root, _index(state))
@@ -311,7 +311,7 @@ def _review_step(state: dict) -> dict:
     if len(diff.encode("utf-8")) > state["settings"]["max_diff_kb"] * 1024:
         raise StepFailed(f"The changes for review {number} exceed max_diff_kb ({state['settings']['max_diff_kb']} KB)")
     to_check = _work_list(state)
-    data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(state, number, diff, summary), schemas.REVIEW)
+    data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(state, number, diff, summary), schemas.REVIEW, progress)
     after = gitops.snapshot(root, _index(state))
     if after != before:
         files = gitops.changed_files(root, before, after)
@@ -357,7 +357,7 @@ def _review_step(state: dict) -> dict:
     state["notes"] += [{"review": number, "text": note} for note in notes]
     if not pending:
         state["phase"] = "done"
-        state["final_status"] = "independently-passed"
+        state["final_status"] = "needs-user-decision" if any(c["exit_code"] != 0 for c in state["checks"]) else "independently-passed"
         store.save(state)
         return _event(state, f"Review {number} left nothing to adjudicate.")
     state["pending"] = pending
@@ -370,7 +370,7 @@ def _finish(state: dict) -> dict:
     root = _root(state)
     tree = gitops.snapshot(root, _index(state))
     changed = gitops.changed_files(root, state["trees"]["finalizing"], tree)
-    if state["stage"] == "feature-delivery":
+    if state["stage"] in ("feature-delivery", "general"):
         state["checks"] = _run_checks(state, "finalization")
     failing = [check["command"] for check in state["checks"] if check["after"] == "finalization" and check["exit_code"] != 0]
     left_open = [finding["id"] for finding in state["findings"] if finding.get("left_open")]
@@ -386,15 +386,16 @@ def _finish(state: dict) -> dict:
 # ---------------------------------------------------------------- workers
 
 
-def _invoke(state: dict, role: str, build_prompt, schema: dict) -> dict:
+def _invoke(state: dict, role: str, build_prompt, schema: dict, progress=None) -> dict:
     """Run one worker call, replacing the worker once when its session cannot resume."""
     worker = state["workers"][role]
     provider = providers.get(state["roles"][role]["provider"])
     rotate_at = state["settings"]["rotate_at_tokens"]
     fresh = worker["session_id"] is None or bool(rotate_at and (worker["context_tokens"] or 0) > rotate_at)
-    result = _attempt(state, role, provider, build_prompt, schema, fresh)
+    reason = "new-run" if worker["session_id"] is None else "context-threshold" if fresh else "resume"
+    result = _attempt(state, role, provider, build_prompt, schema, fresh, progress, reason)
     if result.error and not fresh:
-        result = _attempt(state, role, provider, build_prompt, schema, True)
+        result = _attempt(state, role, provider, build_prompt, schema, True, progress, "resume-failed")
     if result.error:
         raise StepFailed(f"The {role} ({state['roles'][role]['provider']}) {result.error}", result.raw)
     errors = schemas.validate(result.data, schema)
@@ -404,18 +405,37 @@ def _invoke(state: dict, role: str, build_prompt, schema: dict) -> dict:
     return result.data
 
 
-def _attempt(state: dict, role: str, provider, build_prompt, schema: dict, fresh: bool):
+def _attempt(state: dict, role: str, provider, build_prompt, schema: dict, fresh: bool, progress=None, reason=None):
     worker = state["workers"][role]
     if fresh:
         worker["generation"] += 1
     summary = _run_summary(state) if fresh and worker["generation"] > 1 else None
     call = _call(state, role, build_prompt(summary), schema, None if fresh else worker["session_id"])
+    def observe(event):
+        if "telemetry" in event:
+            worker["telemetry"] = event["telemetry"]
+        if event.get("session_id"):
+            worker["session_id"] = event["session_id"]
+            if event["session_id"] not in worker["sessions"]:
+                worker["sessions"].append(event["session_id"])
+        worker["last_event"] = event["event"]
+        store.save(state)
+        if progress:
+            progress({"run_id": state["run_id"], "role": role, "generation": worker["generation"], **event})
+    call.progress = observe
+    observe({"event": "worker-started", "fresh": fresh, "reason": reason, "configured": state["roles"][role],
+             "previous_context_tokens": worker["context_tokens"],
+             "rotate_at_tokens": state["settings"]["rotate_at_tokens"]})
     result = provider.run(call)
     if result.session_id:
         worker["session_id"] = result.session_id
         if result.session_id not in worker["sessions"]:
             worker["sessions"].append(result.session_id)
     worker["context_tokens"] = result.context_tokens
+    if result.context_tokens is not None:
+        call.telemetry["context_tokens"] = result.context_tokens
+    worker["telemetry"] = call.telemetry
+    observe({"event": "worker-finished", "context_tokens": result.context_tokens, "failed": bool(result.error)})
     return result
 
 
@@ -627,6 +647,8 @@ def _report(state: dict) -> dict:
         "notes": [note["text"] for note in state["notes"]],
         "error": state["error"],
         "roles": state["roles"],
+        "workers": state["workers"],
+        "producer_summary": state["producer_summaries"][-1] if state["producer_summaries"] else None,
     }
 
 
@@ -644,6 +666,8 @@ def _event(state: dict, message: str, **extra) -> dict:
         "producer_steps": state["producer_steps"],
         "settings": state["settings"],
         "roles": state["roles"],
+        "workers": state["workers"],
+        "producer_summary": state["producer_summaries"][-1] if state["producer_summaries"] else None,
     }
     if phase == "awaiting-decision":
         findings = _findings(state)

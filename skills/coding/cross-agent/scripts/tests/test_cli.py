@@ -349,6 +349,39 @@ class WorkerTests(unittest.TestCase):
 
 
 class RunLifecycleTests(unittest.TestCase):
+    def test_failed_general_check_prevents_a_passing_gate_even_with_clean_review(self):
+        h = Harness(self, {"producer": [produce()], "reviewer": [review()]})
+        h.config.write_text('[projects.' + json.dumps(h.repo.as_posix()) + ']\n'
+                            'delivery_checks = ["git definitely-not-a-command"]\n', encoding="utf-8")
+        run_id = h.start("produce")["run_id"]
+        self.assertNotEqual(h.next(run_id)["checks"][0]["exit_code"], 0)
+        self.assertEqual(h.next(run_id)["final_status"], "needs-user-decision")
+
+    def test_plan_then_execution_use_fresh_workers_and_general_checks(self):
+        h = Harness(self, {"producer": [produce(write={"docs/plan.md": "# Reviewed plan\n"}),
+                                        produce(write={"result.txt": "implemented\n"})],
+                           "reviewer": [review(), review()]})
+        h.config.write_text('[projects.' + json.dumps(h.repo.as_posix()) + ']\n'
+                            'delivery_checks = ["git -c core.whitespace=cr-at-eol diff --check"]\n', encoding="utf-8")
+        first = h.start("produce")["run_id"]
+        checked = h.next(first)["checks"][0]
+        self.assertEqual(checked["exit_code"], 0, checked)
+        self.assertEqual(h.next(first)["final_status"], "independently-passed")
+        h.run("close", "--run", first)
+        second = h.run("start", "--stage", "general", "--artifact", "result.txt", "--first", "produce",
+                       "--request", "Execute docs/plan.md only after its review passed.",
+                       "--producer", "fake", "--reviewer", "fake")["run_id"]
+        output = subprocess.run([sys.executable, str(CLI), "next", "--run", second, "--stream"],
+                                cwd=h.repo, env=h.env, capture_output=True, text=True, check=True)
+        events = [json.loads(line) for line in output.stdout.splitlines()]
+        self.assertEqual(events[0]["event"], "worker-started")
+        self.assertTrue(events[0]["fresh"])
+        self.assertEqual(events[-1]["event"], "result")
+        self.assertEqual(events[-1]["workers"]["producer"]["generation"], 1)
+        self.assertTrue(all(item["session_id"] is None for item in h.calls("producer")))
+        self.assertEqual(h.next(second)["final_status"], "independently-passed")
+        h.run("close", "--run", second)
+
     def test_dry_run_starts_and_saves_nothing(self):
         h = Harness(self, {"reviewer": [review()]})
         event = h.start("review", "--dry-run")

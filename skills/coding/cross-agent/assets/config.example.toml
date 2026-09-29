@@ -32,5 +32,5 @@ reviewer = "codex"
 # Project commands and directories, keyed by the project root.
 # [projects."D:/code/example/project"]
 # allowed_commands = ["dotnet build", "dotnet test"]           # the Producer may run these
-# delivery_checks = ["dotnet build Example.slnx", "dotnet test Example.slnx"]
+# delivery_checks = ["dotnet build Example.slnx", "dotnet test Example.slnx"] # feature-delivery and general
 # extra_dirs = ["../shared-library"]                           # readable, and writable by the Producer

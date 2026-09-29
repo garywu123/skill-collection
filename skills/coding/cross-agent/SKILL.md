@@ -1,12 +1,15 @@
 ---
 name: cross-agent
-description: Orchestrate one bounded cross-agent run on one named artifact. The `cross-agent` CLI starts a headless Producer that follows the stage's lifecycle Skill and a read-only Reviewer, with Claude Code or Codex in either role, while this session adjudicates every finding, relays questions, and finalizes. Invoke explicitly, by name, with a stage (feature-map, feature-plan, feature-delivery, or general) and an artifact. Do not use to run an adjacent lifecycle stage, to review without the CLI, or for an ordinary one-pass review.
+description: Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch to coordinate Producer and read-only Reviewer stages, report live progress, adjudicate findings, and continue through user-authorized stages. Use Claude Code or Codex in either role through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review.
 disable-model-invocation: true
 ---
 
 # Cross-Agent
 
-This session is the Orchestrator of one bounded Producer and Reviewer run. The
+This session is the PM-style Orchestrator of the user's task. Understand the
+outcome, choose the smallest sequence of stages, delegate the detailed design,
+implementation, and review, and keep the user informed. Each stage is one
+bounded Producer and Reviewer run; a task may authorize several runs. The
 `cross-agent` CLI owns every mechanism: starting and replacing workers,
 permissions, schemas, the review budget, snapshots, run state, and cleanup.
 This Skill owns judgment: adjudicating findings, talking to the user, and
@@ -17,11 +20,34 @@ the read-only guard, and recovery.
 The CLI ships inside this Skill. Run it from the project root as
 `python <skill-dir>/scripts/cross_agent.py <command>`, where `<skill-dir>` is
 this Skill's base directory; below, `cross-agent <command>` is short for that.
-Every command prints one JSON object. Settings come from
+Commands print one JSON object; `next --stream` emits progress JSONL followed
+by one `event: result` object. Settings come from
 `~/.cross-agent/config.toml` when it exists;
 [the example](assets/config.example.toml) lists every key.
 
 ## Inputs
+
+First resolve the requested outcome, sources, output artifacts, and stopping
+point. Keep a short stage agenda in the conversation: stage, artifact, required
+inputs, acceptance checks, and next gate. Do not create a separate project
+management document. Infer routine paths and sequencing from repository
+conventions; ask only when ambiguity changes scope or the user's gate.
+
+- A refactor may be `general` plan -> review -> `general` execution -> review.
+- Architecture plus roadmap uses `feature-map` when its lifecycle inputs and
+  ownership apply; otherwise use `general` with explicit design deliverables.
+- Selected Features are processed in dependency order, one run per Feature
+  and stage. Missing prerequisites are reported, not silently added to scope.
+- "Plan, then execute once review passes" authorizes both stages. "Make a
+  plan" stops after planning. "Wait for my approval" requires the user's reply.
+
+Keep detailed problem-solving with the workers. Give each stage a concrete
+request naming inputs, owned outputs, checks, and exclusions. Use the matching
+lifecycle Skill where applicable; `general` must not bypass its requirements.
+For a standalone task with no lifecycle owner, `general` is sufficient and
+does not require synthetic Feature IDs, a Product Brief, or a Feature Map.
+
+Resolve these CLI inputs for each stage:
 
 - **Stage**: `feature-map`, `feature-plan`, `feature-delivery`, or `general`.
   Infer it only when the request leaves no doubt. A Feature Plan path alone can
@@ -38,10 +64,14 @@ Every command prints one JSON object. Settings come from
   the user named; never invent a model name. Omitted specs use the configured
   defaults.
 
-Ask only when the stage, the artifact, or a `produce` request is missing. One
-invocation runs one stage. When the user also wants a later stage, finish and
-report this run, then let the user invoke the next one; the passing result of
-this run never authorizes it.
+One CLI run handles one stage, while this conversation owns the agenda. After
+closing a completed run, continue to the next already-authorized stage without
+asking again. Start fresh Producer and Reviewer sessions at each stage or
+independent work item; within a stage, use the CLI's resume/rotation mechanism.
+Pass the reviewed artifact and a short handoff of scope, decisions, and checks,
+not the prior transcript. An unresolved decision, failed check, or unaccepted
+upstream result stops dependent stages. `completed-by-orchestrator` is not an
+independent review pass: if the user's gate requires that pass, stop there.
 
 ## Preconditions
 
@@ -58,20 +88,25 @@ this run never authorizes it.
 3. A dirty work tree is fine; snapshots isolate the run's own changes. Tell the
    user that nobody else should edit the work tree while the run is open,
    because snapshots would count those edits as the run's.
+4. Check the project's configured commands against the stage's verification
+   needs. `delivery_checks` run after Producer changes for `feature-delivery`
+   and `general`; use stage-appropriate configuration for document-only work.
+   Missing commands must be reported, not silently counted as successful tests.
 
 ## Run Loop
 
 ```text
 cross-agent start --stage <stage> --artifact <path> --first <produce|review>
                   [--request "<text>"] [--producer <spec>] [--reviewer <spec>] [--dry-run]
-cross-agent next  --run <id>
+cross-agent next  --run <id> --stream
 ```
 
 `start` prints the run ID. With `--dry-run` it prints the prompts and commands
 without creating a run; use it when the user wants a preview. Then call `next`,
 and call it again after every `decide` or `answer`, until the run is done. Each
-`next` prints one JSON event; while a run waits, it prints the same pending
-event again. Act on the event's phase:
+`next --stream` prints sanitized observations while the worker runs, then its
+final result; do not launch a second `next` while it is running. `status --run`
+can inspect the latest saved observations. Act on the final result's phase:
 
 | Phase | Action |
 |---|---|
@@ -89,6 +124,33 @@ the Producer's Skill requires a user decision.
 Talk to the user in the user's language. Workers and the backlog use English,
 so write decisions, rationales, and relayed answers in English, and translate
 the Producer's questions when you relay them.
+
+## Live Reporting
+
+Report the agenda before starting. Consume `next --stream` incrementally with
+short tool yields so this conversation remains responsive. Report worker
+start, handoff, review findings, revision, and stage completion promptly;
+otherwise give one concise update about every 30-60 seconds. Group repetitive
+tool events. A heartbeat means the process is still waiting/running, not that
+useful work or a test has succeeded.
+
+Include stage/item, role/provider, configured model and effort, observed model
+and effort when available, session generation, latest parent context tokens,
+rotation threshold, and observed subagent requests/starts/active count. Explain
+the current work using the request, tool activity, and Producer summary; do not
+invent details, expose hidden reasoning, or paste tool arguments/transcripts.
+
+`null` means unknown, never zero. Model aliases/configuration are not observed
+runtime values. Usage is a latest measurement, not a live context meter or
+cumulative spend; never infer a percentage without an observed context limit.
+Child context must not overwrite parent context. Provider compaction events
+and CLI fresh-session rotation are different; report only observed events.
+Rotation is evaluated between worker calls, not during a running call.
+
+Producer delegation must follow the stage Skill, or for `general` be limited
+to substantial independent work with disjoint ownership. Reviewers do not
+delegate. Missing provider telemetry is explicitly unknown; it does not block
+useful work. Report a new session and its reason at every stage transition.
 
 ## Adjudication
 
@@ -177,8 +239,8 @@ stopped in any other unfinished phase also needs `--abandon`.
 
 ## Boundaries
 
-- Run only the named stage. The Producer may change what that stage's Skill
-  owns; never start another stage.
+- Each worker runs only its assigned stage. The Orchestrator advances only
+  through stages covered by the user's task, respecting dependencies and gates.
 - Do not run the lifecycle Skill in this session; the Producer does.
 - Read and change run state only through `cross-agent` commands, never by
   opening `.cross-agent/`.
@@ -195,4 +257,7 @@ independent review left nothing accepted, while `completed-by-orchestrator`
 means this session accepted the final state during finalization. Also report
 reviews and Producer revisions used, findings by disposition, finalization
 edits, checks and their results, backlog items written, open user decisions,
-defects you noticed yourself, and a failed run's state path. Then stop.
+defects you noticed yourself, and a failed run's state path. Update the chat
+agenda and continue an authorized next stage; stop at the requested endpoint.
+"Finish development" means meet its checks, while CLI `close` only cleans up
+run state and worker sessions. Never substitute cleanup for delivery.

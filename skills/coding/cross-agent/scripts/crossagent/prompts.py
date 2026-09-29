@@ -47,6 +47,9 @@ def producer_prompt(
     lines += [
         "",
         "Rules:",
+        "- Own only this stage. The Orchestrator decides when an authorized next stage starts.",
+        "- Use subagents only for substantial independent work with disjoint ownership; otherwise work serially. "
+        "Report their roles and completed work in your summary; do not guess runtime telemetry.",
         "- When the Skill says to ask the user or to stop, return status needs-user-decision with your "
         "questions, or blocked with the blocking condition, and make no further edits.",
         "- In outcomes, report every accepted finding listed above as fixed or not-fixed, with a rationale. "
@@ -78,6 +81,7 @@ def reviewer_prompt(
         f'You are the read-only Reviewer in a cross-agent review run for stage "{stage}", '
         f"review {review} of at most {max_reviews}.",
         "Do not create, modify, or delete any file, and do not commit. Any write fails the run.",
+        "Do not spawn subagents or launch other agents. Perform this bounded review yourself.",
         "",
         f"Project root and working directory: {project_root}",
         f"Artifact: {artifact}",
