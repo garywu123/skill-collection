@@ -39,10 +39,11 @@ def _parser() -> argparse.ArgumentParser:
     next_command = commands.add_parser("next", help="run the next step or print the pending event")
     next_command.add_argument("--run", required=True)
     next_command.add_argument("--stream", action="store_true", help="emit sanitized progress JSONL before the final result")
+    commands.add_parser("retry-review", help="retry a failed Reviewer execution, preserving Producer context").add_argument("--run", required=True)
     decide = commands.add_parser("decide", help="record adjudications from a JSON file")
     decide.add_argument("--run", required=True)
     decide.add_argument("--input", required=True, help="JSON file outside the work tree")
-    answer = commands.add_parser("answer", help="pass the user's answer to the Producer")
+    answer = commands.add_parser("answer", help="pass the user's answer or blocker recovery decision to the Producer")
     answer.add_argument("--run", required=True)
     answer.add_argument("--text", required=True)
     commands.add_parser("status", help="show one run, or list open runs and settings").add_argument("--run")
@@ -88,6 +89,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "next":
             progress = (lambda event: print(json.dumps(event, ensure_ascii=True), flush=True)) if args.stream else None
             result = engine.next_step(root, args.run, progress=progress)
+        elif args.command == "retry-review":
+            result = engine.retry_review(root, args.run)
         elif args.command == "decide":
             result = engine.decide(root, args.run, args.input)
         elif args.command == "answer":

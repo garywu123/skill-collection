@@ -216,6 +216,17 @@ Talk to the user in the user's language. Workers and the backlog use English,
 so write decisions, rationales, and relayed answers in English, and translate
 the Producer's questions when you relay them.
 
+When the user explicitly authorizes recovery after a Reviewer execution failure,
+fix the external cause first, then use `cross-agent retry-review --run <id>`
+and `next --stream`. This retains the run, Producer session, findings, and review
+budget, while starting a fresh Reviewer. It refuses validation failures such as
+Reviewer writes, and does not bypass the review limit. Do not edit run state or
+launch workers manually to recover. When the user explicitly resolves a
+Producer-reported blocker and asks to continue, pass that decision with
+`cross-agent answer --run <id> --text "<user decision>"`, then `next --stream`.
+This preserves both worker sessions, findings, snapshots, and the review budget;
+it cannot resume a failed validation guard. Other failed or blocked runs stop.
+
 ## Live Reporting
 
 Report the agenda before starting. Consume `next --stream` incrementally with

@@ -31,6 +31,8 @@ Codex 目前没有等价开关，只能依赖 description 中的 "Invoke explici
 Producer 与只读 Reviewer。用户一次授权多个阶段时，Orch 在前一阶段通过后自动继续，
 每个阶段使用新 session；用户要求人工批准时等待回复。只请求规划不会自动授权执行。
 `next --stream` 提供活动、可获得的模型/context/sub-agent 信息和心跳；未知数据明确标注。
+Reviewer 执行失败后，用户明确授权恢复时可用 `retry-review` 保留 Producer 与审阅预算；
+Producer 报告的 blocker 可通过 `answer` 传递用户的恢复决定，校验失败仍不可绕过。
 在对话中显式请求 `cross-agent initiate` 时，Orch 根据项目说明和已有构建、测试定义选择命令，
 通过 CLI 的 `init` 创建当前项目根目录的 `.cross-agent/config.toml`，保存 Producer/Reviewer
 的模型和 effort，并检测已安装 Codex CLI 与 npm 最新发布版本；已有设置保留并报告差异。

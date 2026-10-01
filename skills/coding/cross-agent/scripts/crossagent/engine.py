@@ -141,6 +141,25 @@ def next_step(project_root: Path, run_id: str, progress=None) -> dict:
     return _event(state, "No step to run; this is the pending event.")
 
 
+def retry_review(project_root: Path, run_id: str) -> dict:
+    """Retry only a Reviewer execution failure without losing Producer context."""
+    state = store.load(project_root, run_id)
+    message = (state.get("error") or {}).get("message", "")
+    if state["phase"] != "failed" or not message.startswith("The reviewer ("):
+        raise UsageError("Only a failed Reviewer execution can be retried; validation failures stay closed")
+    if state["reviews_done"] >= state["settings"]["max_reviews"]:
+        raise UsageError("The review budget is exhausted")
+    providers.get(state["roles"]["reviewer"]["provider"]).check()
+    # Keep the failed session in cleanup history; only the Reviewer starts fresh.
+    state["workers"]["reviewer"]["session_id"] = None
+    state["workers"]["reviewer"]["context_tokens"] = None
+    state["phase"] = "review"
+    state["final_status"] = None
+    state["error"] = None
+    store.save(state)
+    return _event(state, "Reviewer execution retry armed; Producer session and review budget preserved.")
+
+
 def decide(project_root: Path, run_id: str, input_path: str) -> dict:
     state = store.load(project_root, run_id)
     phase = state["phase"]
@@ -195,15 +214,21 @@ def decide(project_root: Path, run_id: str, input_path: str) -> dict:
 
 def answer(project_root: Path, run_id: str, text: str) -> dict:
     state = store.load(project_root, run_id)
-    if state["phase"] != "awaiting-answer":
+    if state["phase"] not in ("awaiting-answer", "blocked"):
         raise UsageError(f"Run {run_id} is not waiting for an answer (phase {state['phase']})")
     text = text.strip()
     if not text:
         raise UsageError("The answer is empty")
-    state["answer"] = {"questions": state["questions"], "text": text}
+    questions = state["questions"]
+    if state["phase"] == "blocked":
+        # Only Producer-reported blockers use this phase; failed guards stay closed.
+        questions = [(state.get("error") or {}).get("message") or "The Producer is blocked."]
+    state["answer"] = {"questions": questions, "text": text}
     state["answers"].append(state["answer"])
     state["questions"] = []
     state["phase"] = "produce"
+    state["final_status"] = None
+    state["error"] = None
     store.save(state)
     return _event(state, "Answer recorded.")
 

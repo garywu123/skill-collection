@@ -413,5 +413,84 @@ class RunLifecycleTests(unittest.TestCase):
         self.assertEqual((closed["final_status"], closed["backlog_items"]), ("abandoned", []))
 
 
+class ReviewerRetryTests(unittest.TestCase):
+    def test_retry_preserves_producer_session_and_feedback_loop(self):
+        h = Harness(self, {
+            "producer": [produce(), produce(outcomes=[("R1-001", "fixed")])],
+            "reviewer": [{"fail": "model unavailable"}, review(findings=[finding()]),
+                         review(earlier=[("R1-001", "resolved")])],
+        }, max_reviews=2)
+        run_id = h.start("produce")["run_id"]
+        h.next(run_id)
+        producer = h.run("status", "--run", run_id)["workers"]["producer"]
+        self.assertEqual(h.next(run_id)["phase"], "failed")
+        retried = h.run("retry-review", "--run", run_id)
+        self.assertEqual(retried["phase"], "review")
+        self.assertEqual(retried["reviews_done"], 0)
+        self.assertEqual(retried["producer_steps"], 1)
+        self.assertEqual(retried["workers"]["producer"], producer)
+        self.assertEqual(h.next(run_id)["phase"], "awaiting-decision")
+        h.decide(run_id, decision("R1-001", "accepted"))
+        h.next(run_id)
+        self.assertEqual(h.calls("producer")[-1]["session_id"], producer["session_id"])
+        self.assertEqual(h.next(run_id)["final_status"], "independently-passed")
+
+    def test_retry_refuses_unfailed_run_and_producer_failure(self):
+        h = Harness(self, {"producer": [{"fail": "unavailable"}]})
+        run_id = h.start("produce")["run_id"]
+        self.assertIn("Only a failed Reviewer", h.run("retry-review", "--run", run_id, expect=2)["error"])
+        h.next(run_id)
+        self.assertIn("Only a failed Reviewer", h.run("retry-review", "--run", run_id, expect=2)["error"])
+        self.assertEqual(h.run("status", "--run", run_id)["phase"], "failed")
+
+    def test_retry_does_not_bypass_reviewer_write_guard(self):
+        h = Harness(self, {"reviewer": [review(write={"docs/plan.md": "changed"})]})
+        run_id = h.start()["run_id"]
+        self.assertEqual(h.next(run_id)["phase"], "failed")
+        self.assertIn("Only a failed Reviewer", h.run("retry-review", "--run", run_id, expect=2)["error"])
+
+
+class ProducerRecoveryTests(unittest.TestCase):
+    def test_blocker_answer_preserves_session_findings_and_review_budget(self):
+        blocked = produce(status="blocked")
+        blocked["output"]["blocker"] = "Pinned dependency cannot restore."
+        h = Harness(self, {
+            "producer": [produce(), blocked, produce(outcomes=[("R1-001", "fixed")])],
+            "reviewer": [review(findings=[finding()]), review(earlier=[("R1-001", "resolved")])],
+        }, max_reviews=2)
+        run_id = h.start("produce")["run_id"]
+        h.next(run_id)
+        h.next(run_id)
+        h.decide(run_id, decision("R1-001", "accepted"))
+        self.assertEqual(h.next(run_id)["phase"], "blocked")
+        before = h.state(run_id)
+        h.run("answer", "--run", run_id, "--text", "Use the patched dependency and continue.")
+        after = h.state(run_id)
+        for key in ("workers", "settings", "reviews_done", "producer_steps", "findings", "trees"):
+            self.assertEqual(after[key], before[key], key)
+        self.assertEqual(after["answer"]["questions"], ["Pinned dependency cannot restore."])
+        self.assertIsNone(after["error"])
+        self.assertIsNone(after["final_status"])
+        self.assertEqual(h.next(run_id)["phase"], "review")
+        self.assertEqual(h.calls("producer")[-1]["session_id"], before["workers"]["producer"]["session_id"])
+        self.assertIn("Answer: Use the patched dependency", h.calls("producer")[-1]["prompt"])
+        self.assertEqual(h.next(run_id)["final_status"], "independently-passed")
+        self.assertEqual(h.state(run_id)["reviews_done"], 2)
+
+    def test_empty_recovery_and_failed_guard_cannot_resume(self):
+        blocked = produce(status="blocked")
+        blocked["output"]["blocker"] = "Dependency unavailable."
+        h = Harness(self, {"producer": [blocked]})
+        run_id = h.start("produce")["run_id"]
+        h.next(run_id)
+        self.assertIn("empty", h.run("answer", "--run", run_id, "--text", " ", expect=2)["error"])
+        self.assertEqual(h.run("status", "--run", run_id)["phase"], "blocked")
+        h2 = Harness(self, {"reviewer": [review(write={"docs/plan.md": "changed"})]})
+        run_id2 = h2.start()["run_id"]
+        self.assertEqual(h2.next(run_id2)["phase"], "failed")
+        self.assertIn("not waiting", h2.run("answer", "--run", run_id2, "--text", "Continue", expect=2)["error"])
+        self.assertEqual(h2.run("status", "--run", run_id2)["phase"], "failed")
+
+
 if __name__ == "__main__":
     unittest.main()

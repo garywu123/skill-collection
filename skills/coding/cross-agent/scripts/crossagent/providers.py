@@ -354,6 +354,7 @@ class Codex:
             return CallResult(session_id=call.session_id, error=f"timed out after {call.timeout} s", raw=_excerpt(exc.stdout))
         result = CallResult(session_id=call.session_id, raw=_excerpt(process.stdout + process.stderr))
         failure = None
+        terminal_failure = False
         for line in process.stdout.splitlines():
             try:
                 event = json.loads(line)
@@ -363,8 +364,12 @@ class Codex:
             if kind == "thread.started" and event.get("thread_id"):
                 result.session_id = event["thread_id"]
             elif kind in ("turn.failed", "error"):
+                terminal_failure = terminal_failure or kind == "turn.failed"
                 error = event.get("error")
                 failure = (error.get("message") if isinstance(error, dict) else error) or event.get("message") or kind
+            elif kind == "turn.completed" and not terminal_failure:
+                # A completed turn recovers transient errors, never a terminal turn failure.
+                failure = None
         if process.returncode != 0 or failure:
             result.error = f"exited with code {process.returncode}" + (f": {failure}" if failure else "")
             return result

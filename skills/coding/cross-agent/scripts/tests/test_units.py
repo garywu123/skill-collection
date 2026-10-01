@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import copy
+import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -54,6 +58,53 @@ class CodexCommandTests(unittest.TestCase):
                 self.assertIn('approval_policy="never"', command)
                 self.assertIn(f'sandbox_mode="{mode}"', command)
                 self.assertEqual("multi_agent" in command, role == "reviewer")
+
+
+class CodexResultTests(unittest.TestCase):
+    def test_recovered_errors_require_success_and_do_not_hide_terminal_failures(self):
+        data = {"findings": [], "earlier_results": [], "notes": []}
+        recovered = {"type": "error", "message": "Reconnecting... 3/5 (request timed out)"}
+        completed = {"type": "turn.completed", "usage": {}}
+        failed = {"type": "turn.failed", "error": {"message": "terminal failure"}}
+        cases = [
+            ("success", [completed], 0, json.dumps(data), None),
+            ("recovered", [recovered, completed], 0, json.dumps(data), None),
+            ("multiple retries", [recovered, recovered, completed], 0, json.dumps(data), None),
+            ("unrecovered", [recovered], 0, json.dumps(data), "request timed out"),
+            ("terminal", [failed], 0, json.dumps(data), "terminal failure"),
+            ("terminal then completed", [failed, completed], 0, json.dumps(data), "terminal failure"),
+            ("error after completed", [completed, recovered], 0, json.dumps(data), "request timed out"),
+            ("nonzero exit", [recovered, completed], 1, json.dumps(data), "exited with code 1"),
+            ("invalid output", [recovered, completed], 0, "incomplete JSON", "no structured output"),
+            ("missing output", [recovered, completed], 0, None, "no structured output"),
+        ]
+        for name, events, returncode, output, error in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                call = providers.Call(
+                    role="reviewer", model=None, effort=None, prompt="", schema=schemas.REVIEW,
+                    session_id=None, cwd=root, read_dirs=[], write_dirs=[],
+                    allowed_commands=[], timeout=1, work_dir=root,
+                )
+
+                def fake_run(command, call):
+                    if output is not None:
+                        (root / "reviewer.last-message.json").write_text(output, encoding="utf-8")
+                    return subprocess.CompletedProcess(
+                        command, returncode, "\n".join(json.dumps(event) for event in events), "",
+                    )
+
+                with patch.object(providers, "_run", side_effect=fake_run), patch.object(
+                    providers, "_codex_context_tokens", return_value=None,
+                ):
+                    result = providers.Codex().run(call)
+                if error is None:
+                    self.assertIsNone(result.error)
+                    self.assertEqual(result.data, data)
+                    self.assertEqual(schemas.validate(result.data, call.schema), [])
+                else:
+                    self.assertIn(error, result.error or "")
+                    self.assertIsNone(result.data)
 
 
 class ClaudeCommandTests(unittest.TestCase):
