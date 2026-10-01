@@ -1,6 +1,6 @@
 ---
 name: cross-agent
-description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch; initiate initializes this project's configuration without starting workers. Coordinate Producer and read-only Reviewer stages, report live progress, adjudicate findings, and continue through user-authorized stages using Claude Code or Codex through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review."
+description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch; initiate creates repo-local configuration with model/effort defaults and checks Codex CLI freshness without starting workers. Coordinate Producer and read-only Reviewer stages, report live progress, adjudicate findings, and continue through user-authorized stages using Claude Code or Codex through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review."
 disable-model-invocation: true
 ---
 
@@ -22,7 +22,9 @@ The CLI ships inside this Skill. Run it from the project root as
 this Skill's base directory; below, `cross-agent <command>` is short for that.
 Commands print one JSON object; `next --stream` emits progress JSONL followed
 by one `event: result` object. Settings come from
-`~/.cross-agent/config.toml` when it exists;
+`<project-root>/.cross-agent/config.toml` when it exists. `CROSS_AGENT_CONFIG`
+explicitly overrides this path. Never search parent directories or implicitly
+load the old `~/.cross-agent/config.toml`; different project roots are independent.
 [the example](assets/config.example.toml) lists every key.
 
 ## Mode Selection
@@ -63,6 +65,8 @@ template, or edit the configuration as a substitute for this command.
 
    ```text
    cross-agent init --input <absolute-temporary-json-path>
+                    [--producer <provider[:model[:effort]]>]
+                    [--reviewer <provider[:model[:effort]]>]
    ```
 
    ```json
@@ -74,30 +78,43 @@ template, or edit the configuration as a substitute for this command.
    ```
 
    These commands are examples; use the project's real commands. Omitted
-   fields become empty lists. The CLI writes to `CROSS_AGENT_CONFIG` when
-   supplied, otherwise `~/.cross-agent/config.toml`. It creates the file or
-   appends a section keyed by the current project root. Existing global
-   settings, comments, and other projects remain intact. An existing matching
-   project section is preserved in full, even if fields are omitted; the
-   result reports `proposed_differences` without applying them. Report those
-   differences rather than claiming the proposed settings were installed.
-   Updating existing settings requires an explicit configuration-change task.
+   fields become empty lists. The CLI creates `.cross-agent/config.toml` in
+   the current project root, using `[projects."."]` for portable project
+   commands and `[defaults]` for its Producer/Reviewer model and effort.
+   Pass only roles the user specified; `codex::high` sets effort while keeping
+   the provider's default model, and `codex:<requested-model>:high` sets both.
+   Omitted roles use the built-in defaults in a new file. The selected CLI and
+   model determine supported effort values; do not invent or substitute them.
+   Existing configuration, comments, and role defaults remain intact. A
+   missing project section is appended; an existing matching section is
+   preserved in full, even if fields are omitted. Report `proposed_differences`
+   and `proposed_role_differences` rather than claiming they were installed.
+   Changing existing settings requires an explicit configuration-change task.
+   `CROSS_AGENT_CONFIG` remains an explicit override, including for a legacy
+   shared file; it is never automatically selected or migrated.
 5. Run `status` again and report the config path, action (`created`,
    `project-added`, or `unchanged`), effective project commands, role defaults,
-   and remaining prerequisites. `providers_on_path` shows executable discovery
-   only; it does not verify login or model availability. Inspect sibling stage
-   Skills only for stages the user intends to use. Initialization validates
-   configuration syntax and schema; it does not execute checks, start workers,
-   or create a run. Remove the temporary input file and stop unless a following
-   task was explicitly authorized.
+   and remaining prerequisites. `init` runs `codex --version` and compares it
+   with the npm registry's `@openai/codex` `latest` release, with bounded
+   timeouts. Report `codex_version.installed`, `latest`, `status`, and `reason`:
+   `current` means the versions match; `update-available` means the installed
+   stable version is older; `ahead` means it is newer; `not-installed`,
+   `unknown`, and `skipped` must never be reported as current. Network failures
+   and prerelease builds yield `unknown`. Do not automatically upgrade the CLI.
+   Use `--skip-version-check` only when the user requests skipping it.
+   `providers_on_path` checks executable discovery, not login or model access.
+   Inspect sibling stage Skills only for intended stages. Initialization does
+   not execute project checks, start workers, or create a run. Remove the
+   temporary input and stop unless a following task was authorized.
 
-Use existing global or built-in role defaults. Initialization does not change
-global defaults for one project's role preference; pass explicitly requested
-roles using `start --producer` / `--reviewer` on subsequent runs. Keep private
-configuration and temporary input outside the work tree. Normal sandbox
-permissions still apply; if the default path is unwritable, report the
-restriction and use an authorized private `CROSS_AGENT_CONFIG` path consistently
-for every CLI call, without silently switching configurations.
+`start --producer` / `--reviewer` override this repo's saved defaults for one
+run, including model and effort. They do not change the current Orch session.
+Keep temporary inputs outside the work tree. Initialization uses Git's local
+exclude to keep `.cross-agent/` configuration and run state out of snapshots
+and commits, without editing the project's tracked `.gitignore`. Normal
+sandbox permissions apply. If the path is unwritable, report the restriction;
+do not silently switch to a user-level file. Configuration syntax validation
+and version freshness do not prove model access, supported effort, or test success.
 
 ## Inputs
 
@@ -317,7 +334,9 @@ stopped in any other unfinished phase also needs `--abandon`.
   through stages covered by the user's task, respecting dependencies and gates.
 - Do not run the lifecycle Skill in this session; the Producer does.
 - Read and change run state only through `cross-agent` commands, never by
-  opening `.cross-agent/`.
+  opening `.cross-agent/runs/`. `.cross-agent/config.toml` is configuration;
+  explicit configuration-change tasks may inspect and edit it, but workers
+  must not change it as part of a stage.
 - Do not read or search `docs/review-backlog.md` unless the user asks for a
   backlog review or names an item ID.
 - Do not start another run on the same artifact to obtain more reviews; the

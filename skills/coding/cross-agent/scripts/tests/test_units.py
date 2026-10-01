@@ -34,12 +34,18 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class CodexCommandTests(unittest.TestCase):
-    def _command(self, role, session_id=None):
+    def _command(self, role, session_id=None, model=None, effort=None):
         call = providers.Call(
-            role=role, model=None, effort=None, prompt="", schema={}, session_id=session_id, cwd=Path("."),
+            role=role, model=model, effort=effort, prompt="", schema={}, session_id=session_id, cwd=Path("."),
             read_dirs=[], write_dirs=[], allowed_commands=[], timeout=1, work_dir=Path("."),
         )
         return providers.Codex().command(call, Path("schema.json"), Path("last.json"))
+
+    def test_model_and_effort_reach_codex_on_start_and_resume(self):
+        for session_id in (None, "saved-session"):
+            command = self._command("producer", session_id, model="requested-model", effort="high")
+            self.assertEqual(command[command.index("-m") + 1], "requested-model")
+            self.assertIn('model_reasoning_effort="high"', command)
 
     def test_workers_never_escalate_and_keep_their_sandbox_on_resume(self):
         for role, mode in (("reviewer", "read-only"), ("producer", "workspace-write")):
@@ -53,10 +59,12 @@ class CodexCommandTests(unittest.TestCase):
 class ClaudeCommandTests(unittest.TestCase):
     def test_windows_producer_allows_configured_commands_in_powershell(self):
         call = providers.Call(
-            role="producer", model=None, effort=None, prompt="", schema={}, session_id=None, cwd=Path("."),
+            role="producer", model="opus", effort="high", prompt="", schema={}, session_id=None, cwd=Path("."),
             read_dirs=[], write_dirs=[], allowed_commands=["python -m unittest"], timeout=1, work_dir=Path("."),
         )
         command = providers.Claude().command(call, "00000000-0000-0000-0000-000000000000", True)
+        self.assertEqual(command[command.index("--model") + 1], "opus")
+        self.assertEqual(command[command.index("--effort") + 1], "high")
         allowed = command[command.index("--allowedTools") + 1]
         self.assertIn("Bash(python -m unittest:*)", allowed)
         if sys.platform == "win32":

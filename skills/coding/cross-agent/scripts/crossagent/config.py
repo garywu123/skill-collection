@@ -36,14 +36,14 @@ PRODUCER_BASE_COMMANDS = ("git status", "git diff", "git log", "git show")
 PROJECT_KEYS = ("allowed_commands", "delivery_checks", "extra_dirs")
 
 
-def config_path() -> Path:
+def config_path(project_root: Path | None = None) -> Path:
     override = os.environ.get("CROSS_AGENT_CONFIG")
-    return Path(override).expanduser() if override else Path.home() / ".cross-agent" / "config.toml"
+    return Path(override).expanduser() if override else (project_root or Path.cwd()) / ".cross-agent" / "config.toml"
 
 
-def load_config() -> dict:
+def load_config(project_root: Path | None = None) -> dict:
     """Return the defaults overlaid with the user's config file, when it exists."""
-    path = config_path()
+    path = config_path(project_root)
     try:
         text = path.read_text(encoding="utf-8-sig") if path.exists() else ""
     except (OSError, UnicodeError) as exc:
@@ -71,13 +71,17 @@ def _parse_config(text: str, path: Path) -> dict:
     return config
 
 
-def initialize(project_root: Path, input_file: str) -> dict:
+def initialize(project_root: Path, input_file: str, *, producer=None, reviewer=None, check_version=True) -> dict:
     """Append a missing project without rewriting existing TOML or starting a run."""
     from . import gitops
+    from .versions import check_codex_version
 
     project_root = project_root.resolve()
     gitops.require_work_tree(project_root)
-    path = config_path().expanduser().resolve()
+    path = config_path(project_root).resolve()
+    requested_roles = {key: value for key, value in {"producer": producer, "reviewer": reviewer}.items() if value is not None}
+    for value in requested_roles.values():
+        parse_spec(value)
     temporary = None
     try:
         proposed = json.loads(Path(input_file).read_text(encoding="utf-8-sig"))
@@ -88,7 +92,13 @@ def initialize(project_root: Path, input_file: str) -> dict:
         config = _parse_config((original or b"").decode("utf-8-sig"), path)
         exists = project_configured(config, project_root)
         if not exists:
-            section = f'\n[projects.{json.dumps(project_root.as_posix(), ensure_ascii=False)}]\n'
+            # Local files use '.' so moving a checkout does not invalidate its settings.
+            project_key = "." if path == project_root / ".cross-agent" / "config.toml" else project_root.as_posix()
+            section = ""
+            if original is None:
+                roles = {**DEFAULTS["defaults"], **requested_roles}
+                section = "\n[defaults]\n" + "".join(f"{key} = {json.dumps(value)}\n" for key, value in roles.items())
+            section += f'\n[projects.{json.dumps(project_key, ensure_ascii=False)}]\n'
             section += "".join(f"{key} = {json.dumps(value, ensure_ascii=False)}\n" for key, value in proposed.items())
             updated = (original or b"# Cross-agent settings; omitted keys use built-in defaults.\n") + section.encode("utf-8")
             config = _parse_config(updated.decode("utf-8-sig"), path)
@@ -104,6 +114,8 @@ def initialize(project_root: Path, input_file: str) -> dict:
                 if path.read_bytes() != original:
                     raise UsageError("Config changed during initialization; retry without overwriting it")
                 os.replace(temporary, path)
+        if path.is_relative_to(gitops.repo_root(project_root)):
+            gitops.ensure_excluded(project_root)
         effective = project_settings(config, project_root)
         proposed_effective = project_settings({"projects": {project_root.as_posix(): proposed}}, project_root)
         return {
@@ -117,7 +129,13 @@ def initialize(project_root: Path, input_file: str) -> dict:
                 key: value for key, value in proposed.items()
                 if proposed_effective[key] != effective[key]
             },
+            "proposed_role_differences": {
+                key: value for key, value in requested_roles.items() if value != config["defaults"][key]
+            },
             "providers_on_path": {provider: shutil.which(provider) is not None for provider in ("claude", "codex")},
+            "codex_version": check_codex_version() if check_version else {
+                "status": "skipped", "installed": None, "latest": None,
+            },
             "checks_configured": bool(effective["delivery_checks"]),
             "checks_executed": False,
             "workers_started": False,
@@ -186,7 +204,7 @@ def _same_path(left: str | Path, right: str | Path) -> bool:
 def project_settings(config: dict, project_root: Path) -> dict:
     """Return the project's commands and extra directories, keyed by its root path."""
     settings = next(
-        (value for key, value in config["projects"].items() if _same_path(key, project_root)),
+        (value for key, value in config["projects"].items() if key == "." or _same_path(key, project_root)),
         {},
     )
     return {
@@ -197,7 +215,7 @@ def project_settings(config: dict, project_root: Path) -> dict:
 
 
 def project_configured(config: dict, project_root: Path) -> bool:
-    return any(_same_path(key, project_root) for key in config["projects"])
+    return any(key == "." or _same_path(key, project_root) for key in config["projects"])
 
 
 def skills_root() -> Path:

@@ -52,7 +52,7 @@ class StepFailed(Exception):
 def start(project_root: Path, *, stage, artifact, first, request, producer, reviewer, dry_run) -> dict:
     project_root = project_root.resolve()
     gitops.require_work_tree(project_root)
-    config = cfg.load_config()
+    config = cfg.load_config(project_root)
     request = (request or "").strip() or None
     if first == "produce" and not request:
         raise UsageError("--first produce needs --request with a concrete change")
@@ -211,7 +211,7 @@ def answer(project_root: Path, run_id: str, text: str) -> dict:
 def status(project_root: Path, run_id: str | None) -> dict:
     if run_id:
         return _event(store.load(project_root, run_id), "Current status.")
-    config = cfg.load_config()
+    config = cfg.load_config(project_root)
     return {
         "open_runs": [
             {key: run.get(key) for key in ("run_id", "stage", "artifact", "phase", "final_status", "updated_at")}
@@ -219,8 +219,8 @@ def status(project_root: Path, run_id: str | None) -> dict:
         ],
         "settings": {key: config[key] for key in cfg.RUN_SETTINGS},
         "defaults": config["defaults"],
-        "config_path": str(cfg.config_path()),
-        "config_exists": cfg.config_path().is_file(),
+        "config_path": str(cfg.config_path(project_root)),
+        "config_exists": cfg.config_path(project_root).is_file(),
         "project_root": str(project_root.resolve()),
         "project_configured": cfg.project_configured(config, project_root),
         "project": cfg.project_settings(config, project_root),

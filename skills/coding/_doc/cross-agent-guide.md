@@ -56,7 +56,7 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1 
 powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1
 ```
 
-只部署一端时使用 `-Target claude` 或 `-Target agents`。不确定目录里是否有其他内容时，不要直接运行真实部署。部署不会自动生成 `~/.cross-agent/config.toml`，也不会替项目初始化 Git。
+只部署一端时使用 `-Target claude` 或 `-Target agents`。不确定目录里是否有其他内容时，不要直接运行真实部署。部署安装 Skill 的代码和指令，不会自动生成目标 repo 的 `.cross-agent/config.toml`，也不会替项目初始化 Git；项目配置由下一节的 `initiate` 创建。
 
 部署后确认实际使用的 Skill 路径。后文 PowerShell 示例采用 Codex / Agents 的默认安装位置：
 
@@ -91,15 +91,24 @@ Cross-agent 的 `initiate` 模式负责按项目证据准备配置，底层调�
 
 ```text
 使用 cross-agent initiate，根据当前项目的 AGENTS.md 和已有构建、测试定义初始化配置。
+Producer 使用 Claude 默认模型，effort 为 high；Reviewer 使用 Codex 默认模型，effort 为 high。
 后续任务是先规划、再执行行为不变的重构，请据此选择验证命令。
 这次只初始化并报告有效配置和缺少的前置条件。
 ```
 
 Orch 会读取项目证据，确定 `allowed_commands`、`delivery_checks` 和必要的 `extra_dirs`，再由 CLI 校验和写入。没有可靠的验证命令时会报告“验证未配置”，不会按语言凭空猜测试。命令选择有实质歧义或需要扩大权限时才询问你。你不必自己复制 PowerShell 模板或创建 `$PROFILE`。
 
-默认配置位置为 `~/.cross-agent/config.toml`，与 Codex 自身的配置文件不同。已有配置会保留全局设置、注释和其他项目，仅追加缺少的当前项目分区。若当前项目分区已经存在，整个分区保持原样，包括省略的字段；返回 `unchanged` 并报告 `proposed_differences`。要修改现有设置，请明确提出配置修改请求，重复初始化不会覆盖它们。没有配置文件时也能使用内置默认值，但缺少文件不会自动触发初始化。
+默认配置位置为当前项目根目录的 `.cross-agent/config.toml`，与 Codex 自身的配置文件不同。每个 repo 独立保存设置；CLI 不向父目录搜索，也不回退读取旧的 `~/.cross-agent/config.toml`。从哪个项目根目录运行，就使用哪个根目录的配置。新建配置使用 `[projects."."]`，因此移动 checkout 后不必修改绝对路径。
 
-底层命令是 `python $crossAgentCli init --input <JSON文件绝对路径>`。Orch 将输入放在工作树外的临时文件中，完成后删除；JSON 只接受以下三个字段，省略的字段使用空列表：
+已有配置、注释和角色默认值会保留，仅追加缺少的当前项目分区。已有分区保持原样，包括省略的字段；返回 `unchanged`，并用 `proposed_differences` 和 `proposed_role_differences` 报告命令与角色建议的差异。要修改现有设置，请明确提出配置修改请求，重复初始化不会覆盖它们。初始化会使用 Git 的本地 exclude 忽略 `.cross-agent/`，不用修改项目的 `.gitignore`。没有配置文件时仍可使用内置默认值，但缺少文件不会自动触发初始化。
+
+底层命令如下；`--producer` 和 `--reviewer` 在新文件中保存当前 repo 的角色、模型和 effort。`codex::high` 保留默认模型但指定 effort，`codex:<指定模型>:high` 同时指定两者。Orch 只传你明确指定的值，省略角色参数时新文件使用内置角色默认值：
+
+```powershell
+python $crossAgentCli init --input '<JSON文件绝对路径>' --producer claude::high --reviewer codex::high
+```
+
+Orch 将输入放在工作树外的临时文件中，完成后删除；JSON 只接受以下三个字段，省略的字段使用空列表：
 
 ```json
 {
@@ -109,9 +118,11 @@ Orch 会读取项目证据，确定 `allowed_commands`、`delivery_checks` 和�
 }
 ```
 
-这些命令适用于本教程案例，应以你的项目证据为准。CLI 不会执行这些命令，也不验证登录和模型权限；`providers_on_path` 只表示能否找到可执行程序。初始化成功表示配置语法和结构有效，不表示项目测试通过或所有运行前提齐全。
+这些命令适用于本教程案例，应以你的项目证据为准。CLI 不会执行项目检查，也不验证登录和模型权限；`providers_on_path` 只表示能否找到可执行程序。初始化成功表示配置语法和结构有效，不表示项目测试通过或所有运行前提齐全。
 
-如需手动理解或调整设置，参见 [完整配置示例](../cross-agent/assets/config.example.toml)。下面是本案例的完整设置示意；初始化只需写入项目分区，其他键省略时使用内置默认值：
+`init` 会执行只读的 `codex --version`，并向 npm registry 查询 `@openai/codex` 的 `latest` 发布版本。结果在 `codex_version` 中包含已安装版本、最新版本、来源和状态：`current` 表示相同，`update-available` 表示安装的稳定版较旧，`ahead` 表示比该发布版新。未安装时是 `not-installed`，网络失败、版本无法识别或安装预发布版时是 `unknown`，不能报告成“已是最新”。两个查询都有超时，检测失败不会阻止配置创建；初始化不自动升级 CLI。只有明确要求跳过检测时才使用 `--skip-version-check`，此时返回 `skipped`。
+
+如需手动理解或调整设置，参见 [完整配置示例](../cross-agent/assets/config.example.toml)。下面是本案例的完整设置示意；初始化写入角色默认值和项目分区，其他键省略时使用内置默认值：
 
 ```toml
 max_reviews = 2
@@ -121,10 +132,10 @@ backlog_rejected = true
 max_diff_kb = 200
 
 [defaults]
-producer = "claude"
-reviewer = "codex"
+producer = "claude::high"
+reviewer = "codex::high"
 
-[projects."D:/code/examples/name-cleaner"]
+[projects."."]
 allowed_commands = ["python -m unittest"]
 delivery_checks = ["python -m unittest discover -s tests -v"]
 extra_dirs = []
@@ -143,9 +154,9 @@ extra_dirs = []
 | `delivery_checks` | CLI 在 `general` / `feature-delivery` Producer 完成后实际执行的检查；空列表不表示测试通过。只填写你信任、适合当前阶段的命令。 |
 | `extra_dirs` | 额外目录，Producer 可写、Reviewer 可读；不要为了方便授予无关目录。 |
 
-`[projects."..."]` 按运行 CLI 的项目根目录匹配。进入子目录运行可能匹配不到你配置的命令。即使是写计划的 `general` 阶段也会运行 `delivery_checks`，所以本例先确保基线测试存在且能通过。
+`[projects."."]` 表示当前项目根目录；始终从同一项目根目录调用 CLI，进入子目录会使用另一份配置路径。旧的绝对路径分区仍可解析，但用户目录文件不会自动加载。如需继续使用旧文件，通过 `CROSS_AGENT_CONFIG` 显式指定；也可在新建 repo 配置时明确提供旧设置，初始化不会自动迁移或修改旧文件。即使是写计划的 `general` 阶段也会运行 `delivery_checks`，所以本例先确保基线测试存在且能通过。
 
-角色格式为 `<provider>[:<model>[:<effort>]]`。`claude` / `codex` 使用对应 CLI 的默认值；如需指定，填入该 CLI 和账号实际支持的模型与 effort。`codex::high` 表示保留默认模型并请求 `high` effort，不是对所有模型兼容性的保证。初始化继承已有全局或内置角色默认值，不为一个项目修改全局角色；后续任务中指定的角色通过 `start --producer` / `--reviewer` 覆盖默认值。
+角色格式为 `<provider>[:<model>[:<effort>]]`。`claude` / `codex` 使用对应 CLI 的默认值；如需指定，填入该 CLI 和账号实际支持的模型与 effort。`codex::high` 表示保留默认模型并请求 `high` effort，不是对所有模型兼容性的保证。Codex 的 effort 通过 `model_reasoning_effort` 传给 CLI，可用程度依模型和客户端而定，见 [OpenAI 官方配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。新配置的 `[defaults]` 只属于当前 repo；后续任务中指定的角色通过 `start --producer` / `--reviewer` 覆盖该次 run 的默认值，不会改写配置文件。
 
 配置控制 worker，不会改变当前 Orch 对话自己的模型或 effort。每个 run 会保存启动时的设置；修改配置不会改变已经打开的 run。
 
@@ -303,14 +314,15 @@ CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general`
 
 ## 7. 常见问题
 
-- **项目命令没有生效**：核对当前目录与 `[projects."..."]`，以及 `status` 返回的配置路径。配置文件不会通过项目向上搜索；自定义环境变量必须传到实际启动进程。
-- **再次 initiate 没有更新命令**：已有项目分区会完整保留，新的建议在 `proposed_differences` 中报告。明确要求修改现有配置，不能把重复初始化当作覆盖操作。
+- **项目命令没有生效**：核对当前项目根目录和 `status` 返回的配置路径；本地配置使用 `[projects."."]`。CLI 不向父目录搜索，也不自动加载用户目录旧配置；自定义环境变量必须传到实际启动进程。
+- **再次 initiate 没有更新命令或角色**：已有设置会保留，建议分别在 `proposed_differences` 和 `proposed_role_differences` 中报告。明确要求修改现有配置，不能把重复初始化当作覆盖操作。
+- **版本显示 unknown**：查看 `codex_version.reason`，可能是网络、超时、不可识别的输出或预发布版。它不表示最新，也不表示版本必然过旧；恢复检测条件后可再次初始化，不会覆盖配置。
 - **初始化成功但不能运行 worker**：初始化只校验配置；继续核对 CLI 安装、登录、模型权限、所用阶段的 Skill 和真实检查结果。`checks_configured` 不代表 `checks_executed`。
 - **找不到阶段 Skill**：默认从 `cross-agent` 的同级目录寻找。完整部署后应有对应目录；特殊布局可在配置中设置 `[stages.feature-plan]` 的 `skill` 为正确 `SKILL.md` 路径。
 - **配置了命令但仍被拒绝**：允许规则不能覆盖 provider 的安全边界。缩小命令、改用普通测试文件或请求明确授权；不要关闭保护来强行通过。
 - **context / effort / subagent 数字缺失**：provider 不一定提供。context 是最近一次父会话用量测量，不是持续精确的剩余容量；只有观察到窗口上限才能计算占比。
 - **什么时候换人或压缩**：阶段/独立工作项之间新开会话；同阶段按已保存 context 在调用间判断轮换。provider 自身压缩与 CLI 换会话是两回事，Orch 只能报告观察到的事件。
 - **换了 Orch 对话后怎样继续**：回到同一个项目根目录，显式调用 Skill，让 Orch 先运行 `status`。已有 run 的状态可读取；原对话的多阶段授权和审批门槛需要你重新提供，不能只凭文件推断。
-- **可以直接修改 `.cross-agent/` 吗**：不要。通过 `status`、`next`、`decide`、`answer`、`close` 管理运行；运行中也不要旁路修改项目文件。
+- **可以直接修改 `.cross-agent/` 吗**：运行状态在 `.cross-agent/runs/`，只能通过 `status`、`next`、`decide`、`answer`、`close` 管理。`.cross-agent/config.toml` 是配置，明确的配置修改任务可以编辑它；阶段 worker 不修改配置，配置变更不影响已打开 run 的设置。
 
 首次使用时，把目标、输入、输出、验证命令和停止点讲清楚即可。之后你看到的应该是一个持续汇报、在授权范围内推进的 Orch，而不是需要你手动传递每轮结果的两个聊天窗口。

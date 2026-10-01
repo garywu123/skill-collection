@@ -4,12 +4,19 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from crossagent import engine, providers, versions  # noqa: E402
 
 CLI = Path(__file__).resolve().parents[1] / "cross_agent.py"
 
@@ -40,8 +47,61 @@ class InitTests(unittest.TestCase):
         self.assertEqual(result.returncode, expect, result.stdout + result.stderr)
         return json.loads(result.stdout)
 
-    def initialize(self, expect=0):
-        return self.run_cli("init", "--input", str(self.input), expect=expect)
+    def initialize(self, *args, expect=0):
+        return self.run_cli("init", "--input", str(self.input), "--skip-version-check", *args, expect=expect)
+
+    def test_local_config_roles_checkout_move_and_repo_isolation(self):
+        self.env.pop("CROSS_AGENT_CONFIG")
+        home = self.directory / "home"
+        (home / ".cross-agent").mkdir(parents=True)
+        (home / ".cross-agent" / "config.toml").write_text('[defaults]\nproducer = "codex:legacy-model:low"\n', encoding="utf-8")
+        self.env.update({"HOME": str(home), "USERPROFILE": str(home)})
+        result = self.initialize("--producer", "codex:chosen-model:high", "--reviewer", "codex::low")
+        local = self.root / ".cross-agent" / "config.toml"
+        self.assertEqual(result["config_path"], str(local.resolve()))
+        self.assertFalse(self.config.exists())
+        parsed = tomllib.loads(local.read_text(encoding="utf-8"))
+        self.assertIn(".", parsed["projects"])
+        self.assertEqual(parsed["defaults"], {"producer": "codex:chosen-model:high", "reviewer": "codex::low"})
+        self.assertEqual(self.run_cli("status")["defaults"], parsed["defaults"])
+        with patch.dict(os.environ, self.env, clear=True), patch.object(providers.Codex, "check"):
+            preview = engine.start(
+                self.root, stage="general", artifact="output.md", first="produce",
+                request="Write a bounded plan.", producer=None, reviewer=None, dry_run=True,
+            )
+        self.assertEqual(preview["roles"]["producer"], {"provider": "codex", "model": "chosen-model", "effort": "high"})
+        self.assertEqual(preview["roles"]["reviewer"]["effort"], "low")
+        self.assertIn('model_reasoning_effort="high"', preview["command"])
+        ignored = subprocess.run(["git", "check-ignore", ".cross-agent/config.toml"], cwd=self.root, capture_output=True)
+        self.assertEqual(ignored.returncode, 0)
+        self.assertFalse((local.parent / "runs").exists())
+        other = self.directory / "other"
+        other.mkdir()
+        subprocess.run(["git", "init", "-q", str(other)], check=True, capture_output=True)
+        status = self.run_cli("status", cwd=other)
+        self.assertFalse(status["config_exists"])
+        self.assertFalse(status["project_configured"])
+        self.assertEqual(status["defaults"]["producer"], "claude")
+        (other / ".cross-agent").mkdir()
+        shutil.copyfile(local, other / ".cross-agent" / "config.toml")
+        moved = self.run_cli("status", cwd=other)
+        self.assertEqual(moved["project"], self.proposal)
+        self.assertEqual(moved["defaults"], parsed["defaults"])
+        nested = self.root / "nested"
+        nested.mkdir()
+        self.assertFalse(self.run_cli("status", cwd=nested)["config_exists"])
+
+    def test_repeat_preserves_roles_and_reports_requested_differences(self):
+        self.initialize("--producer", "codex:model-a:high")
+        original = self.config.read_bytes()
+        result = self.initialize("--producer", "codex:model-b:low")
+        self.assertEqual(result["defaults"]["producer"], "codex:model-a:high")
+        self.assertEqual(result["proposed_role_differences"], {"producer": "codex:model-b:low"})
+        self.assertEqual(self.config.read_bytes(), original)
+
+    def test_invalid_role_does_not_create_config(self):
+        self.assertIn("error", self.initialize("--reviewer", "unknown:model:high", expect=2))
+        self.assertFalse(self.config.exists())
 
     def test_create_and_status_without_workers_checks_or_run_state(self):
         result = self.initialize()
@@ -115,6 +175,43 @@ class InitTests(unittest.TestCase):
         self.assertIn("Git work tree", result["error"])
         self.assertFalse((outside / ".git").exists())
         self.assertFalse(self.config.exists())
+
+
+class CodexVersionTests(unittest.TestCase):
+    def test_stable_versions_are_compared_numerically(self):
+        for installed, latest, status in (
+            ("1.9.0", "1.10.0", "update-available"),
+            ("1.10.0", "1.10.0", "current"),
+            ("2.0.0", "1.10.0", "ahead"),
+            ("1.10.0-alpha.1", "1.10.0", "unknown"),
+        ):
+            with self.subTest(installed=installed), patch.object(versions.shutil, "which", return_value="codex"), \
+                    patch.object(versions.subprocess, "run") as run, patch.object(versions, "urlopen") as fetch:
+                run.return_value = subprocess.CompletedProcess([], 0, stdout=f"codex-cli {installed}\n")
+                fetch.return_value.__enter__.return_value.read.return_value = json.dumps({"version": latest}).encode()
+                result = versions.check_codex_version()
+                self.assertEqual(result["status"], status)
+                self.assertEqual(result["installed"], installed)
+                self.assertEqual(result["latest"], latest)
+                self.assertEqual(run.call_args.args[0], ["codex", "--version"])
+                self.assertEqual(fetch.call_args.args[0], versions.CODEX_LATEST_URL)
+
+    def test_missing_failed_offline_and_malformed_are_never_current(self):
+        with patch.object(versions.shutil, "which", return_value=None), patch.object(versions, "urlopen") as fetch:
+            self.assertEqual(versions.check_codex_version()["status"], "not-installed")
+            fetch.assert_not_called()
+        for failure in (OSError("offline"), b"not json", b'{"version": null}'):
+            with self.subTest(failure=failure), patch.object(versions.shutil, "which", return_value="codex"), \
+                    patch.object(versions.subprocess, "run") as run, patch.object(versions, "urlopen") as fetch:
+                run.return_value = subprocess.CompletedProcess([], 0, stdout="codex-cli 1.0.0\n")
+                if isinstance(failure, Exception):
+                    fetch.side_effect = failure
+                else:
+                    fetch.return_value.__enter__.return_value.read.return_value = failure
+                self.assertEqual(versions.check_codex_version()["status"], "unknown")
+        with patch.object(versions.shutil, "which", return_value="codex"), \
+                patch.object(versions.subprocess, "run", side_effect=subprocess.TimeoutExpired("codex", 5)):
+            self.assertEqual(versions.check_codex_version()["status"], "unknown")
 
 
 if __name__ == "__main__":

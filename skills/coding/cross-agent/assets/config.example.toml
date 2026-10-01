@@ -1,6 +1,6 @@
 # cross-agent configuration. Prefer requesting cross-agent initiate in chat;
 # the Skill infers commands and calls init to add the project's section safely.
-# For manual setup, copy to ~/.cross-agent/config.toml, or point
+# For manual setup, copy to <project-root>/.cross-agent/config.toml, or point
 # CROSS_AGENT_CONFIG at another private path, then edit. Every key is optional;
 # the values below are the defaults. A run keeps the settings it started with.
 
@@ -24,6 +24,8 @@ max_diff_kb = 200
 
 [defaults]
 # <provider>[:<model>[:<effort>]]. An empty model keeps the provider's default.
+# Example: reviewer = "codex::high" sets effort without fixing a model.
+# Example: producer = "claude:opus:high" sets both, when supported by that CLI.
 producer = "claude"
 reviewer = "codex"
 
@@ -31,8 +33,8 @@ reviewer = "codex"
 # [stages.feature-plan]
 # skill = "C:/Users/<you>/.agents/skills/feature-plan/SKILL.md"
 
-# Project commands and directories, keyed by the project root.
-# [projects."D:/code/example/project"]
+# Local project commands and directories. '.' keeps the checkout portable.
+# [projects."."]
 # allowed_commands = ["dotnet build", "dotnet test"]           # the Producer may run these
 # delivery_checks = ["dotnet build Example.slnx", "dotnet test Example.slnx"] # feature-delivery and general
 # extra_dirs = ["../shared-library"]                           # readable, and writable by the Producer

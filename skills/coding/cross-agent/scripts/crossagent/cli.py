@@ -23,6 +23,9 @@ def _parser() -> argparse.ArgumentParser:
 
     init = commands.add_parser("init", help="add this project's configuration; do not start workers")
     init.add_argument("--input", required=True, help="JSON object with allowed_commands, delivery_checks, extra_dirs")
+    init.add_argument("--producer", help="persist <provider>[:<model>[:<effort>]] in a new config")
+    init.add_argument("--reviewer", help="persist <provider>[:<model>[:<effort>]] in a new config")
+    init.add_argument("--skip-version-check", action="store_true", help="skip Codex version detection and latest-release lookup")
 
     start = commands.add_parser("start", help="create a run")
     start.add_argument("--stage", required=True, choices=STAGES)
@@ -67,7 +70,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "init":
             from . import config
 
-            result = config.initialize(root, args.input)
+            result = config.initialize(
+                root, args.input, producer=args.producer, reviewer=args.reviewer,
+                check_version=not args.skip_version_check,
+            )
         elif args.command == "start":
             result = engine.start(
                 root,
