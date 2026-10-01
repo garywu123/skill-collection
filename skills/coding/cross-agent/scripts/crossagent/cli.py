@@ -21,6 +21,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"cross-agent {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    init = commands.add_parser("init", help="add this project's configuration; do not start workers")
+    init.add_argument("--input", required=True, help="JSON object with allowed_commands, delivery_checks, extra_dirs")
+
     start = commands.add_parser("start", help="create a run")
     start.add_argument("--stage", required=True, choices=STAGES)
     start.add_argument("--artifact", required=True, help="path relative to the project root")
@@ -61,7 +64,11 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     root = Path.cwd()
     try:
-        if args.command == "start":
+        if args.command == "init":
+            from . import config
+
+            result = config.initialize(root, args.input)
+        elif args.command == "start":
             result = engine.start(
                 root,
                 stage=args.stage,

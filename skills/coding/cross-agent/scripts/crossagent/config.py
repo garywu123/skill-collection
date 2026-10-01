@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
+import shutil
+import tempfile
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,17 +38,25 @@ PROJECT_KEYS = ("allowed_commands", "delivery_checks", "extra_dirs")
 
 def config_path() -> Path:
     override = os.environ.get("CROSS_AGENT_CONFIG")
-    return Path(override) if override else Path.home() / ".cross-agent" / "config.toml"
+    return Path(override).expanduser() if override else Path.home() / ".cross-agent" / "config.toml"
 
 
 def load_config() -> dict:
     """Return the defaults overlaid with the user's config file, when it exists."""
-    config = copy.deepcopy(DEFAULTS)
     path = config_path()
-    if path.is_file():
+    try:
+        text = path.read_text(encoding="utf-8-sig") if path.exists() else ""
+    except (OSError, UnicodeError) as exc:
+        raise UsageError(f"Cannot read config {path}: {exc}") from exc
+    return _parse_config(text, path)
+
+
+def _parse_config(text: str, path: Path) -> dict:
+    config = copy.deepcopy(DEFAULTS)
+    if text:
         try:
-            data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
-        except (OSError, tomllib.TOMLDecodeError) as exc:
+            data = tomllib.loads(text)
+        except tomllib.TOMLDecodeError as exc:
             raise UsageError(f"Cannot read config {path}: {exc}") from exc
         for key, value in data.items():
             if key not in DEFAULTS:
@@ -58,6 +69,64 @@ def load_config() -> dict:
                 config[key] = value
     _check(config, path)
     return config
+
+
+def initialize(project_root: Path, input_file: str) -> dict:
+    """Append a missing project without rewriting existing TOML or starting a run."""
+    from . import gitops
+
+    project_root = project_root.resolve()
+    gitops.require_work_tree(project_root)
+    path = config_path().expanduser().resolve()
+    temporary = None
+    try:
+        proposed = json.loads(Path(input_file).read_text(encoding="utf-8-sig"))
+        # Reuse the normal project schema before touching the configuration file.
+        _check({**copy.deepcopy(DEFAULTS), "projects": {project_root.as_posix(): proposed}}, path)
+        proposed = {key: proposed.get(key, []) for key in PROJECT_KEYS}
+        original = path.read_bytes() if path.exists() else None
+        config = _parse_config((original or b"").decode("utf-8-sig"), path)
+        exists = project_configured(config, project_root)
+        if not exists:
+            section = f'\n[projects.{json.dumps(project_root.as_posix(), ensure_ascii=False)}]\n'
+            section += "".join(f"{key} = {json.dumps(value, ensure_ascii=False)}\n" for key, value in proposed.items())
+            updated = (original or b"# Cross-agent settings; omitted keys use built-in defaults.\n") + section.encode("utf-8")
+            config = _parse_config(updated.decode("utf-8-sig"), path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if original is None:
+                # Exclusive creation preserves a configuration created by another session.
+                with path.open("xb") as handle:
+                    handle.write(updated)
+            else:
+                with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".cross-agent-", delete=False) as handle:
+                    temporary = Path(handle.name)
+                    handle.write(updated)
+                if path.read_bytes() != original:
+                    raise UsageError("Config changed during initialization; retry without overwriting it")
+                os.replace(temporary, path)
+        effective = project_settings(config, project_root)
+        proposed_effective = project_settings({"projects": {project_root.as_posix(): proposed}}, project_root)
+        return {
+            "action": "unchanged" if exists else ("created" if original is None else "project-added"),
+            "config_path": str(path),
+            "project_root": str(project_root),
+            "project": effective,
+            "defaults": config["defaults"],
+            "settings": {key: config[key] for key in RUN_SETTINGS},
+            "proposed_differences": {
+                key: value for key, value in proposed.items()
+                if proposed_effective[key] != effective[key]
+            },
+            "providers_on_path": {provider: shutil.which(provider) is not None for provider in ("claude", "codex")},
+            "checks_configured": bool(effective["delivery_checks"]),
+            "checks_executed": False,
+            "workers_started": False,
+        }
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise UsageError(f"Cannot initialize config {path}: {exc}") from exc
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def _check(config: dict, path: Path) -> None:
@@ -125,6 +194,10 @@ def project_settings(config: dict, project_root: Path) -> dict:
         "delivery_checks": list(settings.get("delivery_checks", [])),
         "extra_dirs": [str((project_root / item).resolve()) for item in settings.get("extra_dirs", [])],
     }
+
+
+def project_configured(config: dict, project_root: Path) -> bool:
+    return any(_same_path(key, project_root) for key in config["projects"])
 
 
 def skills_root() -> Path:

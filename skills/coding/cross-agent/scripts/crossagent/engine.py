@@ -221,6 +221,9 @@ def status(project_root: Path, run_id: str | None) -> dict:
         "defaults": config["defaults"],
         "config_path": str(cfg.config_path()),
         "config_exists": cfg.config_path().is_file(),
+        "project_root": str(project_root.resolve()),
+        "project_configured": cfg.project_configured(config, project_root),
+        "project": cfg.project_settings(config, project_root),
         "cli_version": __version__,
     }
 

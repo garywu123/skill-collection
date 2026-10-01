@@ -1,5 +1,7 @@
-# cross-agent configuration. Copy this file to ~/.cross-agent/config.toml, or
-# point CROSS_AGENT_CONFIG at another path, then edit. Every key is optional;
+# cross-agent configuration. Prefer requesting cross-agent initiate in chat;
+# the Skill infers commands and calls init to add the project's section safely.
+# For manual setup, copy to ~/.cross-agent/config.toml, or point
+# CROSS_AGENT_CONFIG at another private path, then edit. Every key is optional;
 # the values below are the defaults. A run keeps the settings it started with.
 
 # Reviews per run. Each review that leaves an accepted finding allows one

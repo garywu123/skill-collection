@@ -20,6 +20,9 @@ Skill list and capabilities. The guides under [`docs/`](docs/) are onboarding
 tutorials that walk through one real, end-to-end example per collection —
 they link back to the collection `README.md` rather than duplicating it.
 
+For multi-stage Producer / Reviewer work, see the Chinese
+[Cross-agent setup and worked example](skills/coding/_doc/cross-agent-guide.md).
+
 <details>
 <summary>Full repository structure</summary>
 

@@ -1,6 +1,6 @@
 ---
 name: cross-agent
-description: Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch to coordinate Producer and read-only Reviewer stages, report live progress, adjudicate findings, and continue through user-authorized stages. Use Claude Code or Codex in either role through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review.
+description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch; initiate initializes this project's configuration without starting workers. Coordinate Producer and read-only Reviewer stages, report live progress, adjudicate findings, and continue through user-authorized stages using Claude Code or Codex through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review."
 disable-model-invocation: true
 ---
 
@@ -24,6 +24,80 @@ Commands print one JSON object; `next --stream` emits progress JSONL followed
 by one `event: result` object. Settings come from
 `~/.cross-agent/config.toml` when it exists;
 [the example](assets/config.example.toml) lists every key.
+
+## Mode Selection
+
+Resolve the mode before the run procedure. An explicit `initiate`, `init`, or
+request to initialize Cross-agent configuration selects initialization below.
+`initiate` is the conversational mode name; the executable CLI command is `init`.
+Otherwise follow Inputs and the run procedure. A missing configuration alone
+does not authorize initialization. No configuration file is required to use
+the built-in defaults, but project commands are never inferred by the CLI.
+
+Initialization alone stops after its report. If the user explicitly requests
+initialization followed by a task, continue only through the authorized stages
+after reporting missing prerequisites that would prevent them.
+
+## Initialization
+
+The Orchestrator identifies project settings; `cross-agent init` validates and
+writes them. Do not delegate initialization to workers, manually copy the
+template, or edit the configuration as a substitute for this command.
+
+1. Work from the project root governed by the applicable `AGENTS.md`, which
+   may be below the Git root. Check Python 3.11+, the existing Git work tree,
+   and `cross-agent status`. Report missing prerequisites; do not initialize
+   Git, install tools, or create lifecycle documents as part of this mode.
+2. Read the applicable project instructions and the build/test definitions
+   they reference, such as package scripts, project files, or CI commands.
+   Prefer explicit documented commands backed by repository evidence. Ask
+   only when the choice is ambiguous or changes permissions. Do not invent
+   tests from the detected language alone.
+3. Select the smallest `allowed_commands` needed for Producer work and exact
+   `delivery_checks` suitable for the intended stage. Both `general` and
+   `feature-delivery` run these checks, including document-only `general`
+   work. Default `extra_dirs` to `[]`; add writable directories only when
+   covered by the user's task. If no reliable checks exist, use `[]` and
+   explicitly report that verification is unconfigured.
+4. Write a JSON object to a temporary file outside the work tree, then run:
+
+   ```text
+   cross-agent init --input <absolute-temporary-json-path>
+   ```
+
+   ```json
+   {
+     "allowed_commands": ["python -m unittest"],
+     "delivery_checks": ["python -m unittest discover -s tests -v"],
+     "extra_dirs": []
+   }
+   ```
+
+   These commands are examples; use the project's real commands. Omitted
+   fields become empty lists. The CLI writes to `CROSS_AGENT_CONFIG` when
+   supplied, otherwise `~/.cross-agent/config.toml`. It creates the file or
+   appends a section keyed by the current project root. Existing global
+   settings, comments, and other projects remain intact. An existing matching
+   project section is preserved in full, even if fields are omitted; the
+   result reports `proposed_differences` without applying them. Report those
+   differences rather than claiming the proposed settings were installed.
+   Updating existing settings requires an explicit configuration-change task.
+5. Run `status` again and report the config path, action (`created`,
+   `project-added`, or `unchanged`), effective project commands, role defaults,
+   and remaining prerequisites. `providers_on_path` shows executable discovery
+   only; it does not verify login or model availability. Inspect sibling stage
+   Skills only for stages the user intends to use. Initialization validates
+   configuration syntax and schema; it does not execute checks, start workers,
+   or create a run. Remove the temporary input file and stop unless a following
+   task was explicitly authorized.
+
+Use existing global or built-in role defaults. Initialization does not change
+global defaults for one project's role preference; pass explicitly requested
+roles using `start --producer` / `--reviewer` on subsequent runs. Keep private
+configuration and temporary input outside the work tree. Normal sandbox
+permissions still apply; if the default path is unwritable, report the
+restriction and use an authorized private `CROSS_AGENT_CONFIG` path consistently
+for every CLI call, without silently switching configurations.
 
 ## Inputs
 
