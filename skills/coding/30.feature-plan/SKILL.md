@@ -1,7 +1,7 @@
 ---
 name: feature-plan
-description: Create, revise, or reopen one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests. Invoke explicitly, by name, to plan, review, reopen, or simplify implementation or verification for one Feature Map item. Do not implement production code or create separate checklists and task files.
-disable-model-invocation: true
+description: Create, revise, or reopen one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests. Use when the user asks to plan, review, reopen, or simplify implementation or verification for one Feature Map item. Do not implement production code or create separate checklists and task files.
+disable-model-invocation: false
 ---
 
 # Feature Plan
@@ -19,7 +19,7 @@ tasks, checklist, research, or verification report.
 Keep the whole plan under 60 lines, focused on:
 
 - the observable feature outcome and scope;
-- affected components and the smallest implementation sequence;
+- affected components, the smallest execution sequence, and any useful delegation;
 - happy-path tests first;
 - relevant failure-path tests second; and
 - executable validation commands and their results.
@@ -66,10 +66,39 @@ it is planned.
    observable behavior without promoting accidental code behavior into a
    requirement. Reference relevant Storyboard states and transitions by ID.
    Prefer behavior-level language over speculative class inventories.
-5. Write the plan and run the consistency check.
+5. Assess execution size, dependencies, and delegation as described below.
+6. Write the plan and run the consistency check.
 
 Do not require or start a Storyboard solely because one is absent. Stop and
 report the unresolved UI decision only when it prevents a reliable plan.
+
+## Execution Planning
+
+Default to one serial execution segment. For substantial work, replace the
+implementation list with a compact table of segment ID, owned area/files,
+prerequisites and shared contracts, focused acceptance/checks, handoff, and
+delegation choice. Keep the same Feature ID and Plan, within the 60-line limit;
+do not create a mini Map or separate task files. Group by verifiable behavior
+and actual dependencies, not speculative class inventories.
+
+With cross-agent, size each segment for its configured worker timeout (default
+30 minutes), leaving time for verification and a checkpoint. This is an estimate,
+not a guarantee; long commands may still time out. Name the completed checks and
+next unfinished work at each boundary. Separate independent product outcomes
+through Feature Map; use segments for one outcome with substantial execution.
+
+Propose subagents only for substantial independent tasks with stable contracts,
+disjoint ownership and resources, and focused verification, when execution
+savings exceed briefing, rereading, review, and integration costs. Keep shared
+types, schemas, routes, and integration with the parent. State "serial" when
+delegation is not worthwhile; do not launch implementation subagents here.
+Give a proposed delegate only its task, owned paths, necessary contracts and
+instructions, checks, and expected brief result with evidence. Delivery reassesses
+these boundaries and owns the actual launches and concurrency limit.
+
+Reserve a final integration segment for the whole Feature's acceptance and
+regression checks. Multiple worker calls/sessions do not create new Feature IDs,
+reset the original baseline, or replenish the run's review budget.
 
 ## Consistency Check
 

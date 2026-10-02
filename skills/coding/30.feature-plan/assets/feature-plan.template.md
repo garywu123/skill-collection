@@ -23,6 +23,10 @@
 1. <Small vertical implementation step and likely touchpoints.>
 2. <Next step.>
 
+<For substantial work, replace this list and note with a compact table:
+Segment | Area/owned files | Prerequisites/contracts | Acceptance/checks | Handoff | Delegation.
+Default to one serial segment; end larger sequences with whole-feature validation.>
+
 ## Happy Paths
 
 | Scenario | Test | Expected result | Actual result |

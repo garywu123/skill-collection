@@ -62,7 +62,7 @@ REVIEW = _object(
 
 PRODUCER = _object(
     {
-        "status": {"type": "string", "enum": ["done", "needs-user-decision", "blocked"]},
+        "status": {"type": "string", "enum": ["done", "checkpoint", "needs-user-decision", "blocked"]},
         "summary": _STRING,
         "questions": _STRINGS,
         "blocker": {"type": ["string", "null"]},

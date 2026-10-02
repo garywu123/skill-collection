@@ -1,7 +1,7 @@
 ---
 name: feature-delivery
-description: Implement or behavior-preservingly simplify one planned feature, test happy paths before relevant failure paths, and record real results in its Feature Plan. Invoke explicitly, by name, to build, complete, fix, simplify, refactor, or be coached through a planned feature. Work automatically by default or let the user write core implementation when that intent is clear. Do not invent product scope, clean up the whole repository, or create additional lifecycle documents.
-disable-model-invocation: true
+description: Implement or behavior-preservingly simplify one planned feature, test happy paths before relevant failure paths, and record real results in its Feature Plan. Use when the user asks to build, complete, fix, simplify, refactor, or be coached through a planned feature. Work automatically by default or let the user write core implementation when that intent is clear. Do not invent product scope, clean up the whole repository, or create additional lifecycle documents.
+disable-model-invocation: false
 ---
 
 # Feature Delivery
@@ -63,6 +63,27 @@ In `guided` mode, for each behavior:
    Continue to answer questions or give bounded hints as needed.
 4. Explain a remaining mismatch concisely and repeat, or advance when it passes.
 
+## Execution Segments
+
+Follow the Plan's segment order, prerequisites, ownership, and acceptance. A
+small Feature needs no additional execution table. Reassess a proposed split
+when evidence invalidates its boundaries; update the same Plan within its scope
+and report a product or design conflict instead of silently expanding the Feature.
+
+Within cross-agent, finish one planned segment and its focused checks before
+returning `status: checkpoint` when more authorized work remains. The summary
+must state the segment completed, actual acceptance/check evidence, changed
+areas and stable contracts, next unfinished segment, and relevant limitations.
+Use empty questions/outcomes and null blocker. This hands off to a new Producer
+session in the same run; it is not completion, an independent review pass, or a
+new revision. Do not checkpoint trivial work just to create sessions.
+
+On recovery, inspect the current diff, Plan results, and checkpoint before doing
+more work; a failed call may have left useful edits. Resume incomplete work
+without repeating a completed segment or inventing successful checks. Finish
+with whole-feature integration, regression checks, and the consistency check;
+only then report `done` and update status according to real acceptance results.
+
 ## Delegation
 
 Work in the current context by default. Subagents are not free: each one repays
@@ -94,6 +115,8 @@ the affected edits or commands. The execution environment may use an isolated
 workspace when it provides one; this Skill does not require or manage a
 particular isolation mechanism.
 
+Give only necessary task context, contracts, and applicable instructions; do
+not copy the full parent transcript or require a whole-repository reread.
 Each brief states the Plan step boundary, the files the subagent owns and must
 not leave, the smallest-change and avoid-speculative-abstraction constraints,
 and the focused verification it must perform. When two subagents turn out to

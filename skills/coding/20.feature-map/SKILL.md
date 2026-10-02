@@ -1,7 +1,7 @@
 ---
 name: feature-map
-description: Create the right-sized MVP delivery structure - one concise Feature Map with shared technical direction, or at scale a Roadmap of child Feature Maps with shared General Designs. Invoke explicitly, by name, to define, split, or revise MVP Features, delivery stages, dependencies, shared technical choices, or cross-feature architecture. Do not create per-feature implementation plans or requirements.
-disable-model-invocation: true
+description: Create the right-sized MVP delivery structure - one concise Feature Map with shared technical direction, or at scale a Roadmap of child Feature Maps with shared General Designs. Use when the user asks to define, split, or revise MVP Features, delivery stages, dependencies, shared technical choices, or cross-feature architecture. Do not create per-feature implementation plans or requirements.
+disable-model-invocation: false
 ---
 
 # Feature Map
@@ -23,7 +23,9 @@ one clear canonical map. For a scale project, create the Roadmap, shared
 General Design, and current child map described below.
 
 Keep the whole map under 60 lines. Keep each feature independently useful and
-small enough to plan in one feature document. Use stable IDs such as `F01` that
+small enough to plan in one feature document. Execution segments and subagent
+choices belong in that Feature Plan; a long implementation alone does not
+justify another Map row. Use stable IDs such as `F01` that
 are unique across every child map and never reuse or renumber them. Put only
 MVP features in the main table; mention later ideas in one short section when
 needed. Use one map when the coherent MVP fits in about eight rows with its

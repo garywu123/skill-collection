@@ -6,10 +6,12 @@ import json
 import os
 import secrets
 import shutil
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from .errors import UsageError
+from . import history
 
 STATE_VERSION = 1
 STATE_DIR = ".cross-agent"
@@ -51,11 +53,21 @@ def save(state: dict) -> None:
     state["updated_at"] = now()
     temporary = path.with_name("state.json.tmp")
     temporary.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
-    os.replace(temporary, path)
+    for attempt in range(4):
+        try:
+            os.replace(temporary, path)
+            break
+        except PermissionError as exc:
+            # Windows may briefly deny replacement while another handle reads the file.
+            # Keep the old complete state and bound retries; permanent permissions still fail.
+            if getattr(exc, "winerror", None) not in (5, 32, 33) or attempt == 3:
+                raise
+            time.sleep(0.05 * 2 ** attempt)
+    history.save(state)
 
 
 def open_runs(project_root: Path) -> list[dict]:
-    """Every run directory that still holds state; closed runs are deleted."""
+    """Runs holding the artifact lock; parked history is retained without that lock."""
     runs = []
     root = runs_root(project_root)
     if root.is_dir():
@@ -64,7 +76,9 @@ def open_runs(project_root: Path) -> list[dict]:
             if not path.is_file():
                 continue
             try:
-                runs.append(json.loads(path.read_text(encoding="utf-8")))
+                state = json.loads(path.read_text(encoding="utf-8"))
+                if state.get("phase") != "parked":
+                    runs.append(state)
             except (OSError, json.JSONDecodeError):
                 runs.append({"run_id": child.name, "phase": "unreadable"})
     return runs

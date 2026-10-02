@@ -1,6 +1,6 @@
 ---
 name: cross-agent
-description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch; initiate creates repo-local configuration with model/effort defaults and checks Codex CLI freshness without starting workers. Coordinate Producer and read-only Reviewer stages, report live progress, adjudicate findings, and continue through user-authorized stages using Claude Code or Codex through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review."
+description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch; initiate creates repo-local configuration with model/effort defaults and checks Codex CLI freshness without starting workers. Coordinate Producer and read-only Reviewer stages, report live progress, retain worker time/token CSV history, adjudicate findings, and continue through user-authorized stages using Claude Code or Codex through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review."
 disable-model-invocation: true
 ---
 
@@ -26,6 +26,19 @@ by one `event: result` object. Settings come from
 explicitly overrides this path. Never search parent directories or implicitly
 load the old `~/.cross-agent/config.toml`; different project roots are independent.
 [the example](assets/config.example.toml) lists every key.
+
+For a multi-project workspace, keep the settings in one shared file. Each
+project's local config may contain only a single `config_file = "<path>"`,
+resolved relative to that local config's directory. A pointer must reference
+an existing settings file; pointers cannot be chained or mixed with settings.
+Use explicit project-root keys in the shared file so commands and permissions
+remain separate. Run state stays in the calling project's `.cross-agent/runs/`.
+
+Optional `[cli]` entries `claude` and `codex` select absolute executable paths;
+unspecified providers use PATH. A missing configured executable fails without
+falling back to another version. `status` and `init` report `cli_executables`;
+version detection uses the selected Codex. CLI paths are read at each worker
+call, including existing runs; saved roles, commands, and budgets are unchanged.
 
 ## Mode Selection
 
@@ -143,6 +156,9 @@ Resolve these CLI inputs for each stage:
 - **Stage**: `feature-map`, `feature-plan`, `feature-delivery`, or `general`.
   Infer it only when the request leaves no doubt. A Feature Plan path alone can
   mean `feature-plan` or `feature-delivery`, so ask.
+- **Item**, optional: a stable Feature ID, function name, or topic for history.
+  Pass the same `--item` at each stage of that work; it defaults to the artifact
+  path. An item is only a reporting label, not new product scope.
 - **Artifact**: the file the run centers on. The Producer may also change what
   its stage Skill owns, such as consistency fixes in related documents.
 - **Start mode**: `review` for an existing artifact, or `produce` with a
@@ -188,7 +204,8 @@ independent review pass: if the user's gate requires that pass, stop there.
 
 ```text
 cross-agent start --stage <stage> --artifact <path> --first <produce|review>
-                  [--request "<text>"] [--producer <spec>] [--reviewer <spec>] [--dry-run]
+                  [--item "<Feature ID or topic>"] [--request "<text>"]
+                  [--producer <spec>] [--reviewer <spec>] [--dry-run]
 cross-agent next  --run <id> --stream
 ```
 
@@ -206,7 +223,8 @@ can inspect the latest saved observations. Act on the final result's phase:
 | `awaiting-answer` | Relay the Producer's questions, then pass the user's reply with `cross-agent answer --run <id> --text "<answer>"`. |
 | `finalizing` | Follow Finalization. |
 | `done` | Follow Close. |
-| `failed` or `blocked` | Report the reason and the state path, then stop. |
+| `failed` | If `automatic_recovery_available`, call `next` once; otherwise report the reason and state path and stop. |
+| `blocked` | Report the blocker and stop until the user resolves it. |
 
 Relay an answer only when the user gave it explicitly, now or earlier in this
 chat, and quote it. Never supply your own answer: the question exists because
@@ -215,6 +233,31 @@ the Producer's Skill requires a user decision.
 Talk to the user in the user's language. Workers and the backlog use English,
 so write decisions, rationales, and relayed answers in English, and translate
 the Producer's questions when you relay them.
+
+Producer timeout and explicit transient connection/rate-limit errors receive at
+most one automatic recovery per run. `next` resumes a compatible failed run or
+the active call retries once; both share that counter. Prefer the previous
+Producer session. Replace it only for the saved context threshold, an execution
+checkpoint, or a recognized missing/unloadable session; retain old sessions for
+history and later cleanup. A replacement receives the run summary and latest
+checkpoint and must inspect existing edits. Each worker call still has the
+configured hard timeout (default 30 minutes); output never extends it. Do not
+keep calling `next` to obtain unlimited retries.
+
+After the external cause of a failed Producer execution is fixed and recovery
+is authorized, use `cross-agent retry-producer --run <id>`, then `next --stream`.
+This explicit retry does not append another automatic retry. It preserves the
+baseline, sessions, edits, findings, answer, and review budget. Schema/output
+validation and write guards are not execution failures and cannot be retried.
+Configuration/discovery failures require fixing their cause before proceeding.
+
+An execution Producer may return `checkpoint` after a planned segment. The CLI
+saves its acceptance/handoff summary and snapshot, stays in `produce`, and the
+next call starts a fresh Producer session. Report the checkpoint and continue
+the already-authorized Plan. There are at most eight checkpoints per run; they
+do not consume or reset a revision/review budget. The original baseline remains
+the final review boundary. Only `done` runs whole-stage checks and hands off for
+independent review. Never treat a checkpoint as verified completion.
 
 When the user explicitly authorizes recovery after a Reviewer execution failure,
 fix the external cause first, then use `cross-agent retry-review --run <id>`
@@ -225,7 +268,21 @@ launch workers manually to recover. When the user explicitly resolves a
 Producer-reported blocker and asks to continue, pass that decision with
 `cross-agent answer --run <id> --text "<user decision>"`, then `next --stream`.
 This preserves both worker sessions, findings, snapshots, and the review budget;
-it cannot resume a failed validation guard. Other failed or blocked runs stop.
+it cannot resume a failed validation guard. Other failed or blocked runs stop; never edit state or launch workers manually.
+
+When the user redirects a failed Delivery to replanning, use `park --run <id>
+--reason "<user-requested replan>"`. This releases its artifact lock without
+closing the run, deleting sessions or resetting its baseline/review budget.
+`status --run` still reads parked history; `next` cannot run it. Update/review
+the same Plan in a separate `feature-plan` run. After that run independently
+passes, use `resume-delivery --run <delivery-id> --plan-run <plan-id> --request
+"<reviewed segment handoff>"`, then close the completed Plan run and call
+Delivery `next --stream`. This starts a fresh Producer while retaining Delivery
+history and its original review boundary/budget. It refuses exhausted budgets,
+other active artifact owners, and schema/read-only/snapshot validation failures.
+For a prior diff-size guard only, an explicit `--max-diff-kb <larger-capacity>`
+may increase that saved input ceiling; it does not omit changes from review.
+Never use parking to bypass a worker or review gate.
 
 ## Live Reporting
 
@@ -235,6 +292,17 @@ start, handoff, review findings, revision, and stage completion promptly;
 otherwise give one concise update about every 30-60 seconds. Group repetitive
 tool events. A heartbeat means the process is still waiting/running, not that
 useful work or a test has succeeded.
+
+Report `skill-loaded` as complete Skill content injected into the worker prompt,
+including the path, hash, and method; it proves supplied content, not native
+Skill-tool invocation or compliance. `skill-started` follows worker readiness:
+Producer executes that stage, Reviewer judges it read-only. Report subagent
+requests, starts, completion and active counts only when observed; otherwise
+say unknown. Do not equate a launch request with a running agent.
+
+Feature Plan owns execution sizing, segment acceptance/handoffs, and proposed
+delegation. Keep Orch's analysis to scope, dependencies, gates, and adjudication;
+drive the reviewed Plan rather than designing an alternative execution map.
 
 Include stage/item, role/provider, configured model and effort, observed model
 and effort when available, session generation, latest parent context tokens,
@@ -248,6 +316,40 @@ cumulative spend; never infer a percentage without an observed context limit.
 Child context must not overwrite parent context. Provider compaction events
 and CLI fresh-session rotation are different; report only observed events.
 Rotation is evaluated between worker calls, not during a running call.
+
+### Retained History
+
+The CLI automatically maintains `.cross-agent/history/<run-id>.csv`, one row
+per worker call, including revisions, checkpoint segments, and failed/retried
+calls. A session can have multiple rows. Calls record item, stage, artifact,
+role/provider, round (`P0`, `R1`, `P1`, ...), segment, configured and observed
+model/effort, session ID/generation/reason, UTC start/end, elapsed seconds,
+worker response status, current/final run status, and observed token counts.
+Elapsed time covers the worker invocation, not user waiting or project checks.
+`call_status` is a worker result, not proof that the stage passed its guards.
+
+Run `cross-agent history` to refresh `.cross-agent/history.csv` from all retained
+runs, then review/filter it in Excel by item, role, round, or session. CSVs use
+UTF-8 with BOM. Scripts own these files; never ask an agent to handwrite rows.
+`status --run` and `close` report the per-run history path. `close` preserves
+history while deleting run state and worker sessions. `.cross-agent/` remains
+locally excluded from Git; history stays in this checkout unless copied out.
+
+Token columns count the parent worker call only (`usage_scope=parent-call`);
+they exclude this Orch session and do not guarantee coverage of subagents or
+provider-internal work. Input tokens include cache reads/writes, which are also
+listed separately; reasoning tokens are an output subset. Sum `total_tokens`
+alone to avoid double counting. Codex session counters become per-call deltas
+against a saved or observed baseline; missing/reset baselines stay unknown.
+Claude uses final result usage for the current call; timeout fallback counts
+unique parent message input/cache tokens and leaves output unknown. Never sum
+Claude session-level `modelUsage`/cost totals across resumed calls.
+
+`usage_status` is `reported`, `partial`, or `unknown`; blank counts mean unknown,
+not zero. Partial totals are not complete spend or billing amounts. A killed
+Orch process may leave a `running` row without an end time; do not invent it.
+Existing runs start recording only their subsequent calls; no past timestamps
+or usage are fabricated. This history is telemetry, not a new lifecycle document.
 
 Producer delegation must follow the stage Skill, or for `general` be limited
 to substantial independent work with disjoint ownership. Reviewers do not
@@ -331,8 +433,9 @@ independence depends on the Producer being the only writer.
 ## Close
 
 When the run is done, run `cross-agent close --run <id>`. It appends the run's
-backlog items to `docs/review-backlog.md`, deletes the run state, and cleans up
-worker sessions. A current blocker never reaches the backlog silently: report
+backlog items to `docs/review-backlog.md`, preserves the history CSV, deletes
+the run state, and cleans up worker sessions. A current blocker never reaches
+the backlog silently: report
 every unfixed accepted finding to the user as open before closing.
 
 A `failed` or `blocked` run stays open, and blocks new runs on its artifact,
@@ -361,7 +464,8 @@ independent review left nothing accepted, while `completed-by-orchestrator`
 means this session accepted the final state during finalization. Also report
 reviews and Producer revisions used, findings by disposition, finalization
 edits, checks and their results, backlog items written, open user decisions,
-defects you noticed yourself, and a failed run's state path. Update the chat
-agenda and continue an authorized next stage; stop at the requested endpoint.
+defects you noticed yourself, and a failed run's state path. Report the retained
+history path and any unknown or partial token coverage. Update the chat agenda
+and continue an authorized next stage; stop at the requested endpoint.
 "Finish development" means meet its checks, while CLI `close` only cleans up
 run state and worker sessions. Never substitute cleanup for delivery.

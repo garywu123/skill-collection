@@ -19,24 +19,44 @@ Product Brief
   -> Feature Delivery (auto | guided)
 ```
 
-生命周期 Skill 只由人显式点名调用（Claude Code 中为 `/skill-name`），不由 AI 根据
-对话自动选择；`SKILL.md` 用 `disable-model-invocation: true` 声明这一点。Copilot 和
-Codex 目前没有等价开关，只能依赖 description 中的 "Invoke explicitly, by name"。
-一个已有或缺失的产物本身不授权相邻 Skill；一条指令明确覆盖多个结果时，才依次调用
-多个 Skill。
+`feature-map`、`feature-plan`、`feature-delivery` 可由模型根据用户请求自动选择，也可
+显式调用。它们共享一份 `SKILL.md` 正文和 description：Claude Code 用 frontmatter 的
+`disable-model-invocation: false`；Codex 用同目录 `agents/openai.yaml` 的
+`policy.allow_implicit_invocation: true`。其他生命周期 Skills 与 `cross-agent` 保持
+显式调用边界；Copilot 的发现依其客户端支持，不能假定它识别这两个平台专用字段。
+自动选择 Skill 不扩大授权：只请求规划时停在规划，要求完成一个 Feature 时可按已授权
+结果衔接必要规划和交付；缺失产物本身不授权创建新产品范围。
+
+Feature Map 拆独立用户结果；Feature Plan 评估执行规模、依赖、阶段验收、交接与委派。
+小功能默认单阶段串行；大功能可在同一份 60 行以内的 Plan 中用紧凑表安排多个执行
+segment/session，最后整体回归。Feature Delivery 按计划执行并重新核实委派边界；
+只有收益超过背景加载和整合成本的独立任务才开 sub-agent，最多同时三个，并受环境限制。
 
 `cross-agent`（Orch）让当前会话像 PM 一样理解任务、安排阶段并汇报实时进度，适用于
 设计、带总体设计的 Roadmap、重构计划与执行，以及指定 Features。Skill 自带的 CLI
 （Python 3.11+）每个 run 仍只处理一个阶段和一个 artifact，启动 Claude Code 或 Codex
 Producer 与只读 Reviewer。用户一次授权多个阶段时，Orch 在前一阶段通过后自动继续，
 每个阶段使用新 session；用户要求人工批准时等待回复。只请求规划不会自动授权执行。
-`next --stream` 提供活动、可获得的模型/context/sub-agent 信息和心跳；未知数据明确标注。
-Reviewer 执行失败后，用户明确授权恢复时可用 `retry-review` 保留 Producer 与审阅预算；
-Producer 报告的 blocker 可通过 `answer` 传递用户的恢复决定，校验失败仍不可绕过。
+`next --stream` 显示阶段 Skill 正文注入成功（路径/hash/加载方式）、worker 就绪后的阶段
+开始、活动、可获得的模型/context/sub-agent 信息和心跳；未知数据明确标注。CLI 对
+Producer 的 timeout/明确瞬态连接错误每 run 自动恢复一次，优先 resume 原 session；
+失效 session 或超过 context 阈值才替换，并保留历史。默认单次调用仍为 30 分钟硬上限。
+失败的执行可在修复原因后用 `retry-producer` 明确重试；`retry-review` 保留 Producer 与
+审阅预算，blocker 通过 `answer` 传递用户决定，schema 和只读校验失败不可绕过。
+执行阶段的 `checkpoint` 保存真实验收证据与未完成工作，下一次 `next` 新开 Producer
+session；仍为同一个 run，原始 baseline、findings 和 review 预算保留，不提前送审。
+每 run 最多八个 checkpoint；全部完成后才整体检查并交给 Reviewer。
+CLI 自动保存 `.cross-agent/history/<run-id>.csv`：每次 Producer/Reviewer 调用一行，
+包括 Feature/主题、round、segment/session、模型/effort、UTC 起止时间、耗时、状态和
+可获得的 token 用量；`start --item` 可让同一功能跨阶段使用相同分组。
+`history` 命令汇总到 `.cross-agent/history.csv`，`close` 后仍保留。未知用量留空，
+部分用量明确标注；统计范围是父 worker 调用，不包含当前 Orch，不能保证覆盖子 agent。
+用户把失败的 Delivery 转回规划时，`park` 暂存旧 run 并保留历史；同一 Plan 独立审阅
+通过后，`resume-delivery` 新开 Producer，保留原 Delivery baseline 和剩余预算。
 在对话中显式请求 `cross-agent initiate` 时，Orch 根据项目说明和已有构建、测试定义选择命令，
 通过 CLI 的 `init` 创建当前项目根目录的 `.cross-agent/config.toml`，保存 Producer/Reviewer
 的模型和 effort，并检测已安装 Codex CLI 与 npm 最新发布版本；已有设置保留并报告差异。
-默认不读取用户目录或父目录配置。初始化不自动升级 CLI、不执行项目测试或启动 worker；
+默认不读取用户目录或父目录配置。可用单层 `config_file` 入口共享 workspace 配置，各项目命令保持分区；`[cli]` 可指定绝对 CLI 路径，启动、恢复和版本检测使用同一选择，路径失效时不回退。初始化不自动升级 CLI、不执行项目测试或启动 worker；
 无法检测版本时明确报告未知，缺少配置本身不触发初始化。
 
 变更只向下传播：Brief -> Spec -> Design -> Roadmap -> Map -> Plan -> 代码。交付发现
@@ -67,7 +87,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature 的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划 | `docs/features/<feature-id>-<slug>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，并记录真实测试结果 | 更新代码、Feature Plan 和 Feature Map 状态 |
-| [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort 和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；每阶段独立 Producer/Reviewer run，限定审阅次数并裁决 findings | 项目根目录 `.cross-agent/config.toml`；任务产出各阶段 artifact 与对话进度，非阻塞遗留项追加到 `docs/review-backlog.md` |
+| [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort 和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；每阶段独立 Producer/Reviewer run，限定审阅次数并裁决 findings，按功能/主题保留调用历史 | 项目根目录 `.cross-agent/config.toml`；各阶段 artifact 与对话进度；`.cross-agent/history/` 的时间与用量 CSV，`history` 可汇总；非阻塞遗留项追加到 `docs/review-backlog.md` |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 | [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |
@@ -84,7 +104,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | Roadmap | 子 Map 的顺序、分配的 FS ID、依赖和路径；文件存在后才使用链接 | 需求原文、设计、交付状态 |
 | Feature Map | Feature 结果、引用的 FS ID、依赖、状态；单 Map 项目还包含技术方向和架构 | 需求原文、实现细节 |
 | Feature Storyboard | 一个 UI Feature 的可见状态和转换 | 实现设计、测试、状态 |
-| Feature Plan | 该 Feature 的实现步骤、测试设计和真实结果 | 上游内容的复制 |
+| Feature Plan | 该 Feature 的执行阶段、依赖、验收、交接、委派选择、测试设计和真实结果 | 上游内容的复制 |
 | Review Backlog | `cross-agent` 裁决后未进入本次修订的非阻塞遗留项及其理由 | 未告知用户的当前 blocker、prompt、transcript、token 日志、快照、需求或计划内容 |
 
 下游文档链接上游文档，不复制上游内容。用户指定的既有 domain knowledge 只是可选

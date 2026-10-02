@@ -23,6 +23,7 @@ DEFAULTS: dict = {
     "backlog_rejected": True,
     "max_diff_kb": 200,
     "defaults": {"producer": "claude", "reviewer": "codex"},
+    "cli": {},
     "stages": {},
     "projects": {},
 }
@@ -38,7 +39,24 @@ PROJECT_KEYS = ("allowed_commands", "delivery_checks", "extra_dirs")
 
 def config_path(project_root: Path | None = None) -> Path:
     override = os.environ.get("CROSS_AGENT_CONFIG")
-    return Path(override).expanduser() if override else (project_root or Path.cwd()) / ".cross-agent" / "config.toml"
+    path = Path(override).expanduser() if override else (project_root or Path.cwd()) / ".cross-agent" / "config.toml"
+    if not path.is_file():
+        return path
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
+        if "config_file" not in data:
+            return path
+        reference = data["config_file"]
+        if set(data) != {"config_file"} or not isinstance(reference, str) or not reference.strip():
+            raise UsageError(f"Config pointer {path} must contain only a nonempty 'config_file'")
+        target = (path.parent / reference).resolve()
+        if not target.is_file():
+            raise UsageError(f"Shared config {target} referenced by {path} does not exist")
+        if "config_file" in tomllib.loads(target.read_text(encoding="utf-8-sig")):
+            raise UsageError(f"Config pointers cannot be chained: {path} -> {target}")
+        return target
+    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
+        raise UsageError(f"Cannot read config {path}: {exc}") from exc
 
 
 def load_config(project_root: Path | None = None) -> dict:
@@ -133,7 +151,8 @@ def initialize(project_root: Path, input_file: str, *, producer=None, reviewer=N
                 key: value for key, value in requested_roles.items() if value != config["defaults"][key]
             },
             "providers_on_path": {provider: shutil.which(provider) is not None for provider in ("claude", "codex")},
-            "codex_version": check_codex_version() if check_version else {
+            "cli_executables": cli_executables(config),
+            "codex_version": check_codex_version(config["cli"].get("codex")) if check_version else {
                 "status": "skipped", "installed": None, "latest": None,
             },
             "checks_configured": bool(effective["delivery_checks"]),
@@ -155,6 +174,9 @@ def _check(config: dict, path: Path) -> None:
         raise UsageError(f"'rotate_at_tokens' in {path} must be 0 (off) or a positive integer")
     if not isinstance(config["backlog_rejected"], bool):
         raise UsageError(f"'backlog_rejected' in {path} must be true or false")
+    for provider, executable in config["cli"].items():
+        if provider not in ("claude", "codex") or not isinstance(executable, str) or not Path(executable).is_absolute():
+            raise UsageError(f"[cli] in {path} accepts only absolute 'claude' or 'codex' executable paths")
     for role in ("producer", "reviewer"):
         parse_spec(str(config["defaults"].get(role, "")))
     for project, settings in config["projects"].items():
@@ -165,6 +187,11 @@ def _check(config: dict, path: Path) -> None:
                 raise UsageError(f"Unknown key '{key}' in [projects.\"{project}\"] of {path}")
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
                 raise UsageError(f"'{key}' in [projects.\"{project}\"] of {path} must be a list of strings")
+
+
+def cli_executables(config: dict) -> dict:
+    """Report the configured executables, or PATH discovery when unspecified."""
+    return {provider: shutil.which(config["cli"].get(provider, provider)) for provider in ("claude", "codex")}
 
 
 def _is_int(value) -> bool:

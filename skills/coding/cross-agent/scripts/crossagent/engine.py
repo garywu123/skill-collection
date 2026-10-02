@@ -6,18 +6,21 @@ A run moves through these phases:
 
 `awaiting-answer` interrupts a Producer step until the user answers, and a run
 ends early in `done` when an adjudicated review leaves nothing accepted.
-`failed` and `blocked` keep the run open until the user abandons it.
+`failed` and `blocked` keep the run open for bounded recovery or explicit abandonment.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
 import subprocess
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, backlog, gitops, prompts, providers, schemas, store
+from . import __version__, backlog, gitops, history, prompts, providers, schemas, store
 from . import config as cfg
 from .errors import GitError, UsageError
 
@@ -25,6 +28,8 @@ TERMINAL = ("done", "failed", "blocked")
 BACKLOG_FILE = "docs/review-backlog.md"
 CHECK_EXCERPT_LINES = 40
 EXCERPT_CHARS = 4000
+MAX_PRODUCER_CHECKPOINTS = 8
+MAX_AUTO_PRODUCER_RETRIES = 1
 
 NEXT_ACTION = {
     "produce": "Call next to run the Producer.",
@@ -34,6 +39,7 @@ NEXT_ACTION = {
     "finalizing": "Fix accepted local problems in one batch, record unfixed ones with decide, then call next.",
     "done": "Report the result, then call close.",
     "failed": "Report the error. Close the run only when the user abandons it.",
+    "parked": "Review the updated Plan, then use resume-delivery with its independently passed run.",
     "blocked": "Report the blocker. Close the run only when the user abandons it.",
 }
 
@@ -41,15 +47,18 @@ NEXT_ACTION = {
 class StepFailed(Exception):
     """A worker, schema, or snapshot failure that ends the run as failed."""
 
-    def __init__(self, message: str, raw: str = ""):
+    def __init__(self, message: str, raw: str = "", *, role=None, execution=False, retryable=False):
         super().__init__(message)
         self.raw = raw
+        self.role = role
+        self.execution = execution
+        self.retryable = retryable
 
 
 # ---------------------------------------------------------------- commands
 
 
-def start(project_root: Path, *, stage, artifact, first, request, producer, reviewer, dry_run) -> dict:
+def start(project_root: Path, *, stage, artifact, first, request, producer, reviewer, dry_run, item=None) -> dict:
     project_root = project_root.resolve()
     gitops.require_work_tree(project_root)
     config = cfg.load_config(project_root)
@@ -70,7 +79,7 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         "reviewer": cfg.parse_spec(reviewer or config["defaults"]["reviewer"]),
     }
     for spec in roles.values():
-        providers.get(spec.provider).check()
+        providers.get(spec.provider).check(config["cli"].get(spec.provider))
     skill = cfg.find_stage_skill(config, stage)
     for run in store.open_runs(project_root):
         if run.get("artifact") == artifact_rel:
@@ -88,6 +97,7 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         "stage": stage,
         "skill": str(skill) if skill else None,
         "artifact": artifact_rel,
+        "item": (item or "").strip() or artifact_rel,
         "first": first,
         "request": request,
         "settings": {key: config[key] for key in cfg.RUN_SETTINGS},
@@ -128,6 +138,11 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
 def next_step(project_root: Path, run_id: str, progress=None) -> dict:
     state = store.load(project_root, run_id)
     try:
+        if state["phase"] == "failed" and _can_auto_recover(state):
+            _arm_producer_retry(state, automatic=True)
+            if progress:
+                progress({"event": "producer-recovery", "run_id": run_id, "stage": state["stage"],
+                          "role": "producer", "automatic": True, "attempt": state["producer_auto_retries"]})
         if state["phase"] == "produce":
             return _producer_step(state, progress)
         if state["phase"] == "review":
@@ -135,21 +150,76 @@ def next_step(project_root: Path, run_id: str, progress=None) -> dict:
         if state["phase"] == "finalizing":
             return _finish(state)
     except StepFailed as exc:
-        return _fail(state, str(exc), exc.raw)
+        return _fail(state, str(exc), exc.raw, role=exc.role, execution=exc.execution, retryable=exc.retryable)
     except GitError as exc:
         return _fail(state, str(exc))
+    except UsageError as exc:
+        # State is saved before its CSV. Even a locked CSV must stop this run
+        # rather than let a later next silently launch the same completed work.
+        return _fail(state, str(exc))
     return _event(state, "No step to run; this is the pending event.")
+
+
+def _execution_error(state: dict, role: str) -> bool:
+    error = state.get("error") or {}
+    if "execution" in error:
+        return error.get("role") == role and error["execution"]
+    # Version-1 runs saved before recovery metadata used this narrow prefix.
+    message = error.get("message", "")
+    return message.startswith(f"The {role} (") and "returned no structured output" not in message
+
+
+def _transient_error(message: str) -> bool:
+    text = message.lower()
+    if any(word in text for word in ("authentication", "unauthorized", "permission denied", "model unavailable")):
+        return False
+    return any(word in text for word in ("timed out", "timeout", "connection reset", "connection refused",
+                                        "connection closed", "network error", "rate limit", "temporarily unavailable"))
+
+
+def _can_auto_recover(state: dict) -> bool:
+    error = state.get("error") or {}
+    return (state["phase"] == "failed" and _execution_error(state, "producer")
+            and error.get("retryable", _transient_error(error.get("message", "")))
+            and state.get("producer_auto_retries", 0) < MAX_AUTO_PRODUCER_RETRIES)
+
+
+def _arm_producer_retry(state: dict, *, automatic=False) -> None:
+    error = state.get("error") or {}
+    state["producer_recovery"] = error.get("message", "Previous Producer execution failed.")
+    state.setdefault("producer_recoveries", []).append({"at": store.now(), "automatic": automatic,
+                                                       "reason": state["producer_recovery"]})
+    if automatic:
+        state["producer_auto_retries"] = state.get("producer_auto_retries", 0) + 1
+    else:
+        # An explicit retry is one call; do not append another automatic retry.
+        state["producer_auto_retries"] = MAX_AUTO_PRODUCER_RETRIES
+    state["phase"] = "produce"
+    state["final_status"] = None
+    state["error"] = None
+    store.save(state)
+
+
+def retry_producer(project_root: Path, run_id: str) -> dict:
+    """Arm an explicitly requested execution retry, retaining the previous session."""
+    state = store.load(project_root, run_id)
+    if state["phase"] != "failed" or not _execution_error(state, "producer"):
+        raise UsageError("Only a failed Producer execution can be retried; validation failures stay closed")
+    name = state["roles"]["producer"]["provider"]
+    providers.get(name).check(cfg.load_config(project_root)["cli"].get(name))
+    _arm_producer_retry(state)
+    return _event(state, "Producer retry armed; sessions, edits, findings, baseline and review budget preserved.")
 
 
 def retry_review(project_root: Path, run_id: str) -> dict:
     """Retry only a Reviewer execution failure without losing Producer context."""
     state = store.load(project_root, run_id)
-    message = (state.get("error") or {}).get("message", "")
-    if state["phase"] != "failed" or not message.startswith("The reviewer ("):
+    if state["phase"] != "failed" or not _execution_error(state, "reviewer"):
         raise UsageError("Only a failed Reviewer execution can be retried; validation failures stay closed")
     if state["reviews_done"] >= state["settings"]["max_reviews"]:
         raise UsageError("The review budget is exhausted")
-    providers.get(state["roles"]["reviewer"]["provider"]).check()
+    provider_name = state["roles"]["reviewer"]["provider"]
+    providers.get(provider_name).check(cfg.load_config(project_root)["cli"].get(provider_name))
     # Keep the failed session in cleanup history; only the Reviewer starts fresh.
     state["workers"]["reviewer"]["session_id"] = None
     state["workers"]["reviewer"]["context_tokens"] = None
@@ -158,6 +228,51 @@ def retry_review(project_root: Path, run_id: str) -> dict:
     state["error"] = None
     store.save(state)
     return _event(state, "Reviewer execution retry armed; Producer session and review budget preserved.")
+
+
+def park(project_root: Path, run_id: str, reason: str) -> dict:
+    """Release a failed Delivery's artifact lock, retaining all snapshots and sessions."""
+    state = store.load(project_root, run_id)
+    if state["stage"] != "feature-delivery" or state["phase"] != "failed" or not reason.strip():
+        raise UsageError("Only a failed feature-delivery run can be parked, with a concrete replanning reason")
+    state["park_reason"] = reason.strip()
+    state["phase"] = "parked"
+    store.save(state)
+    return _event(state, "Delivery parked for replanning; baseline, sessions, findings and review budget retained.")
+
+
+def resume_delivery(project_root: Path, run_id: str, plan_run_id: str, request: str,
+                    max_diff_kb: int | None = None) -> dict:
+    """Start a fresh Producer only after independently reviewed replanning."""
+    state = store.load(project_root, run_id)
+    if state["stage"] != "feature-delivery" or state["phase"] != "parked" or not request.strip():
+        raise UsageError("A parked feature-delivery run and concrete handoff request are required")
+    error = (state.get("error") or {}).get("message", "")
+    size_guard = error.startswith("The changes for review ") and "exceed max_diff_kb" in error
+    if not (_execution_error(state, "producer") or size_guard):
+        raise UsageError("Replanning cannot bypass schema, read-only, snapshot or other validation failures")
+    plan = store.load(project_root, plan_run_id)
+    if (plan["stage"] != "feature-plan" or plan["artifact"] != state["artifact"]
+            or plan["phase"] != "done" or plan["final_status"] != "independently-passed"):
+        raise UsageError("The same artifact needs an independently passed feature-plan run before Delivery resumes")
+    if any(run["run_id"] != plan_run_id and run.get("artifact") == state["artifact"]
+           for run in store.open_runs(project_root)):
+        raise UsageError("Another run still holds this artifact")
+    if state["reviews_done"] >= state["settings"]["max_reviews"]:
+        raise UsageError("The original Delivery review budget is exhausted")
+    if max_diff_kb is not None and max_diff_kb <= state["settings"]["max_diff_kb"]:
+        raise UsageError("--max-diff-kb must explicitly increase the saved positive review capacity")
+    provider = state["roles"]["producer"]["provider"]
+    providers.get(provider).check(cfg.load_config(project_root)["cli"].get(provider))
+    state.setdefault("planning_handoffs", []).append({"at": store.now(), "plan_run": plan_run_id,
+                                                     "previous_error": state.get("error"), "request": request.strip()})
+    if max_diff_kb is not None:
+        state["settings"]["max_diff_kb"] = max_diff_kb
+    state["request"] = request.strip()
+    state["workers"]["producer"]["fresh_reason"] = "reviewed-replan"
+    state["phase"], state["final_status"], state["error"] = "produce", None, None
+    store.save(state)
+    return _event(state, "Reviewed Plan handed off to a fresh Delivery Producer; original baseline and budget retained.")
 
 
 def decide(project_root: Path, run_id: str, input_path: str) -> dict:
@@ -250,6 +365,7 @@ def status(project_root: Path, run_id: str | None) -> dict:
         "project_configured": cfg.project_configured(config, project_root),
         "project": cfg.project_settings(config, project_root),
         "cli_version": __version__,
+        "cli_executables": cfg.cli_executables(config),
     }
 
 
@@ -269,6 +385,7 @@ def close(project_root: Path, run_id: str, abandon: bool) -> dict:
         except OSError as exc:
             raise UsageError(f"Cannot write {BACKLOG_FILE}; the run stays open: {exc}") from exc
     deleted = []
+    history.save(state)  # Retain the final status before deleting state and provider sessions.
     for role, worker in state["workers"].items():
         adapter = providers.get(state["roles"][role]["provider"])
         for session_id in worker["sessions"]:
@@ -284,6 +401,7 @@ def close(project_root: Path, run_id: str, abandon: bool) -> dict:
         "backlog_file": BACKLOG_FILE if written else None,
         "backlog_items": written,
         "deleted_session_files": deleted,
+        "history_file": str(history.run_file(_root(state), run_id)),
     }
 
 
@@ -295,7 +413,21 @@ def _producer_step(state: dict, progress=None) -> dict:
     label = f"P{state['reviews_done']}"
     work = _work_list(state)
     data = _invoke(state, "producer", lambda summary: _producer_prompt(state, summary), schemas.PRODUCER, progress)
+    if data["status"] == "checkpoint":
+        checkpoints = state.setdefault("producer_checkpoints", [])
+        if (state["stage"] not in ("feature-delivery", "general") or not data["summary"].strip()
+                or data["questions"] or data["blocker"] is not None or data["outcomes"]
+                or len(checkpoints) >= MAX_PRODUCER_CHECKPOINTS):
+            raise StepFailed("Invalid Producer checkpoint: use a nonempty handoff, no questions/blocker/outcomes, "
+                             "and at most eight checkpoints in an execution run")
+        tree = gitops.snapshot(root, _index(state))
+        checkpoints.append({"at": store.now(), "summary": data["summary"].strip(), "tree": tree})
+        state["workers"]["producer"]["fresh_reason"] = "plan-checkpoint"
+        store.save(state)
+        return _event(state, "Execution segment checkpoint saved; call next for the next segment in a new session.",
+                      checkpoint=checkpoints[-1], changed_files=gitops.changed_files(root, _review_base(state), tree))
     state["answer"] = None
+    state["producer_recovery"] = None
     if data["summary"].strip():
         state["producer_summaries"].append(f"{label}: {data['summary'].strip()}")
     if data["status"] == "needs-user-decision":
@@ -339,11 +471,17 @@ def _review_step(state: dict, progress=None) -> dict:
     if len(diff.encode("utf-8")) > state["settings"]["max_diff_kb"] * 1024:
         raise StepFailed(f"The changes for review {number} exceed max_diff_kb ({state['settings']['max_diff_kb']} KB)")
     to_check = _work_list(state)
-    data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(state, number, diff, summary), schemas.REVIEW, progress)
+    failure = None
+    try:
+        data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(state, number, diff, summary), schemas.REVIEW, progress)
+    except StepFailed as exc:
+        failure = exc
     after = gitops.snapshot(root, _index(state))
     if after != before:
         files = gitops.changed_files(root, before, after)
         raise StepFailed(f"The Reviewer changed files, which fails the run: {', '.join(files[:10])}")
+    if failure:
+        raise failure
     state["reviews_done"] = number
     state["trees"]["last_review"] = before
     reported = {item["finding_id"]: item["result"] for item in data["earlier_results"]}
@@ -418,27 +556,72 @@ def _invoke(state: dict, role: str, build_prompt, schema: dict, progress=None) -
     """Run one worker call, replacing the worker once when its session cannot resume."""
     worker = state["workers"][role]
     provider = providers.get(state["roles"][role]["provider"])
-    rotate_at = state["settings"]["rotate_at_tokens"]
-    fresh = worker["session_id"] is None or bool(rotate_at and (worker["context_tokens"] or 0) > rotate_at)
-    reason = "new-run" if worker["session_id"] is None else "context-threshold" if fresh else "resume"
+    # Old failed runs may have saved a final null plus a useful streamed measurement.
+    if worker["context_tokens"] is None:
+        worker["context_tokens"] = (worker.get("telemetry") or {}).get("context_tokens")
+    fresh, reason = _session_choice(state, role)
     result = _attempt(state, role, provider, build_prompt, schema, fresh, progress, reason)
-    if result.error and not fresh:
-        result = _attempt(state, role, provider, build_prompt, schema, True, progress, "resume-failed")
+    if result.error and not fresh and _session_missing(result):
+        result = _attempt(state, role, provider, build_prompt, schema, True, progress, "resume-unavailable")
+    if (result.error and "returned no structured output" not in result.error
+            and role == "producer" and _transient_error(result.error)
+            and state.get("producer_auto_retries", 0) < MAX_AUTO_PRODUCER_RETRIES):
+        state["error"] = {"message": result.error}
+        _arm_producer_retry(state, automatic=True)
+        if progress:
+            progress({"event": "producer-recovery", "run_id": state["run_id"], "role": role,
+                      "stage": state["stage"], "automatic": True, "attempt": state["producer_auto_retries"]})
+        fresh, reason = _session_choice(state, role)
+        result = _attempt(state, role, provider, build_prompt, schema, fresh, progress, "automatic-recovery:" + reason)
+        if result.error and not fresh and _session_missing(result):
+            result = _attempt(state, role, provider, build_prompt, schema, True, progress, "resume-unavailable")
     if result.error:
-        raise StepFailed(f"The {role} ({state['roles'][role]['provider']}) {result.error}", result.raw)
-    errors = schemas.validate(result.data, schema)
-    if errors:
-        raw = json.dumps(result.data, ensure_ascii=False)[:EXCERPT_CHARS]
-        raise StepFailed(f"The {role} output does not match its schema: {'; '.join(errors[:5])}", raw)
+        structured = "returned no structured output" in result.error
+        raise StepFailed(f"The {role} ({state['roles'][role]['provider']}) {result.error}", result.raw,
+                         role=role, execution=not structured, retryable=not structured and _transient_error(result.error))
     return result.data
+
+
+def _session_missing(result) -> bool:
+    text = (result.error or "").lower() + "\n" + result.raw.lower()
+    return any(message in text for message in ("session not found", "session does not exist", "no conversation found",
+                                               "no rollout found", "could not find session", "failed to load session"))
+
+
+def _session_choice(state: dict, role: str) -> tuple[bool, str]:
+    worker = state["workers"][role]
+    if worker.get("fresh_reason"):
+        return True, worker["fresh_reason"]
+    if worker["session_id"] is None:
+        return True, "new-run"
+    threshold = state["settings"]["rotate_at_tokens"]
+    if threshold and (worker["context_tokens"] or 0) > threshold:
+        return True, "context-threshold"
+    return False, "resume"
 
 
 def _attempt(state: dict, role: str, provider, build_prompt, schema: dict, fresh: bool, progress=None, reason=None):
     worker = state["workers"][role]
+    previous_context = worker["context_tokens"]
     if fresh:
         worker["generation"] += 1
+        worker["context_tokens"] = None
+        worker["session_id"] = None
+        worker.pop("fresh_reason", None)
     summary = _run_summary(state) if fresh and worker["generation"] > 1 else None
     call = _call(state, role, build_prompt(summary), schema, None if fresh else worker["session_id"])
+    calls = state.setdefault("worker_calls", [])
+    record = {"run_id": state["run_id"], "item": state.get("item", state["artifact"]),
+              "stage": state["stage"], "artifact": state["artifact"], "call": len(calls) + 1,
+              "role": role, "round": f"P{state.get('reviews_done', 0)}" if role == "producer" else
+              f"R{state.get('reviews_done', 0) + 1}", "segment": len(state.get("producer_checkpoints", [])) + 1,
+              "provider": state["roles"][role]["provider"], "configured_model": call.model,
+              "configured_effort": call.effort, "generation": worker["generation"],
+              "session_id": call.session_id, "session_reason": reason,
+              "started_at_utc": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+              "call_status": "running", "usage_status": "unknown"}
+    calls.append(record)
+    started = time.monotonic()
     def observe(event):
         if "telemetry" in event:
             worker["telemetry"] = event["telemetry"]
@@ -446,24 +629,49 @@ def _attempt(state: dict, role: str, provider, build_prompt, schema: dict, fresh
             worker["session_id"] = event["session_id"]
             if event["session_id"] not in worker["sessions"]:
                 worker["sessions"].append(event["session_id"])
+        record.update(session_id=worker["session_id"], observed_model=call.telemetry.get("model"),
+                      observed_effort=call.telemetry.get("effort"))
+        record.update(call.telemetry.get("token_usage") or {})
         worker["last_event"] = event["event"]
         store.save(state)
         if progress:
-            progress({"run_id": state["run_id"], "role": role, "generation": worker["generation"], **event})
+            progress({"run_id": state["run_id"], "stage": state["stage"], "artifact": state["artifact"],
+                      "role": role, "generation": worker["generation"], **event})
+        if event["event"] == "worker-ready" and call.loaded_skill:
+            observe({"event": "skill-started", "skill": call.loaded_skill, "mode": "execute" if role == "producer" else "judge"})
     call.progress = observe
+    if call.loaded_skill:
+        worker["loaded_skill"] = call.loaded_skill
+        observe({"event": "skill-loaded", "skill": call.loaded_skill, "method": "prompt-injected"})
     observe({"event": "worker-started", "fresh": fresh, "reason": reason, "configured": state["roles"][role],
-             "previous_context_tokens": worker["context_tokens"],
+             "previous_context_tokens": previous_context,
              "rotate_at_tokens": state["settings"]["rotate_at_tokens"]})
-    result = provider.run(call)
+    try:
+        result = provider.run(call)
+    except (OSError, UsageError) as exc:
+        result = providers.CallResult(error=f"could not execute worker: {exc}", session_id=worker["session_id"])
     if result.session_id:
         worker["session_id"] = result.session_id
         if result.session_id not in worker["sessions"]:
             worker["sessions"].append(result.session_id)
-    worker["context_tokens"] = result.context_tokens
+    measured = result.context_tokens
+    if measured is None:
+        measured = call.telemetry.get("context_tokens")
+        if measured is None and not fresh and not call.telemetry.get("compactions"):
+            measured = previous_context
+    worker["context_tokens"] = measured
     if result.context_tokens is not None:
         call.telemetry["context_tokens"] = result.context_tokens
     worker["telemetry"] = call.telemetry
-    observe({"event": "worker-finished", "context_tokens": result.context_tokens, "failed": bool(result.error)})
+    errors = schemas.validate(result.data, schema) if not result.error else []
+    record.update(ended_at_utc=datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+                  elapsed_seconds=round(time.monotonic() - started, 3),
+                  call_status="execution-failed" if result.error else "invalid-output" if errors else
+                  result.data.get("status", "review-returned"))
+    observe({"event": "worker-finished", "context_tokens": measured, "failed": bool(result.error)})
+    if errors:
+        raw = json.dumps(result.data, ensure_ascii=False)[:EXCERPT_CHARS]
+        raise StepFailed(f"The {role} output does not match its schema: {'; '.join(errors[:5])}", raw)
     return result
 
 
@@ -473,7 +681,26 @@ def _call(state: dict, role: str, prompt: str, schema: dict, session_id: str | N
     read_dirs = [str(Path(state["skill"]).parent)] if state["skill"] else []
     if not producer:
         read_dirs += project["extra_dirs"]
+    loaded_skill = None
+    if state["skill"]:
+        path = Path(state["skill"])
+        try:
+            content = path.read_bytes()
+            body = content.decode("utf-8-sig")
+        except (OSError, UnicodeError) as exc:
+            raise StepFailed(f"Cannot load stage Skill {path}: {exc}") from exc
+        loaded_skill = {"name": state["stage"], "path": str(path), "sha256": hashlib.sha256(content).hexdigest()}
+        purpose = "Execute this stage within the request." if producer else (
+            "Review criteria only: do not execute this Skill's writing or implementation workflow. "
+            "The read-only Reviewer role above takes precedence.")
+        prompt += ("\n\nStage Skill supplied by CLI (complete content; references resolve from "
+                   + str(path.parent) + "):\n" + purpose + "\n" + body)
+        if not producer:
+            prompt += "\n\nRemain read-only. Judge the artifact and return only the review result JSON."
     return providers.Call(
+        loaded_skill=loaded_skill,
+        token_baseline=((state.get("workers", {}).get(role, {}).get("telemetry") or {}).get("session_token_usage")
+                        if session_id else None),
         role=role,
         model=state["roles"][role]["model"],
         effort=state["roles"][role]["effort"],
@@ -486,6 +713,7 @@ def _call(state: dict, role: str, prompt: str, schema: dict, session_id: str | N
         allowed_commands=[*cfg.PRODUCER_BASE_COMMANDS, *project["allowed_commands"]] if producer else [],
         timeout=state["settings"]["timeout_minutes"] * 60,
         work_dir=_run_dir(state),
+        executable=cfg.load_config(_root(state))["cli"].get(state["roles"][role]["provider"]),
     )
 
 
@@ -495,17 +723,23 @@ def _producer_prompt(state: dict, summary: str | None) -> str:
     if answer_state:
         questions = "\n".join(f"- {question}" for question in answer_state["questions"])
         answer_text = f"Questions:\n{questions}\nAnswer: {answer_state['text']}"
-    return prompts.producer_prompt(
+    prompt = prompts.producer_prompt(
         stage=state["stage"],
         project_root=state["project_root"],
         artifact=state["artifact"],
         skill=state["skill"],
         request=state["request"],
-        initial=state["first"] == "produce" and state["producer_steps"] == 0,
+        initial=state["first"] == "produce" and state["producer_steps"] == 0 and not state.get("producer_checkpoints"),
         work=[_work_item(finding) for finding in _work_list(state)],
         answer=answer_text,
         summary=summary,
     )
+    checkpoints = state.get("producer_checkpoints") or []
+    if checkpoints:
+        prompt += "\n\nLatest execution checkpoint (inspect current files before continuing):\n" + checkpoints[-1]["summary"]
+    if state.get("producer_recovery"):
+        prompt += "\n\nPrevious Producer call failed: " + state["producer_recovery"] + "\nInspect existing edits and real check results before continuing unfinished work; do not restart completed work."
+    return prompt
 
 
 def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None) -> str:
@@ -564,6 +798,7 @@ def _run_summary(state: dict) -> str:
             status += f", {finding['resolution']}"
         lines.append(f"- {finding['id']} [{finding['severity']}] {finding['claim']} ({status})")
     lines += [f"- {summary}" for summary in state["producer_summaries"][-3:]]
+    lines += ["- Execution checkpoint: " + item["summary"] for item in state.get("producer_checkpoints", [])[-3:]]
     return "\n".join(lines)
 
 
@@ -604,20 +839,24 @@ def _dry_run(state: dict) -> dict:
         "message": "Nothing was started or saved.",
         "stage": state["stage"],
         "artifact": state["artifact"],
+        "item": state.get("item", state["artifact"]),
+        "history_file": str(history.run_file(_root(state), state["run_id"])),
         "first": state["first"],
         "skill": state["skill"],
         "roles": state["roles"],
         "settings": state["settings"],
         "first_worker": role,
         "command": providers.preview_command(state["roles"][role]["provider"], call),
-        "prompt": prompt,
+        "prompt": call.prompt,
+        "loaded_skill": call.loaded_skill,
     }
 
 
-def _fail(state: dict, message: str, raw: str = "") -> dict:
+def _fail(state: dict, message: str, raw: str = "", *, role=None, execution=False, retryable=False) -> dict:
     state["phase"] = "failed"
     state["final_status"] = "failed"
-    state["error"] = {"message": message, "raw_excerpt": (raw or "")[-EXCERPT_CHARS:]}
+    state["error"] = {"message": message, "raw_excerpt": (raw or "")[-EXCERPT_CHARS:],
+                      "role": role, "execution": execution, "retryable": retryable}
     store.save(state)
     return _event(state, message)
 
@@ -677,6 +916,9 @@ def _report(state: dict) -> dict:
         "roles": state["roles"],
         "workers": state["workers"],
         "producer_summary": state["producer_summaries"][-1] if state["producer_summaries"] else None,
+        "producer_checkpoints": state.get("producer_checkpoints", []),
+        "producer_auto_retries": state.get("producer_auto_retries", 0),
+        "producer_recoveries": state.get("producer_recoveries", []),
     }
 
 
@@ -686,9 +928,11 @@ def _event(state: dict, message: str, **extra) -> dict:
         "run_id": state["run_id"],
         "phase": phase,
         "message": message,
-        "next_action": NEXT_ACTION[phase],
+        "next_action": "Call next once to recover the previous Producer execution." if _can_auto_recover(state) else NEXT_ACTION[phase],
         "stage": state["stage"],
         "artifact": state["artifact"],
+        "item": state.get("item", state["artifact"]),
+        "history_file": str(history.run_file(_root(state), state["run_id"])),
         "reviews_done": state["reviews_done"],
         "max_reviews": state["settings"]["max_reviews"],
         "producer_steps": state["producer_steps"],
@@ -696,6 +940,9 @@ def _event(state: dict, message: str, **extra) -> dict:
         "roles": state["roles"],
         "workers": state["workers"],
         "producer_summary": state["producer_summaries"][-1] if state["producer_summaries"] else None,
+        "producer_checkpoints": state.get("producer_checkpoints", []),
+        "producer_auto_retries": state.get("producer_auto_retries", 0),
+        "automatic_recovery_available": _can_auto_recover(state),
     }
     if phase == "awaiting-decision":
         findings = _findings(state)

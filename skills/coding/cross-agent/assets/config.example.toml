@@ -8,7 +8,8 @@
 # Producer revision.
 max_reviews = 2
 
-# Minutes before a worker call or a check command is stopped.
+# Hard minutes per worker call or check command; activity never extends it.
+# Producer transient recovery is capped at one per run; checkpoints keep budgets.
 timeout_minutes = 30
 
 # Start a fresh worker session when the previous call's context exceeded this
@@ -22,12 +23,21 @@ backlog_rejected = true
 # A review fails when the changes it must read exceed this size.
 max_diff_kb = 200
 
+# Optional CLI selection. Use absolute paths; omitted providers use PATH.
+# [cli]
+# codex = "C:/Tools/Codex/codex.exe"
+# claude = "C:/Tools/Claude/claude.exe"
+
+# To share settings, a project's local config contains only:
+# config_file = "../../workspace/.cross-agent/config.toml"
+# The referenced file holds all settings and explicit project-root sections.
+
 [defaults]
 # <provider>[:<model>[:<effort>]]. An empty model keeps the provider's default.
 # Example: reviewer = "codex::high" sets effort without fixing a model.
 # Example: producer = "claude:opus:high" sets both, when supported by that CLI.
-producer = "claude"
-reviewer = "codex"
+producer = "claude:Opus:medium"
+reviewer = "codex::high"
 
 # Stage Skills are found next to cross-agent. Override a path only when needed.
 # [stages.feature-plan]

@@ -11,11 +11,11 @@ from urllib.request import urlopen
 CODEX_LATEST_URL = "https://registry.npmjs.org/@openai/codex/latest"
 
 
-def check_codex_version() -> dict:
+def check_codex_version(executable: str | None = None) -> dict:
     result = {"status": "unknown", "installed": None, "latest": None, "source": CODEX_LATEST_URL, "reason": None}
-    executable = shutil.which("codex")
+    executable = shutil.which(executable or "codex")
     if not executable:
-        return {**result, "status": "not-installed", "reason": "Codex CLI is not on PATH"}
+        return {**result, "status": "not-installed", "reason": "Selected Codex CLI is unavailable"}
     try:
         process = subprocess.run(
             [executable, "--version"], capture_output=True, text=True,

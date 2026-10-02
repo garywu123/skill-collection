@@ -107,6 +107,29 @@ class CodexResultTests(unittest.TestCase):
                     self.assertIsNone(result.data)
 
 
+class CliSelectionTests(unittest.TestCase):
+    def test_configured_path_reaches_start_and_resume_for_both_providers(self):
+        selected = str(Path(sys.executable).resolve())
+        for provider in ("claude", "codex"):
+            for session_id in (None, "saved-session"):
+                with self.subTest(provider=provider, session_id=session_id):
+                    call = providers.Call(
+                        role="reviewer", model=None, effort=None, prompt="", schema={},
+                        session_id=session_id, cwd=Path("."), read_dirs=[], write_dirs=[],
+                        allowed_commands=[], timeout=1, work_dir=Path("."), executable=selected,
+                    )
+                    with patch.object(providers.shutil, "which", return_value=selected) as discover:
+                        providers.get(provider).check(selected)
+                        command = providers.preview_command(provider, call)
+                        self.assertEqual(command[0], selected)
+                        discover.assert_called_with(selected)
+                    with patch.object(providers.shutil, "which", return_value=None):
+                        with self.assertRaises(UsageError):
+                            providers.get(provider).check(selected)
+                        with self.assertRaises(UsageError):
+                            providers.preview_command(provider, call)
+
+
 class ClaudeCommandTests(unittest.TestCase):
     def test_windows_producer_allows_configured_commands_in_powershell(self):
         call = providers.Call(

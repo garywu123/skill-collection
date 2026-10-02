@@ -178,6 +178,28 @@ python $crossAgentCli status
 
 检查 `config_path`、`config_exists`、`project_root`、`project_configured`、`project`、`defaults`、`settings` 和 `open_runs`。`project` 显示当前目录匹配到的有效命令和额外目录；`project_configured: false` 表示没有匹配的项目分区。空的 `delivery_checks` 表示没有配置验证，不表示测试通过。如果相同 artifact 已有打开的 run，应恢复它或明确决定放弃，不要直接创建第二个。
 
+### 3.3 共享 workspace 配置与 CLI 路径
+
+多个项目可以各自保留 `.cross-agent/config.toml` 入口，只含一行指针，例如：
+
+```toml
+config_file = "../../workspace/.cross-agent/config.toml"
+```
+
+路径从入口文件所在目录解析，只允许一层指针。共享文件保存角色和设置，各项目以
+明确的根目录键分别配置命令与 `extra_dirs`；run 状态仍留在发起项目中。无需重复 init
+或删除旧 history。共享文件中的 CLI 选择示例：
+
+```toml
+[cli]
+codex = "C:/Tools/Codex/codex.exe"
+claude = "C:/Tools/Claude/claude.exe"
+```
+
+使用实际安装的绝对路径。省略某一项时该 provider 使用 PATH；指定路径无效时会失败，
+不会回退到另一份安装。CLI 路径在每次 worker 调用时读取，因此现有 run 的恢复也使用
+新选择；保存的角色、命令、timeout 和 review 预算保持原样。
+
 ## 4. 主案例：先规划，再执行重构
 
 ### 4.1 案例起点
@@ -270,7 +292,8 @@ python $crossAgentCli next --run $crossAgentRun --stream
 | `awaiting-answer` | 等你明确回答，再通过 `answer --text` 转交。 |
 | `finalizing` | 由 Orch 完成 Skill 允许的一次有限收尾，再 `next` 记录结果。 |
 | `done` | 先读 `final_status` 和报告；满足门槛后才关闭并进入已授权的下一阶段。 |
-| `failed` / `blocked` | 报告原因并暂停，不无限重试、不自行新建 run 刷预算。 |
+| `failed` | `automatic_recovery_available` 为 true 时调用一次 `next`；否则报告原因并暂停。 |
+| `blocked` | 等待用户解决 blocker，再用 `answer` 传递决定。 |
 
 只读查看状态和正常关闭：
 
@@ -310,7 +333,7 @@ Roadmap 结构，否则作为有明确产物的 general 设计任务。评审后
 
 CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general` 四种 stage，不存在 `roadmap` 或 `refactor` 子命令。`general` 不应被用来绕过本来适用的生命周期前提。
 
-不用为了这条链路把所有 Skills 的自动调用全部打开：生命周期阶段的 worker prompt 会明确指定要读取的 Skill 文件。这里区分的是“你授权 Orch 后显式分派阶段”和“模型看到文件就自行扩展流程”，不是一个全局自动开发开关。
+`feature-map`、`feature-plan`、`feature-delivery` 现在允许根据用户请求自动选择；共用 `SKILL.md`，分别用 Claude frontmatter 和 Codex `agents/openai.yaml` 声明策略。其他生命周期 Skills 和 Orch 保持显式调用。Cross-agent 不依赖模型碰巧选择正确 Skill：CLI 将指定阶段的完整正文注入 prompt，并显示路径、hash 和加载方式；引用的资源仍按需读取。自动选择不会扩大用户授权或解除 Reviewer 的只读角色。
 
 ## 7. 常见问题
 
@@ -321,8 +344,70 @@ CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general`
 - **找不到阶段 Skill**：默认从 `cross-agent` 的同级目录寻找。完整部署后应有对应目录；特殊布局可在配置中设置 `[stages.feature-plan]` 的 `skill` 为正确 `SKILL.md` 路径。
 - **配置了命令但仍被拒绝**：允许规则不能覆盖 provider 的安全边界。缩小命令、改用普通测试文件或请求明确授权；不要关闭保护来强行通过。
 - **context / effort / subagent 数字缺失**：provider 不一定提供。context 是最近一次父会话用量测量，不是持续精确的剩余容量；只有观察到窗口上限才能计算占比。
-- **什么时候换人或压缩**：阶段/独立工作项之间新开会话；同阶段按已保存 context 在调用间判断轮换。provider 自身压缩与 CLI 换会话是两回事，Orch 只能报告观察到的事件。
+- **什么时候换人或压缩**：阶段/独立工作项之间、计划 checkpoint 后新开会话；其他调用优先 resume，只有 context 超阈值或 session 明确失效才替换。timeout 保留最后可用的 parent context 测量，旧 session 留在历史中。provider 自身压缩与 CLI 换会话分别报告。
 - **换了 Orch 对话后怎样继续**：回到同一个项目根目录，显式调用 Skill，让 Orch 先运行 `status`。已有 run 的状态可读取；原对话的多阶段授权和审批门槛需要你重新提供，不能只凭文件推断。
 - **可以直接修改 `.cross-agent/` 吗**：运行状态在 `.cross-agent/runs/`，只能通过 `status`、`next`、`decide`、`answer`、`close` 管理。`.cross-agent/config.toml` 是配置，明确的配置修改任务可以编辑它；阶段 worker 不修改配置，配置变更不影响已打开 run 的设置。
 
 首次使用时，把目标、输入、输出、验证命令和停止点讲清楚即可。之后你看到的应该是一个持续汇报、在授权范围内推进的 Orch，而不是需要你手动传递每轮结果的两个聊天窗口。
+
+
+## 执行阶段、进度和恢复
+
+Feature Plan 提前评估可验证的功能区域、依赖、阶段验收与交接，并决定串行还是值得
+委派。小功能保持单阶段；较大 Feature 在同一份 Plan 中安排执行 segment，预留验证和
+checkpoint 时间。30 分钟是单次 worker 调用的硬上限，规划不能保证所有测试都在限时内。
+Producer 最多同时三个 sub-agent；共享接口、schema、整合与整体回归留在父会话。
+
+`next --stream` 的 `skill-loaded` 表示完整正文已注入本次 prompt，`method` 为
+`prompt-injected`，附路径和 SHA-256；不是声称调用了原生 Skill 工具。worker 就绪后
+`skill-started` 显示 Producer 执行阶段或 Reviewer 只读判定阶段。运行数据缺失时为
+`null`，不能报作零。示例状态包括 Skill 加载、Feature/阶段开始、模型/effort 和实际
+sub-agent 活动；有心跳不代表验收通过。
+
+完成一个计划 segment 且后续工作仍在授权范围内时，Producer 返回 `status: checkpoint`。
+`summary` 必须包含完成段、真实验收/检查证据、稳定契约、下一段未完成工作和限制；
+`questions`、`outcomes` 为空，`blocker` 为 null。下一次 `next` 创建新 Producer session
+继续，不提前送审。每 run 最多八个 checkpoint；原始 baseline、Feature ID、findings、
+待传递回答与总 review 预算保持原样，全部完成后才执行整体验证并交给 Reviewer。
+
+Producer timeout 或明确瞬态连接/限流错误会自动恢复一次，每 run 共用这个上限，包括
+升级 CLI 后的旧 failed run。默认优先 resume 之前的 Producer；context 超阈值才换新。
+恢复前先检查现有 diff、Plan 结果和交接，避免重复已经完成的工作。第二次失败停在
+failed；修复外部原因并授权后，可以显式重试：
+
+```powershell
+python $crossAgentCli retry-producer --run '<run-id>'
+python $crossAgentCli next --run '<run-id>' --stream
+```
+
+显式重试只启动下一次调用，不追加自动重试；不会关闭 run 或删除 session。Reviewer
+执行失败仍用 `retry-review`，保留 Producer，让之后的 feedback 返回它。没有结构化
+输出、schema 校验失败、Reviewer 写文件等 guard 失败都不能通过 retry 绕过；用户
+问题与 Producer blocker 仍等待真实回答。更新/部署 CLI 不需要重新 init，也不移动或
+清理项目配置和 run 历史。
+
+
+本次执行机制的自动化验证运行 `python -B -m unittest discover -s
+skills/coding/cross-agent/scripts/tests`：70 项通过，覆盖假 provider 的恢复、feedback
+回路、checkpoint、只读/schema guard、CLI 选择和真实子进程的硬 timeout。安装后另以
+`status`、`start --dry-run` 与文件 hash 核对两端副本及旧 run 兼容性。模型原生的自动
+Skill 选择、真实 Claude/Codex 的 checkpoint 和失效 session 恢复尚需实际运行验证；
+本轮部署没有启动、关闭或修改现有 F05 run。
+
+## 失败 Delivery 转回 Feature Plan
+
+用户要求重新规划时，用 `park --run <delivery-id> --reason "<原因>"` 释放 artifact 锁；
+run、原始 baseline、findings、剩余预算以及已有 session 全部保留。新版 Feature Plan
+更新同一计划、拆分验收 session 后，另起 `feature-plan` run 审阅。只有它以
+`independently-passed` 完成，才可 `resume-delivery --run <delivery-id>
+--plan-run <plan-id> --request "<分段交接>"`。随后关闭已完成的 Plan run，再调用 Delivery
+`next --stream`；Producer 会以新 session 开始，原交付审阅边界与预算不重置。
+旧 diff size guard 可用 `--max-diff-kb <更大值>` 明确增加容量；schema、只读、snapshot
+校验失败不可通过该入口恢复。30 分钟硬 timeout 不变。
+
+验证记录：本次交接与 Windows 原子写入修复后，CLI 回归共 74 项通过。实机验证了
+失败 Delivery 暂存、同一 Plan 的 Codex 独立审阅通过、恢复时新开 Producer、
+S1/S2/S3 checkpoint 连续换新 session，以及原始交付 baseline 与 0/2 审阅预算保留。
+原 run 的命令权限仍为启动时的快照；更新共享配置只影响新 run 的命令权限，
+`[cli]` 路径仍实时读取，旧 run 的 review 容量只通过显式 handoff 参数增加。
+被旧权限拒绝的 Workspace validator 由 Orch 执行并记录真实结果，不把拒绝算作通过。

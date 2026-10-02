@@ -29,7 +29,7 @@ def producer_prompt(
         f"Artifact: {artifact}",
     ]
     if skill:
-        lines.append(f"Stage Skill: read and follow {skill} completely, including its consistency check.")
+        lines.append(f"Stage Skill: {skill}. Its complete content is supplied below by the CLI; follow it, including its consistency check, and read referenced resources as needed.")
     else:
         lines.append("No lifecycle Skill applies: follow AGENTS.md and the request.")
     if stage == "feature-delivery":
@@ -37,7 +37,7 @@ def producer_prompt(
     if initial:
         lines += ["", "Request:", request or ""]
     else:
-        lines += ["", f"Original request: {request or 'none'}", "Current step: fix the accepted findings below."]
+        lines += ["", f"Original request: {request or 'none'}", "Current step: continue unfinished authorized work and address the accepted findings below."]
     if summary:
         lines += ["", "Run summary so far:", summary]
     if work:
@@ -56,6 +56,10 @@ def producer_prompt(
         "Return an empty outcomes list when none is listed.",
         "- Change only what the request, the accepted findings, and the Skill's consistency check require.",
         "- Do not commit, and do not start another lifecycle stage.",
+        "- For an execution stage, return checkpoint only after a planned segment and its focused checks, "
+        "when more authorized work remains. Summarize acceptance evidence, stable contracts, and the next "
+        "unfinished segment; use empty questions/outcomes and null blocker. A checkpoint starts a new session "
+        "without resetting review or revision budgets. Do not return done before whole-stage validation.",
         "- Write all output in English.",
         "- Your final message must be only the Producer result JSON object.",
     ]

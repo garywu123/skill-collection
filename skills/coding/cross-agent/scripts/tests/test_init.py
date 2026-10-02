@@ -91,6 +91,75 @@ class InitTests(unittest.TestCase):
         nested.mkdir()
         self.assertFalse(self.run_cli("status", cwd=nested)["config_exists"])
 
+    def test_shared_pointer_keeps_project_commands_separate_and_selects_configured_cli(self):
+        self.env.pop("CROSS_AGENT_CONFIG")
+        workspace = self.directory / "workspace"
+        shared = workspace / ".cross-agent" / "config.toml"
+        shared.parent.mkdir(parents=True)
+        other = self.directory / "other"
+        other.mkdir()
+        selected = str(Path(sys.executable).resolve())
+        shared.write_text(
+            '[defaults]\nproducer = "codex"\nreviewer = "codex::high"\n'
+            + f'[cli]\ncodex = {json.dumps(selected)}\n'
+            + f'[projects.{json.dumps(self.root.as_posix())}]\n'
+            + "".join(f"{key} = {json.dumps(value)}\n" for key, value in self.proposal.items())
+            + f'[projects.{json.dumps(other.as_posix())}]\nallowed_commands = ["other command"]\n',
+            encoding="utf-8",
+        )
+        original = shared.read_bytes()
+        for project in (self.root, other):
+            local = project / ".cross-agent" / "config.toml"
+            local.parent.mkdir()
+            reference = Path(os.path.relpath(shared, local.parent)).as_posix()
+            local.write_text(f"config_file = {json.dumps(reference)}\n", encoding="utf-8")
+        status = self.run_cli("status")
+        self.assertEqual(status["config_path"], str(shared))
+        self.assertEqual(status["project"], self.proposal)
+        self.assertEqual(status["cli_executables"]["codex"], selected)
+        other_status = self.run_cli("status", cwd=other)
+        self.assertEqual(other_status["config_path"], str(shared))
+        self.assertEqual(other_status["project"]["allowed_commands"], ["other command"])
+        self.assertEqual(other_status["project"]["delivery_checks"], [])
+        repeated = self.initialize()
+        self.assertEqual(repeated["action"], "unchanged")
+        self.assertEqual(shared.read_bytes(), original)
+        with patch.dict(os.environ, self.env, clear=True):
+            preview = engine.start(
+                self.root, stage="general", artifact="output.md", first="produce",
+                request="Write a bounded plan.", producer=None, reviewer=None, dry_run=True,
+            )
+            state = {
+                "project_root": str(self.root), "run_id": "saved-run", "project": status["project"],
+                "skill": None, "roles": preview["roles"], "settings": status["settings"],
+            }
+            call = engine._call(state, "reviewer", "", {}, "saved-session")
+            self.assertEqual(call.executable, selected)
+            self.assertEqual(providers.preview_command("codex", call)[0], selected)
+        self.assertEqual(preview["command"][0], selected)
+        self.assertFalse((self.root / ".cross-agent" / "runs").exists())
+        self.assertEqual(shared.read_bytes(), original)
+
+    def test_invalid_shared_pointers_and_cli_values_are_refused(self):
+        self.config.parent.mkdir()
+        shared = self.directory / "shared.toml"
+        cases = [
+            'config_file = "missing.toml"\n',
+            'config_file = "shared.toml"\nmax_reviews = 2\n',
+            'config_file = ""\n',
+            '[cli]\ncodex = "relative/codex.exe"\n',
+            '[cli]\ncodex = 42\n',
+            '[cli]\nunknown = "/cli"\n',
+        ]
+        for original in cases:
+            with self.subTest(original=original):
+                self.config.write_text(original, encoding="utf-8")
+                self.run_cli("status", expect=2)
+                self.assertEqual(self.config.read_text(encoding="utf-8"), original)
+        shared.write_text('config_file = "settings/config.toml"\n', encoding="utf-8")
+        self.config.write_text('config_file = "../shared.toml"\n', encoding="utf-8")
+        self.assertIn("cannot be chained", self.run_cli("status", expect=2)["error"])
+
     def test_repeat_preserves_roles_and_reports_requested_differences(self):
         self.initialize("--producer", "codex:model-a:high")
         original = self.config.read_bytes()
@@ -195,6 +264,16 @@ class CodexVersionTests(unittest.TestCase):
                 self.assertEqual(result["latest"], latest)
                 self.assertEqual(run.call_args.args[0], ["codex", "--version"])
                 self.assertEqual(fetch.call_args.args[0], versions.CODEX_LATEST_URL)
+
+    def test_version_check_uses_the_configured_cli(self):
+        selected = str(Path(sys.executable).resolve())
+        with patch.object(versions.shutil, "which", return_value=selected) as discover, \
+                patch.object(versions.subprocess, "run") as run, patch.object(versions, "urlopen") as fetch:
+            run.return_value = subprocess.CompletedProcess([], 0, stdout="codex-cli 1.0.0")
+            fetch.return_value.__enter__.return_value.read.return_value = b'{"version":"1.0.0"}'
+            self.assertEqual(versions.check_codex_version(selected)["status"], "current")
+            discover.assert_called_once_with(selected)
+            self.assertEqual(run.call_args.args[0], [selected, "--version"])
 
     def test_missing_failed_offline_and_malformed_are_never_current(self):
         with patch.object(versions.shutil, "which", return_value=None), patch.object(versions, "urlopen") as fetch:

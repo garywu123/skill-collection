@@ -21,7 +21,7 @@ from typing import Callable
 from pathlib import Path
 
 from .errors import UsageError
-from .progress import Observer
+from .progress import Observer, codex_usage, token_counts
 
 EXCERPT_CHARS = 4000
 SESSION_ID = re.compile(r"^[0-9A-Za-z][0-9A-Za-z_-]{7,}$")
@@ -43,6 +43,9 @@ class Call:
     work_dir: Path
     progress: Callable | None = None
     telemetry: dict = field(default_factory=dict)
+    executable: str | None = None
+    loaded_skill: dict | None = None
+    token_baseline: dict | None = None
 
 
 @dataclass
@@ -177,16 +180,24 @@ def _run(command: list[str], call: Call, env: dict | None = None):
     return subprocess.CompletedProcess(command, process.returncode, "".join(output), "")
 
 
+def _executable(provider: str, configured: str | None = None) -> str:
+    """Never fall back to PATH when an explicit executable cannot be found."""
+    selected = shutil.which(configured or provider)
+    if configured and not selected:
+        raise UsageError(f"Configured {provider} CLI does not exist or is not executable: {configured}")
+    return selected or provider
+
+
 class Claude:
     name = "claude"
 
-    def check(self) -> None:
-        if not shutil.which("claude"):
-            raise UsageError("Claude Code CLI 'claude' is not on PATH")
+    def check(self, executable: str | None = None) -> None:
+        if not shutil.which(executable or "claude"):
+            raise UsageError(f"Claude Code CLI is unavailable: {executable or 'claude on PATH'}")
 
     def command(self, call: Call, session_id: str, new: bool) -> list[str]:
         command = [
-            shutil.which("claude") or "claude",
+            _executable("claude", call.executable),
             "-p",
             "--output-format",
             "stream-json",
@@ -301,16 +312,38 @@ def _codex_context_tokens(session_id: str | None) -> int | None:
     return latest
 
 
+def _codex_token_totals(session_id: str | None) -> dict | None:
+    """Optional baseline/partial usage from this worker's own rollout, never a transcript export."""
+    try:
+        rollouts = _codex_rollouts(session_id or "")
+        if not rollouts:
+            return None
+        latest = None
+        for line in rollouts[-1].read_text(encoding="utf-8", errors="replace").splitlines():
+            if '"token_count"' not in line:
+                continue
+            try:
+                info = json.loads(line)["payload"]["info"]
+                counts = token_counts(info.get("total_token_usage"))
+                if counts:
+                    latest = counts
+            except (KeyError, TypeError, json.JSONDecodeError):
+                continue
+        return latest
+    except OSError:
+        return None
+
+
 class Codex:
     name = "codex"
 
-    def check(self) -> None:
-        if not shutil.which("codex"):
-            raise UsageError("Codex CLI 'codex' is not on PATH")
+    def check(self, executable: str | None = None) -> None:
+        if not shutil.which(executable or "codex"):
+            raise UsageError(f"Codex CLI is unavailable: {executable or 'codex on PATH'}")
 
     def command(self, call: Call, schema_file: Path, output_file: Path) -> list[str]:
         mode = "read-only" if call.role == "reviewer" else "workspace-write"
-        command = [shutil.which("codex") or "codex", "exec"]
+        command = [_executable("codex", call.executable), "exec"]
         if call.session_id:
             # `exec resume` has no --sandbox flag, so the mode is always set through -c.
             command += ["resume", call.session_id]
@@ -343,6 +376,8 @@ class Codex:
         return command
 
     def run(self, call: Call) -> CallResult:
+        if call.session_id:
+            call.token_baseline = _codex_token_totals(call.session_id) or call.token_baseline
         schema_file = call.work_dir / f"{call.role}.schema.json"
         output_file = call.work_dir / f"{call.role}.last-message.json"
         schema_file.write_text(json.dumps(call.schema), encoding="utf-8")
@@ -351,7 +386,11 @@ class Codex:
         try:
             process = _run(self.command(call, schema_file, output_file), call)
         except subprocess.TimeoutExpired as exc:
-            return CallResult(session_id=call.session_id, error=f"timed out after {call.timeout} s", raw=_excerpt(exc.stdout))
+            session_id = call.telemetry.get("session_id") or call.session_id
+            totals = _codex_token_totals(session_id)
+            if totals:
+                codex_usage(call, totals, "codex-rollout-delta", "partial")
+            return CallResult(session_id=session_id, error=f"timed out after {call.timeout} s", raw=_excerpt(exc.stdout))
         result = CallResult(session_id=call.session_id, raw=_excerpt(process.stdout + process.stderr))
         failure = None
         terminal_failure = False
@@ -368,6 +407,7 @@ class Codex:
                 error = event.get("error")
                 failure = (error.get("message") if isinstance(error, dict) else error) or event.get("message") or kind
             elif kind == "turn.completed" and not terminal_failure:
+                codex_usage(call, event.get("usage"), "codex-session-delta", "reported")
                 # A completed turn recovers transient errors, never a terminal turn failure.
                 failure = None
         if process.returncode != 0 or failure:
@@ -397,7 +437,7 @@ class Fake:
 
     name = "fake"
 
-    def check(self) -> None:
+    def check(self, executable: str | None = None) -> None:
         if not os.environ.get("CROSS_AGENT_FAKE_SCRIPT"):
             raise UsageError("The fake provider needs CROSS_AGENT_FAKE_SCRIPT")
 
@@ -425,6 +465,12 @@ class Fake:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
         session_id = call.session_id or f"fake-{call.role}-{uuid.uuid4().hex[:8]}"
+        if call.progress:
+            call.progress({"event": "worker-ready", "session_id": session_id})
+        if step.get("telemetry"):
+            call.telemetry.update(step["telemetry"])
+            if call.progress:
+                call.progress({"event": "usage", "telemetry": dict(call.telemetry)})
         if step.get("fail"):
             return CallResult(session_id=session_id, error=step["fail"])
         return CallResult(data=step["output"], session_id=session_id, context_tokens=step.get("context_tokens"))
