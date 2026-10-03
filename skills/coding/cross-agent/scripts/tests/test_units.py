@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import copy
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -19,29 +19,31 @@ from crossagent.errors import UsageError  # noqa: E402
 
 
 class SpecTests(unittest.TestCase):
-    def test_provider_only_keeps_the_provider_default_model(self):
-        self.assertEqual(config.parse_spec("codex"), config.RoleSpec("codex"))
+    def test_explicit_roles_and_missing_fields(self):
         self.assertEqual(config.parse_spec("claude:opus:high"), config.RoleSpec("claude", "opus", "high"))
-        self.assertEqual(config.parse_spec("codex::low"), config.RoleSpec("codex", None, "low"))
+        self.assertEqual(config.parse_spec("codex:gpt-6.1-sol:xhigh"), config.RoleSpec("codex", "gpt-6.1-sol", "xhigh"))
+        for value in ("codex", "codex::low", "claude:opus", "claude:opus:", "claude: :high"):
+            with self.subTest(value=value), self.assertRaises(UsageError):
+                config.parse_spec(value)
 
     def test_unknown_provider_is_refused(self):
         with self.assertRaises(UsageError):
-            config.parse_spec("gemini")
+            config.parse_spec("gemini:model:high")
 
 
 class DiscoveryTests(unittest.TestCase):
     def test_stage_skills_are_found_next_to_cross_agent(self):
-        skill = config.find_stage_skill(copy.deepcopy(config.DEFAULTS), "feature-plan")
+        skill = config.find_stage_skill({"stages": {}}, "feature-plan")
         self.assertEqual(skill.name, "SKILL.md")
         self.assertTrue(skill.parent.name.endswith("feature-plan"))
-        self.assertIsNone(config.find_stage_skill(copy.deepcopy(config.DEFAULTS), "general"))
+        self.assertIsNone(config.find_stage_skill({"stages": {}}, "general"))
 
 
 class CodexCommandTests(unittest.TestCase):
-    def _command(self, role, session_id=None, model=None, effort=None):
+    def _command(self, role, session_id=None, model="requested-model", effort="high"):
         call = providers.Call(
             role=role, model=model, effort=effort, prompt="", schema={}, session_id=session_id, cwd=Path("."),
-            read_dirs=[], write_dirs=[], allowed_commands=[], timeout=1, work_dir=Path("."),
+            read_dirs=[], write_dirs=[], allowed_commands=[], timeout=1, work_dir=Path("."), executable=sys.executable,
         )
         return providers.Codex().command(call, Path("schema.json"), Path("last.json"))
 
@@ -82,9 +84,9 @@ class CodexResultTests(unittest.TestCase):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 call = providers.Call(
-                    role="reviewer", model=None, effort=None, prompt="", schema=schemas.REVIEW,
+                    role="reviewer", model="requested-model", effort="high", prompt="", schema=schemas.REVIEW,
                     session_id=None, cwd=root, read_dirs=[], write_dirs=[],
-                    allowed_commands=[], timeout=1, work_dir=root,
+                    allowed_commands=[], timeout=1, work_dir=root, executable=sys.executable,
                 )
 
                 def fake_run(command, call):
@@ -108,13 +110,28 @@ class CodexResultTests(unittest.TestCase):
 
 
 class CliSelectionTests(unittest.TestCase):
+    def test_missing_path_or_saved_role_never_falls_back_to_cli_defaults(self):
+        for provider in ("claude", "codex"):
+            for session_id in (None, "saved-session"):
+                for model, effort, executable in ((None, "high", sys.executable),
+                                                   ("test-model", None, sys.executable),
+                                                   ("test-model", "high", None)):
+                    with self.subTest(provider=provider, session_id=session_id, model=model, effort=effort, executable=executable):
+                        call = providers.Call(role="reviewer", model=model, effort=effort, prompt="", schema={},
+                            session_id=session_id, cwd=Path("."), read_dirs=[], write_dirs=[], allowed_commands=[],
+                            timeout=1, work_dir=Path("."), executable=executable)
+                        with patch.object(providers.shutil, "which", return_value=sys.executable) as discover:
+                            with self.assertRaises(UsageError):
+                                providers.preview_command(provider, call)
+                            discover.assert_not_called()
+
     def test_configured_path_reaches_start_and_resume_for_both_providers(self):
         selected = str(Path(sys.executable).resolve())
         for provider in ("claude", "codex"):
             for session_id in (None, "saved-session"):
                 with self.subTest(provider=provider, session_id=session_id):
                     call = providers.Call(
-                        role="reviewer", model=None, effort=None, prompt="", schema={},
+                        role="reviewer", model="requested-model", effort="high", prompt="", schema={},
                         session_id=session_id, cwd=Path("."), read_dirs=[], write_dirs=[],
                         allowed_commands=[], timeout=1, work_dir=Path("."), executable=selected,
                     )
@@ -131,10 +148,22 @@ class CliSelectionTests(unittest.TestCase):
 
 
 class ClaudeCommandTests(unittest.TestCase):
+    def test_configured_effort_overrides_inherited_effort_environment(self):
+        call = providers.Call(role="producer", model="claude-opus-5-5", effort="medium", prompt="", schema={},
+            session_id=None, cwd=Path("."), read_dirs=[], write_dirs=[], allowed_commands=[], timeout=1,
+            work_dir=Path("."), executable=sys.executable)
+        final = json.dumps({"type": "result", "structured_output": {}, "is_error": False})
+        with patch.dict(os.environ, {"CLAUDE_CODE_EFFORT_LEVEL": "max"}), patch.object(providers, "_run") as run:
+            run.return_value = subprocess.CompletedProcess([], 0, final, "")
+            self.assertIsNone(providers.Claude().run(call).error)
+            command, _, environment = run.call_args.args
+            self.assertEqual(command[command.index("--effort") + 1], "medium")
+            self.assertEqual(environment["CLAUDE_CODE_EFFORT_LEVEL"], "medium")
+
     def test_windows_producer_allows_configured_commands_in_powershell(self):
         call = providers.Call(
             role="producer", model="opus", effort="high", prompt="", schema={}, session_id=None, cwd=Path("."),
-            read_dirs=[], write_dirs=[], allowed_commands=["python -m unittest"], timeout=1, work_dir=Path("."),
+            read_dirs=[], write_dirs=[], allowed_commands=["python -m unittest"], timeout=1, work_dir=Path("."), executable=sys.executable,
         )
         command = providers.Claude().command(call, "00000000-0000-0000-0000-000000000000", True)
         self.assertEqual(command[command.index("--model") + 1], "opus")

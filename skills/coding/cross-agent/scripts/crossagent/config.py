@@ -16,20 +16,10 @@ from .errors import UsageError
 STAGES = ("feature-map", "feature-plan", "feature-delivery", "general")
 PROVIDERS = ("claude", "codex", "fake")
 
-DEFAULTS: dict = {
-    "max_reviews": 2,
-    "timeout_minutes": 30,
-    "rotate_at_tokens": 350_000,
-    "backlog_rejected": True,
-    "max_diff_kb": 200,
-    "defaults": {"producer": "claude", "reviewer": "codex"},
-    "cli": {},
-    "stages": {},
-    "projects": {},
-}
-
 # Settings copied into each run, so a later config edit never changes an open run.
 RUN_SETTINGS = ("max_reviews", "timeout_minutes", "rotate_at_tokens", "backlog_rejected", "max_diff_kb")
+CONFIG_KEYS = (*RUN_SETTINGS, "defaults", "cli", "stages", "projects")
+REQUIRED_KEYS = (*RUN_SETTINGS, "defaults", "cli", "projects")
 
 # Read-only Git commands a Producer may run besides the project's allowed_commands.
 PRODUCER_BASE_COMMANDS = ("git status", "git diff", "git log", "git show")
@@ -60,33 +50,49 @@ def config_path(project_root: Path | None = None) -> Path:
 
 
 def load_config(project_root: Path | None = None) -> dict:
-    """Return the defaults overlaid with the user's config file, when it exists."""
+    """Read a complete project configuration; never fill in runtime defaults."""
     path = config_path(project_root)
+    if not path.is_file():
+        raise UsageError(f"Configuration file does not exist: {path}; run init explicitly")
     try:
-        text = path.read_text(encoding="utf-8-sig") if path.exists() else ""
+        text = path.read_text(encoding="utf-8-sig")
     except (OSError, UnicodeError) as exc:
         raise UsageError(f"Cannot read config {path}: {exc}") from exc
     return _parse_config(text, path)
 
 
 def _parse_config(text: str, path: Path) -> dict:
-    config = copy.deepcopy(DEFAULTS)
-    if text:
-        try:
-            data = tomllib.loads(text)
-        except tomllib.TOMLDecodeError as exc:
-            raise UsageError(f"Cannot read config {path}: {exc}") from exc
-        for key, value in data.items():
-            if key not in DEFAULTS:
-                raise UsageError(f"Unknown config key '{key}' in {path}")
-            if isinstance(DEFAULTS[key], dict):
-                if not isinstance(value, dict):
-                    raise UsageError(f"'{key}' in {path} must be a table")
-                config[key].update(value)
-            else:
-                config[key] = value
+    try:
+        config = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        raise UsageError(f"Cannot read config {path}: {exc}") from exc
+    unknown = set(config) - set(CONFIG_KEYS)
+    if unknown:
+        raise UsageError(f"Unknown config keys {sorted(unknown)} in {path}")
+    missing = set(REQUIRED_KEYS) - set(config)
+    if missing:
+        raise UsageError(f"Missing required config keys {sorted(missing)} in {path}")
+    # Stage-path overrides are optional; sibling Skill discovery is unchanged.
+    config.setdefault("stages", {})
+    for key in ("defaults", "cli", "stages", "projects"):
+        if not isinstance(config[key], dict):
+            raise UsageError(f"'{key}' in {path} must be a table")
     _check(config, path)
     return config
+
+
+def _render_config(config: dict) -> str:
+    """Serialize this configuration's scalar settings and named tables."""
+    lines = ["# Initialized from cross-agent/assets/config.example.toml."]
+    lines += [f"{key} = {json.dumps(config[key])}" for key in RUN_SETTINGS]
+    for table in ("defaults", "cli"):
+        lines += ["", f"[{table}]"]
+        lines += [f"{key} = {json.dumps(value)}" for key, value in config[table].items()]
+    for table in ("stages", "projects"):
+        for name, settings in config[table].items():
+            lines += ["", f"[{table}.{json.dumps(name)}]"]
+            lines += [f"{key} = {json.dumps(value)}" for key, value in settings.items()]
+    return "\n".join(lines) + "\n"
 
 
 def initialize(project_root: Path, input_file: str, *, producer=None, reviewer=None, check_version=True) -> dict:
@@ -103,22 +109,40 @@ def initialize(project_root: Path, input_file: str, *, producer=None, reviewer=N
     temporary = None
     try:
         proposed = json.loads(Path(input_file).read_text(encoding="utf-8-sig"))
-        # Reuse the normal project schema before touching the configuration file.
-        _check({**copy.deepcopy(DEFAULTS), "projects": {project_root.as_posix(): proposed}}, path)
-        proposed = {key: proposed.get(key, []) for key in PROJECT_KEYS}
+        if not isinstance(proposed, dict) or set(proposed) - {*PROJECT_KEYS, "cli"}:
+            raise UsageError("Initialization input accepts only allowed_commands, delivery_checks, extra_dirs, and cli")
+        proposed_cli = proposed.get("cli", {})
+        if not isinstance(proposed_cli, dict):
+            raise UsageError("Initialization 'cli' must be a table")
         original = path.read_bytes() if path.exists() else None
-        config = _parse_config((original or b"").decode("utf-8-sig"), path)
-        exists = project_configured(config, project_root)
+        if original is None:
+            template_path = Path(__file__).resolve().parents[2] / "assets" / "config.example.toml"
+            config = _parse_config(template_path.read_text(encoding="utf-8-sig"), template_path)
+            if "." not in config["projects"]:
+                raise UsageError(f"Initialization template requires [projects.\".\"] in {template_path}")
+            project_template = config["projects"]["."]
+        else:
+            config = _parse_config(original.decode("utf-8-sig"), path)
+            project_template = next((value for key, value in config["projects"].items()
+                                     if key == "." or _same_path(key, project_root)), {})
+        exists = original is not None and project_configured(config, project_root)
+        proposed = {**project_template, **{key: value for key, value in proposed.items() if key != "cli"}}
+        _check_project(proposed, path, str(project_root))
+        proposed_settings = copy.deepcopy(config)
+        proposed_settings["cli"].update(proposed_cli)
+        proposed_settings["defaults"].update(requested_roles)
+        _check(proposed_settings, path)
         if not exists:
             # Local files use '.' so moving a checkout does not invalidate its settings.
             project_key = "." if path == project_root / ".cross-agent" / "config.toml" else project_root.as_posix()
             section = ""
             if original is None:
-                roles = {**DEFAULTS["defaults"], **requested_roles}
-                section = "\n[defaults]\n" + "".join(f"{key} = {json.dumps(value)}\n" for key, value in roles.items())
-            section += f'\n[projects.{json.dumps(project_key, ensure_ascii=False)}]\n'
-            section += "".join(f"{key} = {json.dumps(value, ensure_ascii=False)}\n" for key, value in proposed.items())
-            updated = (original or b"# Cross-agent settings; omitted keys use built-in defaults.\n") + section.encode("utf-8")
+                proposed_settings["projects"] = {project_key: proposed}
+                updated = _render_config(proposed_settings).encode("utf-8")
+            else:
+                section += f'\n[projects.{json.dumps(project_key, ensure_ascii=False)}]\n'
+                section += "".join(f"{key} = {json.dumps(value, ensure_ascii=False)}\n" for key, value in proposed.items())
+                updated = original + section.encode("utf-8")
             config = _parse_config(updated.decode("utf-8-sig"), path)
             path.parent.mkdir(parents=True, exist_ok=True)
             if original is None:
@@ -150,6 +174,9 @@ def initialize(project_root: Path, input_file: str, *, producer=None, reviewer=N
             "proposed_role_differences": {
                 key: value for key, value in requested_roles.items() if value != config["defaults"][key]
             },
+            "proposed_cli_differences": {
+                key: value for key, value in proposed_cli.items() if value != config["cli"].get(key)
+            },
             "providers_on_path": {provider: shutil.which(provider) is not None for provider in ("claude", "codex")},
             "cli_executables": cli_executables(config),
             "codex_version": check_codex_version(config["cli"].get("codex")) if check_version else {
@@ -178,20 +205,40 @@ def _check(config: dict, path: Path) -> None:
         if provider not in ("claude", "codex") or not isinstance(executable, str) or not Path(executable).is_absolute():
             raise UsageError(f"[cli] in {path} accepts only absolute 'claude' or 'codex' executable paths")
     for role in ("producer", "reviewer"):
-        parse_spec(str(config["defaults"].get(role, "")))
+        value = config["defaults"].get(role)
+        if not isinstance(value, str):
+            raise UsageError(f"Missing or invalid [defaults] {role} in {path}")
+        spec = parse_spec(value)
+        configured_executable(config, spec.provider, path)
     for project, settings in config["projects"].items():
-        if not isinstance(settings, dict):
-            raise UsageError(f"[projects.\"{project}\"] in {path} must be a table")
-        for key, value in settings.items():
-            if key not in PROJECT_KEYS:
-                raise UsageError(f"Unknown key '{key}' in [projects.\"{project}\"] of {path}")
-            if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-                raise UsageError(f"'{key}' in [projects.\"{project}\"] of {path} must be a list of strings")
+        _check_project(settings, path, project)
+
+
+def _check_project(settings: dict, path: Path, project: str) -> None:
+    if not isinstance(settings, dict):
+        raise UsageError(f"[projects.\"{project}\"] in {path} must be a table")
+    missing = set(PROJECT_KEYS) - set(settings)
+    if missing:
+        raise UsageError(f"Missing required project keys {sorted(missing)} in [projects.\"{project}\"] of {path}")
+    for key, value in settings.items():
+        if key not in PROJECT_KEYS:
+            raise UsageError(f"Unknown key '{key}' in [projects.\"{project}\"] of {path}")
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise UsageError(f"'{key}' in [projects.\"{project}\"] of {path} must be a list of strings")
+
+
+def configured_executable(config: dict, provider: str, path: Path | None = None) -> str | None:
+    if provider == "fake":
+        return None
+    executable = config["cli"].get(provider)
+    if not executable:
+        raise UsageError(f"Missing required [cli] {provider} in {path or 'configuration'}; specify an absolute executable path")
+    return executable
 
 
 def cli_executables(config: dict) -> dict:
-    """Report the configured executables, or PATH discovery when unspecified."""
-    return {provider: shutil.which(config["cli"].get(provider, provider)) for provider in ("claude", "codex")}
+    """Report configured executables only, without implicit PATH selection."""
+    return {provider: shutil.which(executable) for provider, executable in config["cli"].items()}
 
 
 def _is_int(value) -> bool:
@@ -201,23 +248,22 @@ def _is_int(value) -> bool:
 @dataclass(frozen=True)
 class RoleSpec:
     provider: str
-    model: str | None = None
-    effort: str | None = None
+    model: str
+    effort: str
 
     def as_dict(self) -> dict:
         return {"provider": self.provider, "model": self.model, "effort": self.effort}
 
 
 def parse_spec(text: str) -> RoleSpec:
-    """Parse `<provider>[:<model>[:<effort>]]`; an empty model keeps the provider's default."""
+    """Require an explicit provider, model, and effort for every role."""
     parts = text.strip().split(":")
-    if len(parts) > 3 or not parts[0]:
-        raise UsageError(f"Role spec '{text}' must be <provider>[:<model>[:<effort>]]")
+    if len(parts) != 3 or not all(part.strip() for part in parts):
+        raise UsageError(f"Role spec '{text}' must provide <provider>:<model>:<effort>; all three are required")
     provider = parts[0].lower()
     if provider not in PROVIDERS:
         raise UsageError(f"Unknown provider '{parts[0]}'; use claude or codex")
-    model = parts[1] if len(parts) > 1 and parts[1] else None
-    effort = parts[2] if len(parts) > 2 and parts[2] else None
+    model, effort = parts[1].strip(), parts[2].strip()
     return RoleSpec(provider, model, effort)
 
 
@@ -232,12 +278,14 @@ def project_settings(config: dict, project_root: Path) -> dict:
     """Return the project's commands and extra directories, keyed by its root path."""
     settings = next(
         (value for key, value in config["projects"].items() if key == "." or _same_path(key, project_root)),
-        {},
+        None,
     )
+    if settings is None:
+        raise UsageError(f"Missing project configuration for {project_root}; run init explicitly")
     return {
-        "allowed_commands": list(settings.get("allowed_commands", [])),
-        "delivery_checks": list(settings.get("delivery_checks", [])),
-        "extra_dirs": [str((project_root / item).resolve()) for item in settings.get("extra_dirs", [])],
+        "allowed_commands": list(settings["allowed_commands"]),
+        "delivery_checks": list(settings["delivery_checks"]),
+        "extra_dirs": [str((project_root / item).resolve()) for item in settings["extra_dirs"]],
     }
 
 

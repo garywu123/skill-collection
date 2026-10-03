@@ -56,7 +56,7 @@ class HistoryTests(unittest.TestCase):
         self.assertTrue(all(row["started_at_utc"].endswith("+00:00") and row["ended_at_utc"] and
                             float(row["elapsed_seconds"]) >= 0 for row in rows))
         second = h.run("start", "--stage", "feature-plan", "--artifact", "docs/plan.md", "--first", "review",
-                       "--item", item, "--producer", "fake", "--reviewer", "fake:configured-model:high")["run_id"]
+                       "--item", item, "--producer", "fake:test-model:high", "--reviewer", "fake:configured-model:high")["run_id"]
         self.assertNotEqual(second, run_id)
         h.next(second)
         h.run("close", "--run", second)
@@ -193,6 +193,7 @@ class TokenAccountingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             worker = call(root, "saved-session", {"input_tokens": 500, "output_tokens": 50})
+            worker.model, worker.effort, worker.executable = "test-model", "high", sys.executable
             def run(command, call):
                 (root / "producer.last-message.json").write_text('{"status":"done"}', encoding="utf-8")
                 return subprocess.CompletedProcess(command, 0, json.dumps({"type": "turn.completed", "usage": {

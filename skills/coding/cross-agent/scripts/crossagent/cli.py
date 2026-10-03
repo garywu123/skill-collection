@@ -22,9 +22,9 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     init = commands.add_parser("init", help="add this project's configuration; do not start workers")
-    init.add_argument("--input", required=True, help="JSON object with allowed_commands, delivery_checks, extra_dirs")
-    init.add_argument("--producer", help="persist <provider>[:<model>[:<effort>]] in a new config")
-    init.add_argument("--reviewer", help="persist <provider>[:<model>[:<effort>]] in a new config")
+    init.add_argument("--input", required=True, help="JSON object with project commands and optional cli path overrides; other values come from the template")
+    init.add_argument("--producer", help="persist <provider>:<model>:<effort> in a new config")
+    init.add_argument("--reviewer", help="persist <provider>:<model>:<effort> in a new config")
     init.add_argument("--skip-version-check", action="store_true", help="skip Codex version detection and latest-release lookup")
 
     start = commands.add_parser("start", help="create a run")
@@ -32,8 +32,8 @@ def _parser() -> argparse.ArgumentParser:
     start.add_argument("--artifact", required=True, help="path relative to the project root")
     start.add_argument("--first", required=True, choices=("produce", "review"))
     start.add_argument("--request", help="the concrete change or intended outcome")
-    start.add_argument("--producer", help="<provider>[:<model>[:<effort>]]")
-    start.add_argument("--reviewer", help="<provider>[:<model>[:<effort>]]")
+    start.add_argument("--producer", help="complete <provider>:<model>:<effort> override")
+    start.add_argument("--reviewer", help="complete <provider>:<model>:<effort> override")
     start.add_argument("--item", help="stable Feature ID or topic shared across stages; defaults to artifact")
     start.add_argument("--dry-run", action="store_true", help="print the first prompt and command only")
 

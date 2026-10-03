@@ -91,7 +91,7 @@ Cross-agent 的 `initiate` 模式负责按项目证据准备配置，底层调�
 
 ```text
 使用 cross-agent initiate，根据当前项目的 AGENTS.md 和已有构建、测试定义初始化配置。
-Producer 使用 Claude 默认模型，effort 为 high；Reviewer 使用 Codex 默认模型，effort 为 high。
+Producer 使用 claude-opus-5-5，effort 为 medium；Reviewer 使用 gpt-6.1-sol，effort 为 xhigh。
 后续任务是先规划、再执行行为不变的重构，请据此选择验证命令。
 这次只初始化并报告有效配置和缺少的前置条件。
 ```
@@ -100,21 +100,25 @@ Orch 会读取项目证据，确定 `allowed_commands`、`delivery_checks` 和�
 
 默认配置位置为当前项目根目录的 `.cross-agent/config.toml`，与 Codex 自身的配置文件不同。每个 repo 独立保存设置；CLI 不向父目录搜索，也不回退读取旧的 `~/.cross-agent/config.toml`。从哪个项目根目录运行，就使用哪个根目录的配置。新建配置使用 `[projects."."]`，因此移动 checkout 后不必修改绝对路径。
 
-已有配置、注释和角色默认值会保留，仅追加缺少的当前项目分区。已有分区保持原样，包括省略的字段；返回 `unchanged`，并用 `proposed_differences` 和 `proposed_role_differences` 报告命令与角色建议的差异。要修改现有设置，请明确提出配置修改请求，重复初始化不会覆盖它们。初始化会使用 Git 的本地 exclude 忽略 `.cross-agent/`，不用修改项目的 `.gitignore`。没有配置文件时仍可使用内置默认值，但缺少文件不会自动触发初始化。
+新建配置读取 `cross-agent/assets/config.example.toml` 的运行设置和完整角色，再叠加明确提供的角色、CLI 路径与项目命令。Python 没有运行默认值；生成后只读取项目配置，模板变化不会影响已有项目。已有有效配置和注释保留，仅追加缺少的项目分区；`proposed_differences`、`proposed_role_differences` 和 `proposed_cli_differences` 报告未应用的差异。要修改现有设置，请明确提出配置修改请求，重复初始化不会覆盖它们。缺少配置或必填参数会报错，不从模板补齐旧文件，也不自动初始化。初始化使用 Git 的本地 exclude 忽略 `.cross-agent/`，不用修改项目的 `.gitignore`。
 
-底层命令如下；`--producer` 和 `--reviewer` 在新文件中保存当前 repo 的角色、模型和 effort。`codex::high` 保留默认模型但指定 effort，`codex:<指定模型>:high` 同时指定两者。Orch 只传你明确指定的值，省略角色参数时新文件使用内置角色默认值：
+底层命令如下；角色必须完整指定 `provider:model:effort`。省略初始化角色参数时使用模板中的完整配置：
 
 ```powershell
-python $crossAgentCli init --input '<JSON文件绝对路径>' --producer claude::high --reviewer codex::high
+python $crossAgentCli init --input '<JSON文件绝对路径>' --producer claude:claude-opus-5-5:medium --reviewer codex:gpt-6.1-sol:xhigh
 ```
 
-Orch 将输入放在工作树外的临时文件中，完成后删除；JSON 只接受以下三个字段，省略的字段使用空列表：
+Orch 将输入放在工作树外的临时文件中，完成后删除；JSON 接受项目的三个字段和可选的 `cli` 路径覆盖。省略的初始化输入来自模板；生成的配置必须明确包含每个项目字段。以下 CLI 路径是占位示例，必须替换成实际安装路径：
 
 ```json
 {
   "allowed_commands": ["python -m unittest"],
   "delivery_checks": ["python -m unittest discover -s tests -v"],
-  "extra_dirs": []
+  "extra_dirs": [],
+  "cli": {
+    "claude": "C:/Tools/Claude/claude.exe",
+    "codex": "C:/Tools/Codex/codex.exe"
+  }
 }
 ```
 
@@ -122,7 +126,7 @@ Orch 将输入放在工作树外的临时文件中，完成后删除；JSON 只�
 
 `init` 会执行只读的 `codex --version`，并向 npm registry 查询 `@openai/codex` 的 `latest` 发布版本。结果在 `codex_version` 中包含已安装版本、最新版本、来源和状态：`current` 表示相同，`update-available` 表示安装的稳定版较旧，`ahead` 表示比该发布版新。未安装时是 `not-installed`，网络失败、版本无法识别或安装预发布版时是 `unknown`，不能报告成“已是最新”。两个查询都有超时，检测失败不会阻止配置创建；初始化不自动升级 CLI。只有明确要求跳过检测时才使用 `--skip-version-check`，此时返回 `skipped`。
 
-如需手动理解或调整设置，参见 [完整配置示例](../cross-agent/assets/config.example.toml)。下面是本案例的完整设置示意；初始化写入角色默认值和项目分区，其他键省略时使用内置默认值：
+如需手动理解或调整设置，参见 [完整配置示例](../cross-agent/assets/config.example.toml)。下面是本案例的完整设置示意；五个运行控制参数、两个完整角色、所选 CLI 的路径和当前项目的三个字段都是必填项：
 
 ```toml
 max_reviews = 2
@@ -132,8 +136,12 @@ backlog_rejected = true
 max_diff_kb = 200
 
 [defaults]
-producer = "claude::high"
-reviewer = "codex::high"
+producer = "claude:claude-opus-5-5:medium"
+reviewer = "codex:gpt-6.1-sol:xhigh"
+
+[cli]
+claude = "C:/Tools/Claude/claude.exe"
+codex = "C:/Tools/Codex/codex.exe"
 
 [projects."."]
 allowed_commands = ["python -m unittest"]
@@ -156,7 +164,7 @@ extra_dirs = []
 
 `[projects."."]` 表示当前项目根目录；始终从同一项目根目录调用 CLI，进入子目录会使用另一份配置路径。旧的绝对路径分区仍可解析，但用户目录文件不会自动加载。如需继续使用旧文件，通过 `CROSS_AGENT_CONFIG` 显式指定；也可在新建 repo 配置时明确提供旧设置，初始化不会自动迁移或修改旧文件。即使是写计划的 `general` 阶段也会运行 `delivery_checks`，所以本例先确保基线测试存在且能通过。
 
-角色格式为 `<provider>[:<model>[:<effort>]]`。`claude` / `codex` 使用对应 CLI 的默认值；如需指定，填入该 CLI 和账号实际支持的模型与 effort。`codex::high` 表示保留默认模型并请求 `high` effort，不是对所有模型兼容性的保证。Codex 的 effort 通过 `model_reasoning_effort` 传给 CLI，可用程度依模型和客户端而定，见 [OpenAI 官方配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。新配置的 `[defaults]` 只属于当前 repo；后续任务中指定的角色通过 `start --producer` / `--reviewer` 覆盖该次 run 的默认值，不会改写配置文件。
+角色格式为 `<provider>:<model>:<effort>`，三项都必须明确提供；`claude`、`codex` 和 `codex::high` 会报错。填入所选 CLI 和账号支持的模型与 effort；完整字段只保证配置明确，不证明模型访问权限。Codex 的 effort 通过 `model_reasoning_effort` 传给 CLI，见 [OpenAI 官方配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。新配置的 `[defaults]` 只属于当前 repo；`start --producer` / `--reviewer` 可用完整角色覆盖该次 run，不改写配置文件，也不能弥补缺失的项目配置。
 
 配置控制 worker，不会改变当前 Orch 对话自己的模型或 effort。每个 run 会保存启动时的设置；修改配置不会改变已经打开的 run。
 
@@ -176,7 +184,7 @@ $env:CROSS_AGENT_CONFIG = 'D:/local-config/cross-agent-demo.toml'
 python $crossAgentCli status
 ```
 
-检查 `config_path`、`config_exists`、`project_root`、`project_configured`、`project`、`defaults`、`settings` 和 `open_runs`。`project` 显示当前目录匹配到的有效命令和额外目录；`project_configured: false` 表示没有匹配的项目分区。空的 `delivery_checks` 表示没有配置验证，不表示测试通过。如果相同 artifact 已有打开的 run，应恢复它或明确决定放弃，不要直接创建第二个。
+检查 `config_path`、`project_root`、`project`、`defaults`、`settings` 和 `open_runs`。缺少配置文件、匹配的项目分区或必填参数时，`status` 会返回错误；只在你明确要求初始化时使用 `init`。空的 `delivery_checks` 必须明确写成 `[]`，表示没有配置验证，不表示测试通过。如果相同 artifact 已有打开的 run，应恢复它或明确决定放弃，不要直接创建第二个。
 
 ### 3.3 共享 workspace 配置与 CLI 路径
 
@@ -196,8 +204,8 @@ codex = "C:/Tools/Codex/codex.exe"
 claude = "C:/Tools/Claude/claude.exe"
 ```
 
-使用实际安装的绝对路径。省略某一项时该 provider 使用 PATH；指定路径无效时会失败，
-不会回退到另一份安装。CLI 路径在每次 worker 调用时读取，因此现有 run 的恢复也使用
+为每个所选 provider 提供实际安装的绝对路径。缺项或路径无效时会失败，
+不会通过 PATH 选择另一份安装。CLI 路径在每次 worker 调用时读取，因此现有 run 的恢复也使用
 新选择；保存的角色、命令、timeout 和 review 预算保持原样。
 
 ## 4. 主案例：先规划，再执行重构
@@ -249,7 +257,7 @@ Orch 先在对话里列出两个阶段及验收条件，再检查配置和已有
 
 ```text
 阶段 2/2：执行重构。Producer 已启动，新会话 generation 1。
-Provider：Claude；配置：默认模型/effort；实际模型：已观测值；实际 effort：未知。
+Provider：Claude；配置：claude-opus-5-5 / medium；实际模型：已观测值；实际 effort：未知。
 最近 parent context：约 34k；窗口上限：未知；轮换阈值：350k。
 Subagents：请求 2，已确认启动 2，活跃 1。当前正在处理测试；尚无通过结论。
 ```
@@ -273,7 +281,7 @@ Subagents：请求 2，已确认启动 2，活跃 1。当前正在处理测试�
 先在项目根目录预览计划阶段，不启动 worker、不创建 run：
 
 ```powershell
-python $crossAgentCli start --stage general --artifact docs/refactor-plan.md --first produce --request 'Plan a behavior-preserving simplification of names.py; read AGENTS.md and tests; write only docs/refactor-plan.md. Do not implement or commit.' --producer claude --reviewer codex --dry-run
+python $crossAgentCli start --stage general --artifact docs/refactor-plan.md --first produce --request 'Plan a behavior-preserving simplification of names.py; read AGENTS.md and tests; write only docs/refactor-plan.md. Do not implement or commit.' --dry-run
 ```
 
 确认预览后，去掉 `--dry-run` 才会创建 run。记录返回的真实 `run_id`，例如保存为变量，再逐步运行：

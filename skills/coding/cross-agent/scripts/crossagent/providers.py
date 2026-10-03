@@ -181,21 +181,28 @@ def _run(command: list[str], call: Call, env: dict | None = None):
 
 
 def _executable(provider: str, configured: str | None = None) -> str:
-    """Never fall back to PATH when an explicit executable cannot be found."""
-    selected = shutil.which(configured or provider)
-    if configured and not selected:
+    """Require the selected configuration path; never fall back to PATH."""
+    if not configured:
+        raise UsageError(f"Missing configured {provider} CLI executable path")
+    selected = shutil.which(configured)
+    if not selected:
         raise UsageError(f"Configured {provider} CLI does not exist or is not executable: {configured}")
-    return selected or provider
+    return selected
+
+
+def _require_role(call: Call) -> None:
+    if not all(isinstance(value, str) and value.strip() for value in (call.model, call.effort)):
+        raise UsageError(f"The {call.role} must explicitly configure model and effort; incomplete saved roles cannot fall back to CLI defaults")
 
 
 class Claude:
     name = "claude"
 
     def check(self, executable: str | None = None) -> None:
-        if not shutil.which(executable or "claude"):
-            raise UsageError(f"Claude Code CLI is unavailable: {executable or 'claude on PATH'}")
+        _executable("claude", executable)
 
     def command(self, call: Call, session_id: str, new: bool) -> list[str]:
+        _require_role(call)
         command = [
             _executable("claude", call.executable),
             "-p",
@@ -229,7 +236,7 @@ class Claude:
     def run(self, call: Call) -> CallResult:
         new = call.session_id is None
         session_id = str(uuid.uuid4()) if new else call.session_id
-        env = {**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
+        env = {**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "CLAUDE_CODE_EFFORT_LEVEL": call.effort}
         try:
             process = _run(self.command(call, session_id, new), call, env)
         except subprocess.TimeoutExpired as exc:
@@ -338,10 +345,10 @@ class Codex:
     name = "codex"
 
     def check(self, executable: str | None = None) -> None:
-        if not shutil.which(executable or "codex"):
-            raise UsageError(f"Codex CLI is unavailable: {executable or 'codex on PATH'}")
+        _executable("codex", executable)
 
     def command(self, call: Call, schema_file: Path, output_file: Path) -> list[str]:
+        _require_role(call)
         mode = "read-only" if call.role == "reviewer" else "workspace-write"
         command = [_executable("codex", call.executable), "exec"]
         if call.session_id:

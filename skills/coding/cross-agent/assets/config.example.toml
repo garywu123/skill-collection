@@ -1,12 +1,15 @@
 # cross-agent configuration. Prefer requesting cross-agent initiate in chat;
 # the Skill infers commands and calls init to add the project's section safely.
 # For manual setup, copy to <project-root>/.cross-agent/config.toml, or point
-# CROSS_AGENT_CONFIG at another private path, then edit. Every key is optional;
-# the values below are the defaults. A run keeps the settings it started with.
+# CROSS_AGENT_CONFIG at another private path, then edit. init reads this template
+# only when creating a configuration; subsequent calls read project config only.
+# Runtime settings, complete roles, selected CLI paths, and project fields are
+# required. Missing values are errors; there are no Python or CLI defaults.
+# A run keeps the role settings it started with.
 
 # Reviews per run. Each review that leaves an accepted finding allows one
 # Producer revision.
-max_reviews = 2
+max_reviews = 5
 
 # Hard minutes per worker call or check command; activity never extends it.
 # Producer transient recovery is capped at one per run; checkpoints keep budgets.
@@ -15,7 +18,7 @@ timeout_minutes = 30
 # Start a fresh worker session when the previous call's context exceeded this
 # many tokens. 0 turns rotation off; Claude Code and Codex also compress
 # context on their own.
-rotate_at_tokens = 350000
+rotate_at_tokens = 250000
 
 # Write rejected findings to docs/review-backlog.md when a run closes.
 backlog_rejected = true
@@ -23,28 +26,69 @@ backlog_rejected = true
 # A review fails when the changes it must read exceed this size.
 max_diff_kb = 200
 
-# Optional CLI selection. Use absolute paths; omitted providers use PATH.
-# [cli]
-# codex = "C:/Tools/Codex/codex.exe"
-# claude = "C:/Tools/Claude/claude.exe"
+# Required CLI selection for each provider used by a role. Replace these example
+# paths with installed executables, or supply a cli object in the init input.
+# No PATH fallback is used when an entry is missing or invalid.
+[cli]
+codex = "C:/Tools/Codex/codex.exe"
+claude = "C:/Tools/Claude/claude.exe"
 
 # To share settings, a project's local config contains only:
 # config_file = "../../workspace/.cross-agent/config.toml"
 # The referenced file holds all settings and explicit project-root sections.
 
 [defaults]
-# <provider>[:<model>[:<effort>]]. An empty model keeps the provider's default.
-# Example: reviewer = "codex::high" sets effort without fixing a model.
-# Example: producer = "claude:opus:high" sets both, when supported by that CLI.
-producer = "claude:Opus:medium"
-reviewer = "codex::high"
+# Syntax: <provider>:<model>:<effort>, with provider "claude" or "codex".
+# All three fields are required. "claude", "codex", and "codex::high" are errors.
+# An explicit model ID pins the version; aliases may change their target model.
+# Model/effort support below is a 2026-10-03 snapshot, not an enforced allowlist;
+# availability depends on the selected CLI, provider, account, and workspace.
+# Cross-agent forwards model/effort unchanged; it does not validate model access.
+#
+# Codex models and effort:
+#   gpt-6.1-sol, gpt-6-astra, gpt-6-sol:
+#     low, medium, high, xhigh, max, ultra
+#   gpt-6-luna: low, medium, high, xhigh, max (no ultra)
+# Inspect current choices with codex /model, or codex debug models.
+# Source: https://learn.chatgpt.com/docs/models
+#
+# Claude model aliases (use lowercase): opus, sonnet, haiku, fable, best, opusplan.
+# Aliases can resolve to newer versions; opusplan uses Opus for planning and
+# Sonnet for execution. Full Anthropic IDs include claude-opus-5-5,
+# claude-sonnet-5-5, and claude-fable-5-1; other providers use their own IDs.
+# Sonnet 5.5 requires CLI >= 2.1.284; Opus 5.5 requires >= 2.1.280.
+# Claude effort by model:
+#   Opus 5.5/5/4.8/4.7, Sonnet 5.5/5, Fable 5.1/5:
+#     low, medium, high, xhigh, max
+#   Opus 4.6 / Sonnet 4.6: low, medium, high, max (no xhigh)
+#   Haiku: no documented effort support; unsuitable for these required-effort roles.
+# Opus 5.5 / Sonnet 5.5 default to medium; Opus 4.7 to xhigh;
+# other supported models default to high, unless settings override the default.
+# Source: https://code.claude.com/docs/en/model-config
+#
+# Ordinary levels: low = quick tasks; medium = balanced; high = deeper checks;
+# xhigh = extra reasoning; max = deepest single-model reasoning.
+# Levels are calibrated per model, not equivalent across models/providers.
+# Codex ultra and Claude ultracode enable workflows involving subagents.
+# Claude ultracode requests xhigh plus that workflow (CLI >= 2.1.203).
+# Use these only for Producers when the stage's delegation rules permit them;
+# Reviewers must remain read-only and must not delegate.
+#
+# Examples (replace a role value below; do not add a duplicate TOML key):
+# producer = "claude:claude-opus-5-5:medium" # fixed model and explicit effort
+# producer = "claude:sonnet:high"          # moving alias and explicit effort
+# reviewer = "codex:gpt-6.1-sol:xhigh"     # fixed model and explicit effort
+producer = "claude:claude-opus-5-5:medium"
+reviewer = "codex:gpt-6.1-sol:xhigh"
 
 # Stage Skills are found next to cross-agent. Override a path only when needed.
 # [stages.feature-plan]
 # skill = "C:/Users/<you>/.agents/skills/feature-plan/SKILL.md"
 
-# Local project commands and directories. '.' keeps the checkout portable.
-# [projects."."]
-# allowed_commands = ["dotnet build", "dotnet test"]           # the Producer may run these
-# delivery_checks = ["dotnet build Example.slnx", "dotnet test Example.slnx"] # feature-delivery and general
-# extra_dirs = ["../shared-library"]                           # readable, and writable by the Producer
+# Required project commands and directories. '.' keeps the checkout portable.
+# Empty lists are explicit choices, not missing settings. init replaces them
+# with project input when supplied; e.g. allowed_commands = ["dotnet test"].
+[projects."."]
+allowed_commands = []
+delivery_checks = []
+extra_dirs = []

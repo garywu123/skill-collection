@@ -13,7 +13,7 @@ CODEX_LATEST_URL = "https://registry.npmjs.org/@openai/codex/latest"
 
 def check_codex_version(executable: str | None = None) -> dict:
     result = {"status": "unknown", "installed": None, "latest": None, "source": CODEX_LATEST_URL, "reason": None}
-    executable = shutil.which(executable or "codex")
+    executable = shutil.which(executable) if executable else None
     if not executable:
         return {**result, "status": "not-installed", "reason": "Selected Codex CLI is unavailable"}
     try:

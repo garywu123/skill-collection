@@ -170,7 +170,7 @@ class ExecutionTests(unittest.TestCase):
         h = Harness(self, {})
         for first in ("produce", "review"):
             event = h.run("start", "--stage", "feature-plan", "--artifact", "docs/plan.md", "--first", first,
-                          "--request", "Preview a feature plan.", "--producer", "fake", "--reviewer", "fake", "--dry-run")
+                          "--request", "Preview a feature plan.", "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high", "--dry-run")
             self.assertIn("## Execution Planning", event["prompt"])
             self.assertIn("Stage Skill supplied by CLI", event["prompt"])
             self.assertEqual(event["loaded_skill"]["name"], "feature-plan")
@@ -181,7 +181,7 @@ class ExecutionTests(unittest.TestCase):
     def test_skill_content_is_supplied_and_load_start_events_are_distinct(self):
         h = Harness(self, {"producer": [produce()], "reviewer": [review()]})
         run_id = h.run("start", "--stage", "feature-plan", "--artifact", "docs/plan.md", "--first", "produce",
-                       "--request", "Plan one feature.", "--producer", "fake", "--reviewer", "fake")["run_id"]
+                       "--request", "Plan one feature.", "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high")["run_id"]
         for role in ("producer", "reviewer"):
             process = subprocess.run([sys.executable, str(CLI), "next", "--run", run_id, "--stream"],
                                      cwd=h.repo, env=h.env, capture_output=True, text=True, check=True)
@@ -258,7 +258,7 @@ class ExecutionTests(unittest.TestCase):
         h = Harness(self, {"producer": [{"fail": "model unavailable"}, produce()], "reviewer": [review()]})
         delivery = h.run("start", "--stage", "feature-delivery", "--artifact", "docs/plan.md",
                          "--first", "produce", "--request", "Deliver existing plan.",
-                         "--producer", "fake", "--reviewer", "fake")["run_id"]
+                         "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high")["run_id"]
         h.next(delivery)
         before = h.state(delivery)
         h.run("park", "--run", delivery, "--reason", "User requests reviewed replanning.")
@@ -267,7 +267,7 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(len(h.calls("producer")), 1)
         (h.repo / "docs/plan.md").write_text("# Revised segmented plan\n")
         plan = h.run("start", "--stage", "feature-plan", "--artifact", "docs/plan.md", "--first", "review",
-                     "--producer", "fake", "--reviewer", "fake")["run_id"]
+                     "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high")["run_id"]
         self.assertIn("independently passed", h.run("resume-delivery", "--run", delivery, "--plan-run", plan,
                        "--request", "Execute S1 only then checkpoint.", expect=2)["error"])
         self.assertEqual(h.next(plan)["final_status"], "independently-passed")
@@ -291,7 +291,7 @@ class ExecutionTests(unittest.TestCase):
             with self.subTest(error=error):
                 h = Harness(self, {})
                 delivery = h.run("start", "--stage", "feature-delivery", "--artifact", "docs/plan.md",
-                                 "--first", "review", "--producer", "fake", "--reviewer", "fake")["run_id"]
+                                 "--first", "review", "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high")["run_id"]
                 state = h.state(delivery)
                 state.update(phase="failed", error={"message": error, "execution": False})
                 (h.repo / ".cross-agent/runs" / delivery / "state.json").write_text(json.dumps(state))
@@ -302,12 +302,12 @@ class ExecutionTests(unittest.TestCase):
     def test_diff_capacity_replan_preserves_budget_and_rejects_other_owner(self):
         h = Harness(self, {"producer": [produce(write={"result.txt": "x" * 2500})], "reviewer": [review()]}, max_diff_kb=1)
         delivery = h.run("start", "--stage", "feature-delivery", "--artifact", "docs/plan.md", "--first", "produce",
-                         "--request", "Deliver.", "--producer", "fake", "--reviewer", "fake")["run_id"]
+                         "--request", "Deliver.", "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high")["run_id"]
         h.next(delivery)
         self.assertIn("exceed max_diff_kb", h.next(delivery)["error"]["message"])
         h.run("park", "--run", delivery, "--reason", "Replan requested.")
         plan = h.run("start", "--stage", "feature-plan", "--artifact", "docs/plan.md", "--first", "review",
-                     "--producer", "fake", "--reviewer", "fake")["run_id"]
+                     "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high")["run_id"]
         h.next(plan)
         self.assertIn("must explicitly increase", h.run("resume-delivery", "--run", delivery, "--plan-run", plan,
                        "--request", "Continue segmented plan.", "--max-diff-kb", "1", expect=2)["error"])
@@ -316,7 +316,7 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual((event["phase"], event["reviews_done"], event["max_reviews"]), ("produce", 0, 2))
         self.assertIn("already open", h.run(
             "start", "--stage", "general", "--artifact", "docs/plan.md", "--first", "review", "--request", "Other.",
-            "--producer", "fake", "--reviewer", "fake", expect=2)["error"])
+            "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high", expect=2)["error"])
 
     def test_windows_state_replace_retries_are_bounded_and_atomic(self):
         h = Harness(self, {})

@@ -78,6 +78,24 @@ def _toml(value) -> str:
     return ("true" if value else "false") if isinstance(value, bool) else json.dumps(value)
 
 
+def configuration_text(*, producer="fake:test-model:high", reviewer="fake:test-model:high",
+                       cli=None, projects=None, **overrides) -> str:
+    settings = dict(max_reviews=2, timeout_minutes=30, rotate_at_tokens=350000,
+                    backlog_rejected=True, max_diff_kb=200)
+    settings.update(overrides)
+    text = "".join(f"{key} = {_toml(value)}\n" for key, value in settings.items())
+    text += f'\n[defaults]\nproducer = {json.dumps(producer)}\nreviewer = {json.dumps(reviewer)}\n[cli]\n'
+    text += "".join(f"{key} = {json.dumps(value)}\n" for key, value in (cli or {}).items())
+    if projects is None:
+        projects = {".": dict(allowed_commands=[], delivery_checks=[], extra_dirs=[])}
+    for project, values in projects.items():
+        text += f'\n[projects.{json.dumps(project)}]\n'
+        text += "".join(f"{key} = {json.dumps(value)}\n" for key, value in values.items())
+    if not projects:
+        text += "\n[projects]\n"
+    return text
+
+
 class Harness:
     def __init__(self, test: unittest.TestCase, script: dict, **config):
         self.dir = Path(tempfile.mkdtemp(prefix="cross-agent-test-"))
@@ -98,7 +116,7 @@ class Harness:
         self.script = self.dir / "fake.json"
         self.script.write_text(json.dumps(script), encoding="utf-8")
         self.config = self.dir / "config.toml"
-        self.config.write_text("".join(f"{key} = {_toml(value)}\n" for key, value in config.items()), encoding="utf-8")
+        self.config.write_text(configuration_text(**config), encoding="utf-8")
         self.env = {**os.environ, "CROSS_AGENT_CONFIG": str(self.config), "CROSS_AGENT_FAKE_SCRIPT": str(self.script)}
 
     def run(self, *args, expect=0) -> dict:
@@ -117,7 +135,7 @@ class Harness:
     def start(self, first="review", *extra) -> dict:
         return self.run(
             "start", "--stage", "general", "--artifact", "docs/plan.md", "--first", first,
-            "--request", "Keep the plan correct.", "--producer", "fake", "--reviewer", "fake", *extra,
+            "--request", "Keep the plan correct.", "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high", *extra,
         )
 
     def next(self, run_id) -> dict:
@@ -351,8 +369,8 @@ class WorkerTests(unittest.TestCase):
 class RunLifecycleTests(unittest.TestCase):
     def test_failed_general_check_prevents_a_passing_gate_even_with_clean_review(self):
         h = Harness(self, {"producer": [produce()], "reviewer": [review()]})
-        h.config.write_text('[projects.' + json.dumps(h.repo.as_posix()) + ']\n'
-                            'delivery_checks = ["git definitely-not-a-command"]\n', encoding="utf-8")
+        h.config.write_text(configuration_text(projects={".": dict(allowed_commands=[],
+                            delivery_checks=["git definitely-not-a-command"], extra_dirs=[])}), encoding="utf-8")
         run_id = h.start("produce")["run_id"]
         self.assertNotEqual(h.next(run_id)["checks"][0]["exit_code"], 0)
         self.assertEqual(h.next(run_id)["final_status"], "needs-user-decision")
@@ -361,8 +379,8 @@ class RunLifecycleTests(unittest.TestCase):
         h = Harness(self, {"producer": [produce(write={"docs/plan.md": "# Reviewed plan\n"}),
                                         produce(write={"result.txt": "implemented\n"})],
                            "reviewer": [review(), review()]})
-        h.config.write_text('[projects.' + json.dumps(h.repo.as_posix()) + ']\n'
-                            'delivery_checks = ["git -c core.whitespace=cr-at-eol diff --check"]\n', encoding="utf-8")
+        h.config.write_text(configuration_text(projects={".": dict(allowed_commands=[],
+                            delivery_checks=["git -c core.whitespace=cr-at-eol diff --check"], extra_dirs=[])}), encoding="utf-8")
         first = h.start("produce")["run_id"]
         checked = h.next(first)["checks"][0]
         self.assertEqual(checked["exit_code"], 0, checked)
@@ -370,7 +388,7 @@ class RunLifecycleTests(unittest.TestCase):
         h.run("close", "--run", first)
         second = h.run("start", "--stage", "general", "--artifact", "result.txt", "--first", "produce",
                        "--request", "Execute docs/plan.md only after its review passed.",
-                       "--producer", "fake", "--reviewer", "fake")["run_id"]
+                       "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high")["run_id"]
         output = subprocess.run([sys.executable, str(CLI), "next", "--run", second, "--stream"],
                                 cwd=h.repo, env=h.env, capture_output=True, text=True, check=True)
         events = [json.loads(line) for line in output.stdout.splitlines()]
@@ -395,7 +413,7 @@ class RunLifecycleTests(unittest.TestCase):
         run_id = h.start()["run_id"]
         error = h.run(
             "start", "--stage", "general", "--artifact", "docs/plan.md", "--first", "review",
-            "--request", "Again.", "--producer", "fake", "--reviewer", "fake", expect=2,
+            "--request", "Again.", "--producer", "fake:test-model:high", "--reviewer", "fake:test-model:high", expect=2,
         )
         self.assertIn(run_id, error["error"])
         status = subprocess.run(["git", "status", "--porcelain"], cwd=h.repo, capture_output=True, text=True).stdout

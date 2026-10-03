@@ -16,7 +16,8 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from crossagent import engine, providers, versions  # noqa: E402
+from crossagent import config, engine, providers, versions  # noqa: E402
+from test_cli import configuration_text  # noqa: E402
 
 CLI = Path(__file__).resolve().parents[1] / "cross_agent.py"
 
@@ -36,7 +37,8 @@ class InitTests(unittest.TestCase):
             "delivery_checks": ['python -c "open(\'check-ran\', \'w\').close()"'],
             "extra_dirs": [],
         }
-        self.input.write_text(json.dumps(self.proposal), encoding="utf-8")
+        self.cli_paths = dict.fromkeys(("codex", "claude"), str(Path(sys.executable).resolve()))
+        self.input.write_text(json.dumps({**self.proposal, "cli": self.cli_paths}), encoding="utf-8")
         self.env = {**os.environ, "CROSS_AGENT_CONFIG": str(self.config)}
 
     def run_cli(self, *args, expect=0, cwd=None):
@@ -56,13 +58,13 @@ class InitTests(unittest.TestCase):
         (home / ".cross-agent").mkdir(parents=True)
         (home / ".cross-agent" / "config.toml").write_text('[defaults]\nproducer = "codex:legacy-model:low"\n', encoding="utf-8")
         self.env.update({"HOME": str(home), "USERPROFILE": str(home)})
-        result = self.initialize("--producer", "codex:chosen-model:high", "--reviewer", "codex::low")
+        result = self.initialize("--producer", "codex:chosen-model:high", "--reviewer", "codex:review-model:low")
         local = self.root / ".cross-agent" / "config.toml"
         self.assertEqual(result["config_path"], str(local.resolve()))
         self.assertFalse(self.config.exists())
         parsed = tomllib.loads(local.read_text(encoding="utf-8"))
         self.assertIn(".", parsed["projects"])
-        self.assertEqual(parsed["defaults"], {"producer": "codex:chosen-model:high", "reviewer": "codex::low"})
+        self.assertEqual(parsed["defaults"], {"producer": "codex:chosen-model:high", "reviewer": "codex:review-model:low"})
         self.assertEqual(self.run_cli("status")["defaults"], parsed["defaults"])
         with patch.dict(os.environ, self.env, clear=True), patch.object(providers.Codex, "check"):
             preview = engine.start(
@@ -78,10 +80,7 @@ class InitTests(unittest.TestCase):
         other = self.directory / "other"
         other.mkdir()
         subprocess.run(["git", "init", "-q", str(other)], check=True, capture_output=True)
-        status = self.run_cli("status", cwd=other)
-        self.assertFalse(status["config_exists"])
-        self.assertFalse(status["project_configured"])
-        self.assertEqual(status["defaults"]["producer"], "claude")
+        self.assertIn("does not exist", self.run_cli("status", cwd=other, expect=2)["error"])
         (other / ".cross-agent").mkdir()
         shutil.copyfile(local, other / ".cross-agent" / "config.toml")
         moved = self.run_cli("status", cwd=other)
@@ -89,7 +88,7 @@ class InitTests(unittest.TestCase):
         self.assertEqual(moved["defaults"], parsed["defaults"])
         nested = self.root / "nested"
         nested.mkdir()
-        self.assertFalse(self.run_cli("status", cwd=nested)["config_exists"])
+        self.assertIn("does not exist", self.run_cli("status", cwd=nested, expect=2)["error"])
 
     def test_shared_pointer_keeps_project_commands_separate_and_selects_configured_cli(self):
         self.env.pop("CROSS_AGENT_CONFIG")
@@ -99,14 +98,9 @@ class InitTests(unittest.TestCase):
         other = self.directory / "other"
         other.mkdir()
         selected = str(Path(sys.executable).resolve())
-        shared.write_text(
-            '[defaults]\nproducer = "codex"\nreviewer = "codex::high"\n'
-            + f'[cli]\ncodex = {json.dumps(selected)}\n'
-            + f'[projects.{json.dumps(self.root.as_posix())}]\n'
-            + "".join(f"{key} = {json.dumps(value)}\n" for key, value in self.proposal.items())
-            + f'[projects.{json.dumps(other.as_posix())}]\nallowed_commands = ["other command"]\n',
-            encoding="utf-8",
-        )
+        shared.write_text(configuration_text(producer="codex:chosen-model:high", reviewer="codex:review-model:high",
+            cli={"codex": selected}, projects={self.root.as_posix(): self.proposal,
+            other.as_posix(): dict(allowed_commands=["other command"], delivery_checks=[], extra_dirs=[])}), encoding="utf-8")
         original = shared.read_bytes()
         for project in (self.root, other):
             local = project / ".cross-agent" / "config.toml"
@@ -188,12 +182,15 @@ class InitTests(unittest.TestCase):
 
     def test_append_preserves_bom_comments_defaults_other_projects_and_repeat(self):
         self.config.parent.mkdir()
-        original = b'\xef\xbb\xbf# Keep this comment\r\nmax_reviews = 7\r\n[defaults]\r\nproducer = "codex"\r\n[projects."other-project"]\r\nallowed_commands = ["original"]'
+        original = b'\xef\xbb\xbf# Keep this comment\r\n' + configuration_text(max_reviews=7,
+            producer="codex:chosen-model:high", reviewer="codex:review-model:high", cli=self.cli_paths,
+            projects={"other-project": dict(allowed_commands=["original"], delivery_checks=[], extra_dirs=[])}
+            ).rstrip().replace("\n", "\r\n").encode("utf-8")
         self.config.write_bytes(original)
         result = self.initialize()
         self.assertEqual(result["action"], "project-added")
         self.assertEqual(result["settings"]["max_reviews"], 7)
-        self.assertEqual(result["defaults"]["producer"], "codex")
+        self.assertEqual(result["defaults"]["producer"], "codex:chosen-model:high")
         updated = self.config.read_bytes()
         self.assertTrue(updated.startswith(original))
         parsed = tomllib.loads(updated.decode("utf-8-sig"))
@@ -208,7 +205,7 @@ class InitTests(unittest.TestCase):
     def test_existing_project_path_alias_is_preserved(self):
         self.config.parent.mkdir()
         alias = self.root.as_posix() + "/../project"
-        original = f'[projects.{json.dumps(alias)}]\ndelivery_checks = ["existing test"]\n'
+        original = configuration_text(projects={alias: dict(allowed_commands=[], delivery_checks=["existing test"], extra_dirs=[])})
         self.config.write_text(original, encoding="utf-8")
         result = self.initialize()
         self.assertEqual(result["action"], "unchanged")
@@ -220,6 +217,52 @@ class InitTests(unittest.TestCase):
         result = self.initialize()
         self.assertFalse(result["checks_configured"])
         self.assertEqual(result["project"], dict.fromkeys(self.proposal, []))
+
+    def test_initialization_copies_template_values_not_python_defaults(self):
+        template_path = CLI.parents[1] / "assets" / "config.example.toml"
+        template = tomllib.loads(template_path.read_text(encoding="utf-8-sig"))
+        result = self.initialize()
+        parsed = tomllib.loads(self.config.read_text(encoding="utf-8"))
+        for key in config.RUN_SETTINGS:
+            self.assertEqual(parsed[key], template[key])
+        self.assertEqual(parsed["defaults"], template["defaults"])
+        self.assertEqual(parsed["cli"], self.cli_paths)
+        self.assertEqual(result["defaults"], template["defaults"])
+        original_read = Path.read_text
+
+        def read_without_template(path, *args, **kwargs):
+            if path == template_path:
+                raise AssertionError("Existing configuration must not read the initialization template")
+            return original_read(path, *args, **kwargs)
+
+        with patch.dict(os.environ, self.env, clear=True), patch.object(Path, "read_text", read_without_template):
+            self.assertEqual(config.load_config(self.root)["defaults"], parsed["defaults"])
+            self.assertEqual(config.initialize(self.root, str(self.input), check_version=False)["action"], "unchanged")
+
+    def test_missing_required_configuration_never_starts_workers_or_writes_files(self):
+        htext = configuration_text(producer="codex:test-model:high", reviewer="claude:opus:medium", cli=self.cli_paths)
+        cases = [
+            htext.replace('producer = "codex:test-model:high"', 'producer = "codex"'),
+            htext.replace('reviewer = "claude:opus:medium"', 'reviewer = "claude:opus:"'),
+            htext.replace(f'codex = {json.dumps(self.cli_paths["codex"])}\n', ""),
+            htext.replace("delivery_checks = []\n", ""),
+        ]
+        cases += ["\n".join(line for line in htext.split("\n") if not line.startswith(key + " = "))
+                  for key in ("max_reviews", "timeout_minutes", "rotate_at_tokens", "backlog_rejected", "max_diff_kb")]
+        self.config.parent.mkdir()
+        for text in cases:
+            with self.subTest(text=text):
+                self.config.write_text(text, encoding="utf-8")
+                self.run_cli("status", expect=2)
+                self.run_cli("start", "--stage", "general", "--artifact", "output.md", "--first", "produce",
+                             "--request", "Do not run with missing configuration.", expect=2)
+                self.assertEqual(self.config.read_text(encoding="utf-8"), text)
+                self.assertFalse((self.root / ".cross-agent" / "runs").exists())
+
+    def test_project_section_is_required_and_configuration_is_not_backfilled(self):
+        self.config.parent.mkdir()
+        self.config.write_text(configuration_text(projects={}), encoding="utf-8")
+        self.assertIn("Missing project configuration", self.run_cli("status", expect=2)["error"])
 
     def test_invalid_input_and_config_never_change_files(self):
         for value in ([], {"unknown": []}, {"delivery_checks": "not a list"}):
@@ -258,7 +301,7 @@ class CodexVersionTests(unittest.TestCase):
                     patch.object(versions.subprocess, "run") as run, patch.object(versions, "urlopen") as fetch:
                 run.return_value = subprocess.CompletedProcess([], 0, stdout=f"codex-cli {installed}\n")
                 fetch.return_value.__enter__.return_value.read.return_value = json.dumps({"version": latest}).encode()
-                result = versions.check_codex_version()
+                result = versions.check_codex_version("codex")
                 self.assertEqual(result["status"], status)
                 self.assertEqual(result["installed"], installed)
                 self.assertEqual(result["latest"], latest)
@@ -287,10 +330,10 @@ class CodexVersionTests(unittest.TestCase):
                     fetch.side_effect = failure
                 else:
                     fetch.return_value.__enter__.return_value.read.return_value = failure
-                self.assertEqual(versions.check_codex_version()["status"], "unknown")
+                self.assertEqual(versions.check_codex_version("codex")["status"], "unknown")
         with patch.object(versions.shutil, "which", return_value="codex"), \
                 patch.object(versions.subprocess, "run", side_effect=subprocess.TimeoutExpired("codex", 5)):
-            self.assertEqual(versions.check_codex_version()["status"], "unknown")
+            self.assertEqual(versions.check_codex_version("codex")["status"], "unknown")
 
 
 if __name__ == "__main__":

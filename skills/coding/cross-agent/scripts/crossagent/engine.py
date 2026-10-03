@@ -79,7 +79,7 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         "reviewer": cfg.parse_spec(reviewer or config["defaults"]["reviewer"]),
     }
     for spec in roles.values():
-        providers.get(spec.provider).check(config["cli"].get(spec.provider))
+        providers.get(spec.provider).check(cfg.configured_executable(config, spec.provider))
     skill = cfg.find_stage_skill(config, stage)
     for run in store.open_runs(project_root):
         if run.get("artifact") == artifact_rel:
@@ -206,7 +206,7 @@ def retry_producer(project_root: Path, run_id: str) -> dict:
     if state["phase"] != "failed" or not _execution_error(state, "producer"):
         raise UsageError("Only a failed Producer execution can be retried; validation failures stay closed")
     name = state["roles"]["producer"]["provider"]
-    providers.get(name).check(cfg.load_config(project_root)["cli"].get(name))
+    providers.get(name).check(cfg.configured_executable(cfg.load_config(project_root), name))
     _arm_producer_retry(state)
     return _event(state, "Producer retry armed; sessions, edits, findings, baseline and review budget preserved.")
 
@@ -219,7 +219,7 @@ def retry_review(project_root: Path, run_id: str) -> dict:
     if state["reviews_done"] >= state["settings"]["max_reviews"]:
         raise UsageError("The review budget is exhausted")
     provider_name = state["roles"]["reviewer"]["provider"]
-    providers.get(provider_name).check(cfg.load_config(project_root)["cli"].get(provider_name))
+    providers.get(provider_name).check(cfg.configured_executable(cfg.load_config(project_root), provider_name))
     # Keep the failed session in cleanup history; only the Reviewer starts fresh.
     state["workers"]["reviewer"]["session_id"] = None
     state["workers"]["reviewer"]["context_tokens"] = None
@@ -263,7 +263,7 @@ def resume_delivery(project_root: Path, run_id: str, plan_run_id: str, request: 
     if max_diff_kb is not None and max_diff_kb <= state["settings"]["max_diff_kb"]:
         raise UsageError("--max-diff-kb must explicitly increase the saved positive review capacity")
     provider = state["roles"]["producer"]["provider"]
-    providers.get(provider).check(cfg.load_config(project_root)["cli"].get(provider))
+    providers.get(provider).check(cfg.configured_executable(cfg.load_config(project_root), provider))
     state.setdefault("planning_handoffs", []).append({"at": store.now(), "plan_run": plan_run_id,
                                                      "previous_error": state.get("error"), "request": request.strip()})
     if max_diff_kb is not None:
@@ -713,7 +713,7 @@ def _call(state: dict, role: str, prompt: str, schema: dict, session_id: str | N
         allowed_commands=[*cfg.PRODUCER_BASE_COMMANDS, *project["allowed_commands"]] if producer else [],
         timeout=state["settings"]["timeout_minutes"] * 60,
         work_dir=_run_dir(state),
-        executable=cfg.load_config(_root(state))["cli"].get(state["roles"][role]["provider"]),
+        executable=cfg.configured_executable(cfg.load_config(_root(state)), state["roles"][role]["provider"]),
     )
 
 

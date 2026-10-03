@@ -56,7 +56,10 @@ CLI 自动保存 `.cross-agent/history/<run-id>.csv`：每次 Producer/Reviewer 
 在对话中显式请求 `cross-agent initiate` 时，Orch 根据项目说明和已有构建、测试定义选择命令，
 通过 CLI 的 `init` 创建当前项目根目录的 `.cross-agent/config.toml`，保存 Producer/Reviewer
 的模型和 effort，并检测已安装 Codex CLI 与 npm 最新发布版本；已有设置保留并报告差异。
-默认不读取用户目录或父目录配置。可用单层 `config_file` 入口共享 workspace 配置，各项目命令保持分区；`[cli]` 可指定绝对 CLI 路径，启动、恢复和版本检测使用同一选择，路径失效时不回退。初始化不自动升级 CLI、不执行项目测试或启动 worker；
+新配置从 `cross-agent/assets/config.example.toml` 初始化；Python 不提供运行默认值。
+后续调用只读取项目配置，运行控制参数、完整的 `provider:model:effort`、所选 CLI 的绝对路径
+和当前项目的三个字段必须齐全，缺项报错；空命令或目录列表必须明确写成 `[]`。
+默认不读取用户目录或父目录配置。可用单层 `config_file` 入口共享 workspace 配置，各项目命令保持分区；启动、恢复和版本检测使用配置中的同一 CLI 选择，路径缺失或失效时不回退 PATH。初始化不自动升级 CLI、不执行项目测试或启动 worker；
 无法检测版本时明确报告未知，缺少配置本身不触发初始化。
 
 变更只向下传播：Brief -> Spec -> Design -> Roadmap -> Map -> Plan -> 代码。交付发现

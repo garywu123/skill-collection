@@ -34,8 +34,8 @@ an existing settings file; pointers cannot be chained or mixed with settings.
 Use explicit project-root keys in the shared file so commands and permissions
 remain separate. Run state stays in the calling project's `.cross-agent/runs/`.
 
-Optional `[cli]` entries `claude` and `codex` select absolute executable paths;
-unspecified providers use PATH. A missing configured executable fails without
+Required `[cli]` entries for selected providers specify absolute executable paths;
+missing entries and unavailable executables fail without
 falling back to another version. `status` and `init` report `cli_executables`;
 version detection uses the selected Codex. CLI paths are read at each worker
 call, including existing runs; saved roles, commands, and budgets are unchanged.
@@ -46,8 +46,8 @@ Resolve the mode before the run procedure. An explicit `initiate`, `init`, or
 request to initialize Cross-agent configuration selects initialization below.
 `initiate` is the conversational mode name; the executable CLI command is `init`.
 Otherwise follow Inputs and the run procedure. A missing configuration alone
-does not authorize initialization. No configuration file is required to use
-the built-in defaults, but project commands are never inferred by the CLI.
+does not authorize initialization. Runtime calls require a complete configuration
+file; missing settings are errors, never Python or provider CLI defaults.
 
 Initialization alone stops after its report. If the user explicitly requests
 initialization followed by a task, continue only through the authorized stages
@@ -61,14 +61,20 @@ template, or edit the configuration as a substitute for this command.
 
 1. Work from the project root governed by the applicable `AGENTS.md`, which
    may be below the Git root. Check Python 3.11+, the existing Git work tree,
-   and `cross-agent status`. Report missing prerequisites; do not initialize
+   and inspect existing settings with `cross-agent status` when a config exists.
+   A missing config is expected only during explicitly requested initialization.
+   Report missing prerequisites; do not initialize
    Git, install tools, or create lifecycle documents as part of this mode.
 2. Read the applicable project instructions and the build/test definitions
    they reference, such as package scripts, project files, or CI commands.
    Prefer explicit documented commands backed by repository evidence. Ask
    only when the choice is ambiguous or changes permissions. Do not invent
    tests from the detected language alone.
-3. Select the smallest `allowed_commands` needed for Producer work and exact
+3. Read [the initialization template](assets/config.example.toml) for configured
+   runtime settings and complete role specs. Resolve the installed absolute CLI
+   paths for its selected providers and pass them in the input's `cli` object;
+   never persist the template's placeholder paths as if they were verified.
+   Select the smallest `allowed_commands` needed for Producer work and exact
    `delivery_checks` suitable for the intended stage. Both `general` and
    `feature-delivery` run these checks, including document-only `general`
    work. Default `extra_dirs` to `[]`; add writable directories only when
@@ -78,30 +84,36 @@ template, or edit the configuration as a substitute for this command.
 
    ```text
    cross-agent init --input <absolute-temporary-json-path>
-                    [--producer <provider[:model[:effort]]>]
-                    [--reviewer <provider[:model[:effort]]>]
+                    [--producer <provider:model:effort>]
+                    [--reviewer <provider:model:effort>]
    ```
 
    ```json
    {
      "allowed_commands": ["python -m unittest"],
      "delivery_checks": ["python -m unittest discover -s tests -v"],
-     "extra_dirs": []
+     "extra_dirs": [],
+     "cli": {
+       "claude": "C:/Tools/Claude/claude.exe",
+       "codex": "C:/Tools/Codex/codex.exe"
+     }
    }
    ```
 
-   These commands are examples; use the project's real commands. Omitted
-   fields become empty lists. The CLI creates `.cross-agent/config.toml` in
-   the current project root, using `[projects."."]` for portable project
-   commands and `[defaults]` for its Producer/Reviewer model and effort.
-   Pass only roles the user specified; `codex::high` sets effort while keeping
-   the provider's default model, and `codex:<requested-model>:high` sets both.
-   Omitted roles use the built-in defaults in a new file. The selected CLI and
+   These paths and commands are examples; use the project's actual values.
+   Creating a config loads all runtime values from `assets/config.example.toml`,
+   overlays explicit role/CLI inputs and project commands, then validates the
+   complete result before writing. Omitted initialization inputs use template
+   values, never Python defaults. `[projects."."]` keeps local commands portable.
+   Roles must specify `<provider>:<model>:<effort>` in full, including run
+   overrides; `codex`, `claude`, and `codex::high` are errors. The selected CLI and
    model determine supported effort values; do not invent or substitute them.
    Existing configuration, comments, and role defaults remain intact. A
    missing project section is appended; an existing matching section is
-   preserved in full, even if fields are omitted. Report `proposed_differences`
-   and `proposed_role_differences` rather than claiming they were installed.
+   preserved in full when valid; incomplete existing configurations fail without
+   being backfilled from the template. Report `proposed_differences`,
+   `proposed_role_differences`, and `proposed_cli_differences` rather than claiming
+   they were installed.
    Changing existing settings requires an explicit configuration-change task.
    `CROSS_AGENT_CONFIG` remains an explicit override, including for a legacy
    shared file; it is never automatically selected or migrated.
@@ -115,13 +127,19 @@ template, or edit the configuration as a substitute for this command.
    `unknown`, and `skipped` must never be reported as current. Network failures
    and prerelease builds yield `unknown`. Do not automatically upgrade the CLI.
    Use `--skip-version-check` only when the user requests skipping it.
-   `providers_on_path` checks executable discovery, not login or model access.
+   `providers_on_path` checks discovery, not the selected installation, login,
+   or model access; `cli_executables` reports the explicitly configured paths.
    Inspect sibling stage Skills only for intended stages. Initialization does
    not execute project checks, start workers, or create a run. Remove the
    temporary input and stop unless a following task was authorized.
 
 `start --producer` / `--reviewer` override this repo's saved defaults for one
 run, including model and effort. They do not change the current Orch session.
+After initialization, runtime calls read only the selected project/shared
+configuration, not the template. All five runtime control settings, both complete
+roles, selected CLI paths, and all three fields in the matching project section
+are required. Empty project lists must be written explicitly as `[]`. Stage-path
+overrides remain optional because sibling Skill discovery is a routing convention.
 Keep temporary inputs outside the work tree. Initialization uses Git's local
 exclude to keep `.cross-agent/` configuration and run state out of snapshots
 and commits, without editing the project's tracked `.gitignore`. Normal
@@ -166,10 +184,10 @@ Resolve these CLI inputs for each stage:
   Skill and rewrites without purpose. For `general`, always pass a request:
   with no lifecycle Skill, it is the only statement of the intended outcome.
 - **Roles**, optional: translate the user's words into
-  `<provider>[:<model>[:<effort>]]` specs. "Claude Opus produces and Codex
-  reviews" becomes `--producer claude:opus --reviewer codex`. Pass only what
-  the user named; never invent a model name. Omitted specs use the configured
-  defaults.
+  `<provider>:<model>:<effort>` specs. Resolve unspecified model/effort from the
+  existing complete role configuration before applying a user-requested override;
+  never invent a model name or rely on CLI defaults. Omitted overrides use the
+  configured roles. Missing configuration stops the run.
 
 One CLI run handles one stage, while this conversation owns the agenda. After
 closing a completed run, continue to the next already-authorized stage without
