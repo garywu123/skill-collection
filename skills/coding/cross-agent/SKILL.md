@@ -133,13 +133,25 @@ template, or edit the configuration as a substitute for this command.
    not execute project checks, start workers, or create a run. Remove the
    temporary input and stop unless a following task was authorized.
 
-`start --producer` / `--reviewer` override this repo's saved defaults for one
-run, including model and effort. They do not change the current Orch session.
+An optional `[stages.<stage>]` table may set `producer` and `reviewer` in the
+same complete `<provider>:<model>:<effort>` format, so design, delivery, and
+mechanical work can use different models or effort. Each role resolves as the
+`start --producer` / `--reviewer` run override, then the stage role, then
+`[defaults]`. Overrides do not change the current Orch session. `status` shows
+`effective_roles` per stage with their source; `start`, `--dry-run`, and
+`status --run` show the run's `roles` and `role_sources`. An unknown stage or
+key, an incomplete spec, or a provider without its `[cli]` path fails before any
+run or worker starts. A run keeps the roles, Skill path, commands, and budgets it
+started with; later configuration edits never change them. Runs saved before
+stage roles report `role_sources` as `null` and keep their saved roles.
 After initialization, runtime calls read only the selected project/shared
 configuration, not the template. All five runtime control settings, both complete
-roles, selected CLI paths, and all three fields in the matching project section
-are required. Empty project lists must be written explicitly as `[]`. Stage-path
-overrides remain optional because sibling Skill discovery is a routing convention.
+default roles, selected CLI paths, and all three fields in the matching project
+section are required. Empty project lists must be written explicitly as `[]`.
+Stage roles and Skill-path overrides are optional; sibling Skill discovery is a
+routing convention for the three lifecycle stages. `general` loads a Skill only
+when `[stages.general] skill` names one; configure that only when every `general`
+run using this configuration belongs to that Skill.
 Keep temporary inputs outside the work tree. Initialization uses Git's local
 exclude to keep `.cross-agent/` configuration and run state out of snapshots
 and commits, without editing the project's tracked `.gitignore`. Normal
@@ -156,10 +168,16 @@ management document. Infer routine paths and sequencing from repository
 conventions; ask only when ambiguity changes scope or the user's gate.
 
 - A refactor may be `general` plan -> review -> `general` execution -> review.
-- Architecture plus roadmap uses `feature-map` when its lifecycle inputs and
-  ownership apply; otherwise use `general` with explicit design deliverables.
+- Architecture uses `general` with a request that names the
+  `architecture-design` Skill path and its deliverable; the CLI injects that
+  Skill only when `[stages.general] skill` explicitly configures it. A roadmap
+  or Feature Map then uses `feature-map` when its lifecycle inputs and
+  ownership apply.
 - Selected Features are processed in dependency order, one run per Feature
   and stage. Missing prerequisites are reported, not silently added to scope.
+- A bounded validation question uses `feature-plan` to write
+  `docs/plans/<topic>.md`, then `feature-delivery` to execute it, without a
+  Feature ID. Report its execution status and conclusion separately.
 - "Plan, then execute once review passes" authorizes both stages. "Make a
   plan" stops after planning. "Wait for my approval" requires the user's reply.
 
@@ -187,7 +205,7 @@ Resolve these CLI inputs for each stage:
   `<provider>:<model>:<effort>` specs. Resolve unspecified model/effort from the
   existing complete role configuration before applying a user-requested override;
   never invent a model name or rely on CLI defaults. Omitted overrides use the
-  configured roles. Missing configuration stops the run.
+  configured stage role, else the default. Missing configuration stops the run.
 
 One CLI run handles one stage, while this conversation owns the agenda. After
 closing a completed run, continue to the next already-authorized stage without
@@ -197,6 +215,39 @@ Pass the reviewed artifact and a short handoff of scope, decisions, and checks,
 not the prior transcript. An unresolved decision, failed check, or unaccepted
 upstream result stops dependent stages. `completed-by-orchestrator` is not an
 independent review pass: if the user's gate requires that pass, stop there.
+
+A Producer may report that one Feature holds several independent outcomes, that
+an upstream source is wrong, or the user may authorize a change mid-delivery.
+Within the authorized objective, coordinate the owners upstream first: the
+changed requirement or design owner, then every affected intermediate contract
+such as the Architecture Design or Testing Strategy (`general` naming its
+Skill), then affected Storyboards and `feature-map`, then `feature-plan`, then
+Delivery in a new run or through `resume-delivery`. Downstream acceptance waits
+until each affected owner is reconciled. An open Delivery run holds its
+artifact: park a failed one as described below; closing a blocked one still
+needs the user's consent. Ask the user only for an unresolved choice that
+materially affects product behavior, accepted constraints, permissions, cost
+commitments, or the user's explicit gate. Never invent product scope or let a
+worker rewrite an authoritative input to make a check pass.
+
+Each `feature-delivery` request names the run's independent review as a
+selected gate, so the Producer records its results, leaves the Plan's gate row
+`not run`, and reports readiness. For a Feature Plan, the Plan and Map row stay
+`in_progress`. For a standalone validation Plan, the Producer records execution
+status and conclusion as usual; no Map row, Feature status, or `verified`
+exists, and the conclusion is not independently reviewed until the gate passes.
+
+Before `close`, record content hashes of the acceptance-relevant files: the
+Plan, the Map when a Feature has one, and every file in the run's reviewed
+diff. `close` may append nonblocking items to `docs/review-backlog.md`; that CLI
+bookkeeping is not acceptance-relevant, so do not hash or read it. After the
+run ends `independently-passed` and is closed, and those hashes still match,
+make one status-only edit: the gate row's result and the Plan's current
+position, plus for a Feature `verified` in the Plan and Map row when every
+other planned result already passed. A mismatch means the reviewed revision
+changed; report it instead of finalizing. This edit is not a repair; anything
+more needs a new run. After `completed-by-orchestrator`, leave the gate `not
+run`, keep a Feature `in_progress`, and report the missing independent pass.
 
 ## Preconditions
 
@@ -217,6 +268,9 @@ independent review pass: if the user's gate requires that pass, stop there.
    needs. `delivery_checks` run after Producer changes for `feature-delivery`
    and `general`; use stage-appropriate configuration for document-only work.
    Missing commands must be reported, not silently counted as successful tests.
+   An optional `test_reports` table in the project section maps a configured
+   check command to the JUnit XML report it writes; only an explicit
+   configuration-change task adds it.
 
 ## Run Loop
 
@@ -243,6 +297,21 @@ can inspect the latest saved observations. Act on the final result's phase:
 | `done` | Follow Close. |
 | `failed` | If `automatic_recovery_available`, call `next` once; otherwise report the reason and state path and stop. |
 | `blocked` | Report the blocker and stop until the user resolves it. |
+
+Before each review, the CLI builds a deterministic test-change summary for the
+same snapshot range as the review diff and adds it to the Reviewer prompt as
+fixed input; a retried review rebuilds the identical text. It lists added,
+modified, and deleted test, fixture/mock, and runner/configuration paths with
+raw hunks; supported skip/disable/only and filter markers with `path:line`;
+assertion-like line counts in test paths; and each check's exit code. Counts
+come only from a configured JUnit XML report rewritten by that check command,
+scoped to that command, whose suites declare totals matching their test cases
+with one plain outcome each and only standard JUnit elements, placements and status values; stale, absent, unreadable, inconsistent,
+unsupported, or duplicate/rerun reports and console output stay unknown. Detection follows naming conventions and fixed
+patterns, so an empty section never means tests are unchanged, discovered, or
+adequate. `next --stream` emits a `test-changes` event and events carry the
+latest `test_changes` record with its `sha256`. Use these as review signals,
+not as a verdict; the Producer's incremental TDD tests are not frozen.
 
 Relay an answer only when the user gave it explicitly, now or earlier in this
 chat, and quote it. Never supply your own answer: the question exists because

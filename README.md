@@ -12,7 +12,7 @@ human-facing overview.
 
 | Collection | Audience | Docs |
 |---|---|---|
-| [`skills/coding/`](skills/coding/README.md) | Solo devs, small teams, and AI-led delivery | [Coding Skill Kit guide](docs/coding-skill-kit.md) |
+| [`skills/coding/`](skills/coding/README.md) | Solo devs, small teams, and AI-led delivery | [Coding Skill Kit guide](skills/coding/_doc/coding-skill-kit.md) |
 | [`skills/work/`](skills/work/README.md) | Presentation and workplace communication artifacts | [Work Skill Kit guide](docs/work-skill-kit.md) |
 
 Each collection owns its own `README.md` as the source of truth for its
@@ -30,7 +30,6 @@ For multi-stage Producer / Reviewer work, see the Chinese
 skill-collection/
 ├── AGENTS.md                  # canonical contributor rules (read this first)
 ├── docs/
-│   ├── coding-skill-kit.md    # onboarding guide + real example (coding collection)
 │   └── work-skill-kit.md      # onboarding guide + real example (work collection)
 ├── scripts/
 │   ├── Install-Skills.ps1     # copy this repo's Skills into one target project

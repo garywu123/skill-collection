@@ -15,6 +15,9 @@ from .errors import UsageError
 
 STAGES = ("feature-map", "feature-plan", "feature-delivery", "general")
 PROVIDERS = ("claude", "codex", "fake")
+ROLES = ("producer", "reviewer")
+# Optional [stages.<stage>] keys: a Skill path override and complete role specs.
+STAGE_KEYS = ("skill", *ROLES)
 
 # Settings copied into each run, so a later config edit never changes an open run.
 RUN_SETTINGS = ("max_reviews", "timeout_minutes", "rotate_at_tokens", "backlog_rejected", "max_diff_kb")
@@ -204,12 +207,25 @@ def _check(config: dict, path: Path) -> None:
     for provider, executable in config["cli"].items():
         if provider not in ("claude", "codex") or not isinstance(executable, str) or not Path(executable).is_absolute():
             raise UsageError(f"[cli] in {path} accepts only absolute 'claude' or 'codex' executable paths")
-    for role in ("producer", "reviewer"):
+    for role in ROLES:
         value = config["defaults"].get(role)
         if not isinstance(value, str):
             raise UsageError(f"Missing or invalid [defaults] {role} in {path}")
         spec = parse_spec(value)
         configured_executable(config, spec.provider, path)
+    for stage, settings in config["stages"].items():
+        if stage not in STAGES or not isinstance(settings, dict) or set(settings) - set(STAGE_KEYS):
+            raise UsageError(f"[stages.{stage}] in {path} must be a table for one of {', '.join(STAGES)} "
+                             f"with only {', '.join(STAGE_KEYS)}")
+        for key, value in settings.items():
+            if not isinstance(value, str) or not value.strip():
+                raise UsageError(f"[stages.{stage}] {key} in {path} must be a nonempty string")
+            if key in ROLES:
+                try:
+                    spec = parse_spec(value)
+                except UsageError as exc:
+                    raise UsageError(f"[stages.{stage}] {key} in {path}: {exc}") from exc
+                configured_executable(config, spec.provider, path)
     for project, settings in config["projects"].items():
         _check_project(settings, path, project)
 
@@ -221,6 +237,14 @@ def _check_project(settings: dict, path: Path, project: str) -> None:
     if missing:
         raise UsageError(f"Missing required project keys {sorted(missing)} in [projects.\"{project}\"] of {path}")
     for key, value in settings.items():
+        if key == "test_reports":
+            # Optional: delivery check command -> the JUnit XML report that command writes.
+            if not isinstance(value, dict) or not all(
+                    command in settings.get("delivery_checks", []) and isinstance(report, str)
+                    and report.strip().lower().endswith(".xml") for command, report in value.items()):
+                raise UsageError(f"'test_reports' in [projects.\"{project}\"] of {path} must map configured "
+                                 "delivery_checks commands to JUnit XML (.xml) report paths")
+            continue
         if key not in PROJECT_KEYS:
             raise UsageError(f"Unknown key '{key}' in [projects.\"{project}\"] of {path}")
         if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
@@ -267,6 +291,18 @@ def parse_spec(text: str) -> RoleSpec:
     return RoleSpec(provider, model, effort)
 
 
+def resolve_roles(config: dict, stage: str, overrides: dict | None = None) -> tuple[dict, dict]:
+    """Effective role specs and their sources: run override, then stage role, then default."""
+    roles, sources = {}, {}
+    for role in ROLES:
+        candidates = (("override", (overrides or {}).get(role)),
+                      ("stage", config["stages"].get(stage, {}).get(role)),
+                      ("default", config["defaults"][role]))
+        source, value = next(candidate for candidate in candidates if candidate[1])
+        roles[role], sources[role] = parse_spec(value), source
+    return roles, sources
+
+
 def _same_path(left: str | Path, right: str | Path) -> bool:
     def norm(path):
         return os.path.normcase(str(Path(path).expanduser().resolve()))
@@ -282,11 +318,14 @@ def project_settings(config: dict, project_root: Path) -> dict:
     )
     if settings is None:
         raise UsageError(f"Missing project configuration for {project_root}; run init explicitly")
-    return {
+    project = {
         "allowed_commands": list(settings["allowed_commands"]),
         "delivery_checks": list(settings["delivery_checks"]),
         "extra_dirs": [str((project_root / item).resolve()) for item in settings["extra_dirs"]],
     }
+    if "test_reports" in settings:
+        project["test_reports"] = dict(settings["test_reports"])
+    return project
 
 
 def project_configured(config: dict, project_root: Path) -> bool:
@@ -299,15 +338,18 @@ def skills_root() -> Path:
 
 
 def find_stage_skill(config: dict, stage: str) -> Path | None:
-    """Locate the stage's SKILL.md: a configured path, else a sibling Skill folder."""
-    if stage == "general":
-        return None
+    """Locate the stage's SKILL.md: a configured path, else a sibling Skill folder.
+
+    `general` has no lifecycle owner, so it supplies a Skill only when one is configured.
+    """
     override = config["stages"].get(stage, {}).get("skill")
     if override:
         path = Path(override).expanduser()
         if not path.is_file():
             raise UsageError(f"The configured {stage} Skill {path} does not exist")
         return path.resolve()
+    if stage == "general":
+        return None
     root = skills_root()
     for child in sorted(root.iterdir()):
         # Deployed folders are named `<stage>`; authoring folders may be `<ordinal>.<stage>`.

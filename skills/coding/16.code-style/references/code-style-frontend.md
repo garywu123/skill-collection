@@ -53,15 +53,18 @@ Tooling does not enforce these. Settle each one with the user and write it into
 the frontend section, or omit it deliberately:
 
 - TypeScript contract strictness at boundaries and where `any` is forbidden;
-- component and module boundaries, including what may hold state;
+- local component and module organization, including what may hold state;
 - state management and data-fetching conventions;
 - required error, loading, and empty states;
 - semantic HTML, accessibility, labels, focus, and keyboard behavior;
 - responsive support and browser compatibility expectations;
-- security, privacy, and the client/server trust boundary;
+- code-level handling of secrets, private data, and untrusted input;
 - which behavior is tested at which level.
 
-A consistently observed source pattern is a proposal to confirm, not policy.
+The client/server trust boundary, application boundaries, and dependency
+direction belong to the Architecture Design; link them instead of writing them
+here. A consistently observed source pattern is a proposal to confirm, not
+policy.
 
 ## Framework And Markup
 
@@ -83,7 +86,7 @@ commands; never invent a framework or command.
 | Finding | Destination |
 |---|---|
 | Formatting, linting, typing, or compatibility enforcement | Tooling table route; configuration stays read-only |
-| A decided semantic, structural, or documentation rule | The frontend section of `docs/code-style.md` |
+| A decided semantic, structural, or documentation rule | The frontend section of `docs/code-style.md`, or of a scoped file when only that subproject differs |
 | A rule that applies to every language | The cross-language sections of `docs/code-style.md` |
 | A detailed UX, design, or accessibility workflow | An existing project document, routed from the style file |
 | Unknown or conflicting evidence | Ask, or omit and report |

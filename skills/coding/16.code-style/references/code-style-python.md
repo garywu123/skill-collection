@@ -61,11 +61,15 @@ the Python section, or omit it deliberately:
 - context managers and resource ownership;
 - async and cancellation behavior where relevant;
 - dataclass, `TypedDict`, and model conventions, including mutability;
-- import and architectural layer boundaries, including forbidden imports;
+- import style within a package, such as absolute versus relative imports and
+  re-exports;
 - docstring format and which APIs require one;
-- security, secrets, privacy, and data-handling constraints.
+- code-level handling of secrets, private data, and logging.
 
-A consistently observed source pattern is a proposal to confirm, not policy.
+Architectural layer boundaries, forbidden cross-layer imports, and trust
+boundaries belong to the Architecture Design; link them instead of writing them
+here. A consistently observed source pattern is a proposal to confirm, not
+policy.
 
 ## Tests
 
@@ -79,6 +83,6 @@ pattern, or command.
 | Finding | Destination |
 |---|---|
 | Formatting, linting, import, typing, or test enforcement | Tooling table route; configuration stays read-only |
-| A decided semantic, structural, or documentation rule | The Python section of `docs/code-style.md` |
+| A decided semantic, structural, or documentation rule | The Python section of `docs/code-style.md`, or of a scoped file when only that subproject differs |
 | A rule that applies to every language | The cross-language sections of `docs/code-style.md` |
 | Unknown or conflicting evidence | Ask, or omit and report |

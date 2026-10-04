@@ -29,6 +29,14 @@
             "name": "functional-spec"
         },
         {
+            "source": "skills/coding/18.architecture-design",
+            "name": "architecture-design"
+        },
+        {
+            "source": "skills/coding/19.testing-strategy",
+            "name": "testing-strategy"
+        },
+        {
             "source": "skills/coding/20.feature-map",
             "name": "feature-map"
         },

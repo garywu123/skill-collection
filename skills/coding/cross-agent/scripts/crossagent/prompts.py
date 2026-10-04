@@ -80,6 +80,7 @@ def reviewer_prompt(
     earlier: dict | None,
     checks: list[dict],
     summary: str | None,
+    test_changes: str | None = None,
 ) -> str:
     lines = [
         f'You are the read-only Reviewer in a cross-agent review run for stage "{stage}", '
@@ -118,6 +119,9 @@ def reviewer_prompt(
         ]
     if checks:
         lines += ["", "Check results after the latest change:", _json(checks)]
+    if test_changes:
+        lines += ["", "CLI test-change summary (fixed input for this revision; detection signals, not a verdict):",
+                  test_changes]
     lines += [
         "",
         "Report only findings in these categories:",

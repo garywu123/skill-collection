@@ -1,6 +1,6 @@
 ---
 name: coding-agent-instructions
-description: Create, refresh, or audit a software project's canonical AGENTS.md and any genuinely scope-specific nested AGENTS.md files. Invoke explicitly, by name, to establish or continuously calibrate repository guidance after project setup, structural or tooling changes, recurring agent failures, or delivery milestones. Do not use it for a repository with no code; do not create product direction, feature plans, code, reports, tool-specific adapters, or code-style rules owned by docs/code-style.md.
+description: Create, refresh, audit, or assess the instruction impact of changes to a software project's canonical AGENTS.md and any genuinely scope-specific nested AGENTS.md files. Invoke explicitly, by name, to establish or continuously calibrate repository guidance after project setup, structural or tooling changes, recurring agent failures, or delivery milestones, or to decide whether a change to architecture, testing strategy, commands, project structure, or document routes requires an instruction update. Do not use it for a repository with no code; do not create product direction, feature plans, code, reports, tool-specific adapters, or code-style rules owned by the code-style files.
 disable-model-invocation: true
 ---
 
@@ -26,6 +26,28 @@ Infer the intent from the request once the Skill has been invoked.
 - `write`: create or continuously calibrate `AGENTS.md`. This is the default.
 - `audit`: report stale routes, unverified commands, duplicated rules, missing
   boundaries, and candidate changes without modifying a file.
+- `assess`: after a named change to architecture, testing strategy, commands,
+  project structure, or instruction routes, decide its impact on each
+  applicable instruction file, as described below.
+
+## Instruction-Impact Assessment
+
+Assessment is required after such a change, not an `AGENTS.md` edit after
+every Feature. Read the change, its owning documents, and the root and nested
+`AGENTS.md` files whose scope it touches, then record one result per file:
+
+- `updated`: a mechanical correction caused by the change, such as a moved
+  route or a renamed path, or a command whose new syntax is verified, applied
+  with the evidence cited;
+- `unchanged`: assessed, with the reason no instruction depends on the change;
+- `unresolved`: with the reason and the decision or owner needed, such as a new
+  boundary, convention, or other semantic policy, or a command that is not yet
+  verified.
+
+Apply only `updated` changes, and none when the request asks for a report only.
+Escalate every semantic policy as `unresolved` instead of writing it, whatever
+model or worker performs the assessment. A code-style route change stays with
+`code-style`.
 
 ## Output
 
@@ -39,10 +61,10 @@ It does not create tool-specific adapters or a state, history, approval, or
 review file. It may read project and code-quality configuration as evidence but
 must not modify that configuration.
 
-Code style always lives in `docs/code-style.md`, owned by the `code-style`
-Skill. Route `AGENTS.md` to that file and write no code-style rule here. When
-the file does not exist yet, omit the route and report that `code-style` should
-run.
+Code style always lives in `docs/code-style.md`, which lists any scoped
+subproject style files, owned by the `code-style` Skill. Route `AGENTS.md` to
+that file and write no code-style rule here. When the file does not exist yet,
+omit the route and report that `code-style` should run.
 
 Create or update `AGENTS.md` from [the template](assets/agents.template.md).
 At 80 source lines, review duplicated explanations, nonexistent routes, empty
@@ -109,7 +131,8 @@ refactor when the repository contract did not change.
 7. Create a nested `AGENTS.md` only for a real local difference. If the subtree
    inherits root commands and boundaries unchanged, create nothing.
 8. For `write`, update the applicable files. For `audit`, report findings and
-   proposals without writing. Then run the consistency check.
+   proposals without writing. For `assess`, apply only the `updated` results.
+   Then run the consistency check.
 
 When branch naming, merge/rebase, release, hotfix, tag, worktree, or
 cross-repository coordination is material, read the
@@ -129,6 +152,8 @@ decision. Review line count as a signal, never as a substitute for relevance.
 
 Report files written or audited, evidence used, mechanical updates, semantic
 proposals left unapplied, removals, content kept in another owner, unverified
-statements omitted, unresolved conflicts, and remaining risk. Stop without
+statements omitted, unresolved conflicts, and remaining risk. For `assess`,
+also report each file's `updated`, `unchanged`, or `unresolved` result with its
+reason. Stop without
 creating project content, tool adapters, application code, or a separate review
 artifact.

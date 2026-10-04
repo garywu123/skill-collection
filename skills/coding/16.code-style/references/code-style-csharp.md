@@ -54,8 +54,10 @@ the C# section, or omit it deliberately:
 - input validation placement and the exception contract for invalid input;
 - null, empty, and default-value behavior at public boundaries;
 - units, time zones, and encodings carried in contract names or documented;
-- dependency boundaries between projects in the solution;
 - cross-platform constraints.
+
+Dependency boundaries between projects in the solution belong to the
+Architecture Design; link them instead of writing them here.
 
 A consistently observed source pattern is a proposal to confirm, not policy.
 
@@ -84,6 +86,6 @@ and never impose a framework or library the repository does not use.
 | Finding | Destination |
 |---|---|
 | Formatting, naming, or diagnostic enforcement | Tooling table route; configuration stays read-only |
-| A decided semantic, structural, or documentation rule | The C# section of `docs/code-style.md` |
+| A decided semantic, structural, or documentation rule | The C# section of `docs/code-style.md`, or of a scoped file when only that subproject differs |
 | A rule that applies to every language | The cross-language sections of `docs/code-style.md` |
 | Unknown or conflicting evidence | Ask, or omit and report |

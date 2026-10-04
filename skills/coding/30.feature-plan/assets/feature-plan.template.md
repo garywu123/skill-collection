@@ -2,9 +2,11 @@
 
 **Status:** planned
 
+**Current position:** Not started. Next: <first segment>. Remaining checks: all. Blockers: none.
+
 **Sources:** [Product Brief](../product-brief.md), [Owning Feature Map](<actual-relative-map-path>) row `F01`
 
-<Add cited requirement IDs and applicable General Design links; delete this note when absent.>
+<Add cited requirement IDs and applicable Architecture Design and Testing Strategy links; delete this note when absent.>
 
 **Storyboard:** None
 
@@ -24,7 +26,7 @@
 2. <Next step.>
 
 <For substantial work, replace this list and note with a compact table:
-Segment | Area/owned files | Prerequisites/contracts | Acceptance/checks | Handoff | Delegation.
+Segment | Outcome | Owned areas | Prerequisites/contracts | Constraints | Focused checks | Handoff/remaining integration | Delegation.
 Default to one serial segment; end larger sequences with whole-feature validation.>
 
 ## Happy Paths
@@ -41,10 +43,16 @@ Default to one serial segment; end larger sequences with whole-feature validatio
 
 ## Validation
 
-| Command | Purpose | Result |
+| Command or gate | Purpose | Result |
 |---|---|---|
 | `<focused test command>` | <behavior checked> | not run |
 | `<broader test/build command>` | <regression checked> | not run |
+
+<Add a row such as `Independent review` only for a gate the user or project rules select; it stays `not run` until that gate passes.>
+
+## Decisions
+
+- <Key decision or change, its reason, and its impact. Delete this section when empty.>
 
 ## Blockers
 

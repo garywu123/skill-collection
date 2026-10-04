@@ -65,25 +65,49 @@
 
 ```text
 /code-style 为 DockFlow WMS 写 `docs/code-style.md`。后端 C#、前端 TypeScript、报表
-查询 SQL。工具已强制的规则只路由不复述；重点写模块边界、文件与函数结构、注释要解释
+查询 SQL。工具已强制的规则只路由不复述；重点写模块组织、文件与函数结构、注释要解释
 意图、公共 API 文档，以及关键步骤和算法需要解释到什么程度。写完补上 `AGENTS.md` 的
 路由行。
 ```
 
-预期：Code Style 的 `write`；先就语言集合向你确认一次，再输出 `docs/code-style.md`
-——每种确认语言一节，外加跨语言的模块边界、结构、注释、文档四节；最后把 `AGENTS.md`
-的 code-style 路由补上，其余内容不动；停止于该文件与那一行路由。
+预期：Code Style 的 `define`（原 `write` 请求同义）；先就语言集合向你确认一次，再输出
+`docs/code-style.md`——每种确认语言一节，外加跨语言的模块组织、结构、注释、文档四节；
+组件依赖方向只链接 Architecture Design；最后把 `AGENTS.md` 的 code-style 路由补上，
+其余内容不动；停止于该文件与那一行路由。
 
-### 7. 创建 MVP Feature Map
+### 7. 记录共享架构
 
 ```text
-/feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map 和共享技术方向。包含
-F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；不要创建 Plan 或代码。
+/architecture-design 基于已定稿的 DockFlow WMS Brief 写 Architecture Design：手持端与
+后台的边界、ASN 和库存数据所有权、关键契约、部署假设。只记录当前 MVP 需要的决定，
+没有来源的性能预算列为待决，不要创建 Feature Map。
 ```
 
-预期：Feature Map；输出 `docs/feature-map.md`，新行从 `planned` 开始；停止于地图。
+预期：Architecture Design 的 `write`；输出 `docs/architecture.md`；未定预算出现在
+Open Decisions；停止于设计。
 
-### 8. 按需创建 F02 Storyboard
+### 8. 按需建立 Testing Strategy
+
+```text
+/testing-strategy 为 DockFlow WMS 写测试策略：测试项目和已验证命令、单元与集成边界、
+收货数量的业务不变量、fixture 来源和规模、资源测量方法。没有已验证命令就不写命令。
+```
+
+预期：Testing Strategy 的 `write`；输出 `docs/testing.md`，链接需求和架构而不复制；
+停止于策略，不写测试代码。
+
+### 9. 创建 MVP Feature Map
+
+```text
+/feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map，链接现有
+Architecture Design。包含 F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；
+不要创建 Plan 或代码。
+```
+
+预期：Feature Map；输出 `docs/feature-map.md`，链接 `docs/architecture.md`，不写技术
+方向；新行从 `planned` 开始；停止于地图。
+
+### 10. 按需创建 F02 Storyboard
 
 ```text
 /feature-storyboard 为 F02 创建低保真手持设备 HTML Storyboard，展示扫描 ASN、确认实收数量和无效 ASN。
@@ -93,7 +117,7 @@ F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；�
 预期：Feature Storyboard；输出 `docs/storyboards/F02-*.html` 和首次使用时的共享
 CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告未验证风险并停止。
 
-### 9. 创建 F02 Feature Plan
+### 11. 创建 F02 Feature Plan
 
 ```text
 /feature-plan 为 F02 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用相关 S*、T*；
@@ -102,7 +126,7 @@ CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告�
 
 预期：Feature Plan；输出 `docs/features/F02-*.md`，结果为 `not run`；停止于计划。
 
-### 10. 选择一种 Delivery 方式
+### 12. 选择一种 Delivery 方式
 
 自动实现：
 
@@ -154,6 +178,11 @@ CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告�
 - 只有受影响的结果回到 `not run`；预期行为没有变化的真实结果可以保留。
 - 这个变化仍属于原有 MVP 收货方向，因此通常不改 Product Brief；只有产品方向、
   用户、核心流程或 MVP 边界变化时，才显式要求更新 Brief。
+- Plan 的 `## Decisions` 记录一行变更原因和影响，开头的当前执行位置指向需要重跑的
+  场景；组织要求变更单时只链接它，不另建 CR 文档。
+
+如果已在 `cross-agent` 中授权完成 F02，Orch 可以按同样的上游优先顺序协调这三次修订，
+只为实质的产品选择询问你。
 
 ### 2. 确认后再实现变化
 
@@ -166,6 +195,11 @@ CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告�
 预期：只选择 Feature Delivery；输出代码、测试和实际结果。具体条件阻止继续时记录
 blocker，并把 Plan 与 Map 都设为 `blocked`；否则以验证证据决定 `in_progress` 或
 `verified`。
+
+在 `cross-agent` 中执行这一步时，Reviewer 还会收到该 revision 的测试变更摘要：
+被删除或改写的 F02 测试、新的 skip 或过滤参数、fixture 变化和检查的计数来源。摘要
+只是检测信号；没有检测到变化时，Reviewer 仍要对照修订后的 Plan 判断破损数量和隔离
+库位场景是否真正被测试和断言。
 
 ## 场景三：让既有 StockPilot 项目采用这套 Skills
 
@@ -182,14 +216,19 @@ blocker，并把 Plan 与 Map 都设为 `blocked`；否则以验证证据决定 
 ```
 
 ```text
-/feature-map 基于 StockPilot 的 Brief 创建 MVP Feature Map，保留项目已有的 .NET 8、
-React 约定。Map 只包含当前尚待交付的 MVP，不要重建历史功能清单；新 row 从 planned
+/architecture-design 根据 StockPilot 现有代码和配置写 Architecture Design，保留已有的
+.NET 8、React 边界和数据所有权。代码是现状证据；无法判断是否有意为之的选择列为待决。
+```
+
+```text
+/feature-map 基于 StockPilot 的 Brief 创建 MVP Feature Map，链接 Architecture Design。
+Map 只包含当前尚待交付的 MVP，不要重建历史功能清单；新 row 从 planned
 开始，只有 matching Plan 的 status、results 和 blockers 一致时才能同步其他状态。
 不要为历史功能批量创建 Storyboard 或 Feature Plan。
 ```
 
-预期：两次点名。资料充分时输出或协调 `docs/product-brief.md` 与
-`docs/feature-map.md`；不足时停止于具体问题。
+预期：三次点名。资料充分时输出或协调 `docs/product-brief.md`、`docs/architecture.md`
+与 `docs/feature-map.md`；不足时停止于具体问题。
 
 ### 2. 只为下一项工作准备 F02
 
@@ -222,7 +261,8 @@ Feature Map；不要因为发现其他旧代码问题而扩大范围。
 ## 场景四：FleetDock 大到一张 Feature Map 放不下
 
 `FleetDock` 是一个含浏览器端调度台和 .NET 后端的车队调度产品。Brief 定稿后，
-MVP 明显超过八个 Feature，且涉及项目文件、地图编辑、车辆配置和运行观察多个领域。
+删掉可选范围后，MVP 仍需要多个交付阶段，涉及项目文件、地图编辑、车辆配置和运行观察
+多个需求领域，一张 Map 已无法清楚表达它们的依赖。行数本身不是拆分理由。
 
 ### 1. 先写 Functional Specification
 
@@ -235,35 +275,128 @@ MVP 明显超过八个 Feature，且涉及项目文件、地图编辑、车辆�
 预期：Functional Spec 先 `explore` 再 `write`；输出带 `FS-*` 编号的需求清单；停止于
 Spec，不创建 Roadmap 或 Map。
 
-### 2. 建立 Roadmap、General Design 和第一张子 Map
+### 2. 建立 Architecture Design
 
 ```text
-/feature-map 基于 FleetDock 的 Brief 和 Functional Spec 建立规模化布局：
-docs/feature-maps/00.roadmap.md 列出各阶段子 Map 的顺序、分配的 FS ID 和依赖；
-docs/design/system-general-design.md 保存多张子 Map 共享的系统上下文、组件职责、
-跨栈契约、数据所有权和质量约束；只写第一阶段可用流程的子 Map
-01.vehicle-configuration.md，每行填 Requirements 列引用的 FS ID。后续阶段的子 Map
-留到准备交付时再写。DTO、schema 和注册等内部基础不单独成为 Feature。
+/architecture-design 基于 FleetDock 的 Brief 和 Functional Spec 写 docs/architecture.md：
+多张子 Map 共享的系统上下文、组件职责、跨栈契约、数据所有权和质量约束。只引用 FS ID，
+不复制需求，不写交付顺序或状态。
 ```
 
-预期：Feature Map 按 scale layout 输出 Roadmap、一份 General Design 和一张子 Map；
-Roadmap 不保存交付状态，尚未创建的子 Map 只显示代码形式的预定路径；子 Map 只保留
-阶段特有的技术方向，其余链接 General Design；停止于地图。
+预期：Architecture Design 的 `write`；输出一份共享设计，只有某个栈需要大量独立指导时
+才拆分；停止于设计。
 
-### 3. 之后的流程与单 Map 项目相同
+### 3. 建立 Roadmap 和第一张子 Map
+
+```text
+/feature-map 基于 FleetDock 的 Brief、Functional Spec 和 Architecture Design 建立规模化
+布局：docs/feature-maps/00.roadmap.md 列出各阶段子 Map 的顺序、分配的 FS ID 和依赖；
+只写第一阶段可用流程的子 Map 01.vehicle-configuration.md，每行填 Requirements 列引用的
+FS ID。后续阶段的子 Map 留到准备交付时再写。DTO、schema 和注册等内部基础不单独成为
+Feature。
+```
+
+预期：Feature Map 按 scale layout 输出 Roadmap 和一张子 Map；Roadmap 不保存交付状态，
+尚未创建的子 Map 只显示代码形式的预定路径；子 Map 链接 Architecture Design，不写技术
+方向；停止于地图。
+
+### 4. 之后的流程与单 Map 项目相同
 
 每个子 Map 行按 `/feature-plan` 和 `/feature-delivery` 推进。Delivery 只更新 Plan 和
 Map 行；Roadmap 分配不算交付，某个 FS 需求至少被一行 Map 引用、且所有引用它的 Map
-行都 `verified` 后才视为交付。交付中发现 Spec
-或 Design 有误时，Delivery 停下报告，由人依次 `/functional-spec`、`/feature-map`、
-`/feature-plan` 修订后再继续。
+行都 `verified` 后才视为交付。交付中发现 Spec 或 Architecture Design 有误时，Delivery
+停下报告，由你或已授权的 `cross-agent` Orch 依次 `/functional-spec` 或
+`/architecture-design`、`/feature-map`、`/feature-plan` 修订后再继续。
 
-## 场景五：重开任务、增加 Feature、修改共享 Design
+## 场景五：重开任务、增加 Feature、修改共享架构
 
 - 修复或扩展同一个用户结果时，`/feature-plan` 重开原 Plan，复用原 Feature ID；失效
   结果回到 `not run`，Plan 与 Map 回到 `planned`，再由 `/feature-delivery` 实现。
 - 出现可独立交付的新用户结果时，先用 `/feature-map` 分配全项目唯一的新 Feature ID，
   再创建新 Plan；不要把它塞进旧 Plan 或创建 `F02-v2`。
-- 修改 General Design 时，先用 `/feature-map` 更新设计并列出全部受影响行。旧证据不再
-  证明当前设计的行回到 `planned`；随后分别用 `/feature-plan` 协调受影响 Plan，再重新
-  Delivery。未受影响且证据仍有效的 Feature 保持原状态。
+- 修改 Architecture Design 时，先用 `/architecture-design` 更新设计并报告全部受影响行
+  和 Plan；再用 `/feature-map` 把旧证据不再证明当前设计的行回到 `planned`，随后分别用
+  `/feature-plan` 协调受影响 Plan，再重新 Delivery。未受影响且证据仍有效的 Feature
+  保持原状态。
+- 一个 Feature 只是执行很长时，`/feature-plan` 在同一份 Plan 中拆 segment；如果 Plan
+  发现它其实含多个独立结果，就停下请求 `/feature-map` 拆行，保留原 ID 给已规划的结果。
+
+## 场景六：把 Map 中的架构迁移出去
+
+旧版 `docs/feature-map.md` 含 `Technical Direction`、`Architecture`、`Shared Constraints`，
+或规模化项目已有 `docs/design/*-general-design.md`。
+
+```text
+/architecture-design 把 docs/feature-map.md 中的技术方向、架构和共享约束迁移到唯一的
+Architecture Design。已有 General Design 就沿用其路径。Map 只把迁出的章节换成链接，
+不要改 Feature 行、ID、依赖或状态。
+```
+
+预期：Architecture Design 的 `write`；架构只剩一个 owner，Map 保留结果、依赖和状态并
+链接设计；纯迁移不改变 Feature 状态或测试结果；停止于设计和链接。迁移前 `/feature-map`
+保留旧章节不扩写，并报告待迁移。
+
+## 场景七：没有 Feature 的有界验证
+
+Architecture Design 把“现有 ASN 解析库能否在手持端 2 秒内解析 5,000 行”列为待决的
+可行性问题，还没有对应 Feature；2 秒来自产品负责人在 Brief 中写下的约束。
+
+```text
+/feature-plan 为 ASN 解析可行性写 standalone validation plan：docs/plans/asn-parse-feasibility.md。
+用代表性和最大规模 ASN 样本、现有解析库与手写基准对比，说明步骤、指标、预算和停止条件，
+判定标准引用 Brief 的 2 秒约束。不要创建 Feature ID、修改 Map 或实现生产代码。
+```
+
+```text
+/feature-delivery 执行 docs/plans/asn-parse-feasibility.md，只在计划指定的实验目录写代码，
+记录真实证据、执行状态和结论，并报告给 Architecture Design 的所有者。
+```
+
+预期：两次点名，不需要 Map 行。证据齐全但超过 2 秒时，状态 `completed`、结论
+`not supported`；预算用完或样本缺失时状态 `incomplete`、结论保持 `pending`。两种结果都不
+验证任何 Feature，Delivery 也不修改 Architecture Design。
+
+## 场景八：访谈证据、早期 Storyboard、分范围代码风格与指令评估
+
+### 1. 对照访谈证据审阅 Brief
+
+```text
+/product-brief 对照 docs/discovery/dockflow-interview.md 审阅 Brief 草稿。区分我的原话和
+模型建议、已确认和候选、最新决定和被取代的说法；指出遗漏的已确认需求。只报告，不改文件。
+```
+
+预期：Product Brief 的 `review`；每条发现附访谈位置或简短原文，例如我后来把“整托
+收货”改成“逐箱扫描”，或模型建议的“离线模式”未被我确认；只报告，不写文件。之后
+`write` 只写最新的已确认决定，我确认的“扫描后 1 秒内显示结果”写入 Product
+Constraints，未定的内存预算留在 Open Questions。
+
+### 2. 拆 Feature 之前画早期 Storyboard
+
+```text
+/feature-storyboard 还没有 Feature Map。根据 Brief 的收货流程回答一个问题：扫描到未知
+ASN 时操作员看到什么？用 topic slug，不要编 Feature ID，未确认的行为标 candidate。
+```
+
+预期：输出 `docs/storyboards/unknown-asn-scan.html`，`S*`/`T*` 稳定，未确认状态标
+`candidate`，不写产品逻辑，报告浏览器检查结果。之后 F02 的 Plan 直接链接这个文件。
+
+### 3. 分范围代码风格：定义、审计、应用
+
+```text
+/code-style apply：按已有 docs/code-style.md 和 web/docs/code-style.md，只修改
+web/src/receiving/ 的偏差。不要改规则文件或工具配置，保持行为并运行已验证的检查。
+```
+
+预期：Code Style 的 `apply`；只改授权范围内的代码，不为迁就旧代码放宽规则，报告修改、
+运行的命令和结果。共享规则只在根文件；`web/docs/code-style.md` 只写前端真实差异。
+
+### 4. 变化后的指令评估
+
+```text
+/coding-agent-instructions assess：后端测试命令改为 dotnet test backend/DockFlow.sln，
+web 新增 Playwright 端到端测试。评估根 AGENTS.md 和 web/AGENTS.md 是否需要更新。
+```
+
+预期：每个文件一个结果：已验证的命令变化记为 `updated` 并附证据；无关文件记为
+`unchanged` 并说明原因；没有权威来源的新规则（例如“合并前必须跑端到端测试”）记为
+`unresolved`，只上报不写入。

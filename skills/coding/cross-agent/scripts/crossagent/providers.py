@@ -437,7 +437,7 @@ class Fake:
     """Scripted provider for tests.
 
     `CROSS_AGENT_FAKE_SCRIPT` names a JSON file `{"producer": [...], "reviewer": [...]}`.
-    Each step may hold `output`, `write` ({path: content}), `context_tokens`,
+    Each step may hold `output`, `write` ({path: content}), `delete` ([path]), `context_tokens`,
     `fail`, or `fail_on_resume` (fail only when resuming, without consuming the step).
     Positions and a call log live next to the script.
     """
@@ -458,7 +458,8 @@ class Fake:
         positions = json.loads(position_path.read_text(encoding="utf-8")) if position_path.is_file() else {}
         index = positions.get(call.role, 0)
         with script_path.with_name(script_path.name + ".log.jsonl").open("a", encoding="utf-8") as log:
-            log.write(json.dumps({"role": call.role, "session_id": call.session_id, "prompt": call.prompt}) + "\n")
+            log.write(json.dumps({"role": call.role, "session_id": call.session_id, "model": call.model,
+                                  "effort": call.effort, "prompt": call.prompt}) + "\n")
         steps = script.get(call.role, [])
         if index >= len(steps):
             return CallResult(error=f"no scripted {call.role} step {index + 1}")
@@ -471,6 +472,8 @@ class Fake:
             target = call.cwd / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
+        for relative in step.get("delete", []):
+            (call.cwd / relative).unlink()
         session_id = call.session_id or f"fake-{call.role}-{uuid.uuid4().hex[:8]}"
         if call.progress:
             call.progress({"event": "worker-ready", "session_id": session_id})

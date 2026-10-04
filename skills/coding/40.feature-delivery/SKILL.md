@@ -1,6 +1,6 @@
 ---
 name: feature-delivery
-description: Implement or behavior-preservingly simplify one planned feature, test happy paths before relevant failure paths, and record real results in its Feature Plan. Use when the user asks to build, complete, fix, simplify, refactor, or be coached through a planned feature. Work automatically by default or let the user write core implementation when that intent is clear. Do not invent product scope, clean up the whole repository, or create additional lifecycle documents.
+description: Implement or behavior-preservingly simplify one planned feature, test happy paths before relevant failure paths, and record real results in its Feature Plan; or execute one standalone validation Plan and record its evidence and conclusion. Use when the user asks to build, complete, fix, simplify, refactor, or be coached through a planned feature, or to run a planned experiment or feasibility check. Work automatically by default or let the user write core implementation when that intent is clear. Do not invent product scope, clean up the whole repository, or create additional lifecycle documents.
 disable-model-invocation: false
 ---
 
@@ -19,20 +19,29 @@ data-loss protections.
 Read repository guidance, `docs/product-brief.md`, the Feature Map that owns
 the row, the target `docs/features/<feature-id>-<slug>.md`, any Storyboard
 linked by that plan, and only the code and tests needed for the feature. Read
-every cited `FS-*` requirement and linked General Design section. Read the
+every cited `FS-*` requirement and linked Architecture Design and Testing
+Strategy section. Read the
 Roadmap only when dependency order is material. Resolve the owning Map from the
-Plan link rather than assuming `docs/feature-map.md`.
+Plan link rather than assuming `docs/feature-map.md`. For a standalone
+validation Plan, follow Standalone Validation instead.
 
 For behavior-preserving simplification, these sources define intended behavior;
 existing code is evidence, not authority.
 
 Stop and report the missing item when the feature has no plan, its sources
 conflict, or an unresolved decision changes observable behavior. Delivery never
-edits the Functional Specification, General Design, or Roadmap; when
-implementation shows one of them is wrong, report the conflict and stop so the
-user can revise it, then the map row, then the Plan. Do not start
-an adjacent workflow merely because an input is missing. Use multiple Skills
-only when the user's original request covers their outcomes.
+edits the Functional Specification, Architecture Design, Testing Strategy, or
+Roadmap, and never rewrites an authoritative input or expected result to make a
+failing test pass. When implementation shows one of them is wrong, or an
+authorized change arrives mid-delivery, stop work on the affected behavior and
+report the conflict or change. The user, or an Orchestrator authorized for the
+objective, routes the update to the owner first, then every affected
+intermediate contract such as the Architecture Design or Testing Strategy,
+then the Map row, then the Plan. Continue only after linked sources agree with
+the change, from the revised Plan, rerunning only the invalidated
+results and the relevant regressions. Do not start an adjacent workflow merely
+because an input is missing. Use multiple Skills only when the user's original
+request covers their outcomes.
 
 For a reopened Feature, require the existing Plan and Map row to describe the
 current behavior and design before implementation. Reuse that Feature ID. If
@@ -77,6 +86,10 @@ areas and stable contracts, next unfinished segment, and relevant limitations.
 Use empty questions/outcomes and null blocker. This hands off to a new Producer
 session in the same run; it is not completion, an independent review pass, or a
 new revision. Do not checkpoint trivial work just to create sessions.
+
+At every segment boundary and before any checkpoint, update the Plan's current
+position: completed and next segment, remaining checks, and material blockers.
+Record a decision that changes the Plan in its `## Decisions` with the reason.
 
 On recovery, inspect the current diff, Plan results, and checkpoint before doing
 more work; a failed call may have left useful edits. Resume incomplete work
@@ -135,6 +148,36 @@ unfinished work, or an expected wait for the user while work can continue. Use
 condition in the Plan's `## Blockers`, and return both statuses to `in_progress`
 when it clears. Remove the resolved blocker or restore `- None.` at that time.
 
+When the request, project rules, or the Feature Plan's Validation table select
+an independent review or testing gate, finishing implementation and self-tests
+is readiness for that gate, not final acceptance. Record your own results, leave
+the gate row `not run`, keep both statuses `in_progress`, and report readiness.
+Set `verified` only after every selected gate has passed against the final
+relevant revision; that write belongs to the Producer in a later call or to a
+narrow status-only finalization step the requester authorizes, never to a
+read-only Reviewer, and it permits no further repair. Orchestrator acceptance of
+an unfinished review, such as cross-agent `completed-by-orchestrator`, is not an
+independent pass. Without a selected gate, the completion path below applies.
+
+## Standalone Validation
+
+A validation Plan, normally `docs/plans/<topic>.md` written by `feature-plan`,
+needs no Product Brief, Feature Map, or Feature ID. Read it, the sources it
+names, and the Testing Strategy when present. Run only its procedure within its
+budget and stop conditions; keep experiment code where the Plan places it and
+change production code only when the Plan includes it. Record each evidence
+result and keep the current position true. Set the Plan's status to
+`in_progress`, then `completed` when every planned evidence item exists, or
+`incomplete` when a stop condition, exhausted budget, or failure ends execution
+first; use `blocked` only for a concrete condition. Set the conclusion from the
+decision criteria only after `completed`. A `not supported` conclusion is a
+completed experiment, not a failed delivery. When a gate is selected, leave
+its Evidence row `not run` and report readiness; the status and conclusion are
+your result, not yet independently reviewed, and the later gate write changes
+only that row and the current position. Never write a Map status or
+`verified`, and report the conclusion to the requester without editing the
+decision owner's document.
+
 ## Delivery Loop
 
 1. When implementation work begins, set both the Feature Plan and Feature Map
@@ -143,7 +186,10 @@ when it clears. Remove the resolved blocker or restore `- None.` at that time.
    changing implementation unless the Plan explicitly includes fixing it. Work
    through the plan's happy paths first. For each behavior, add or update a
    focused test, confirm it fails for the intended reason when practical, make
-   the smallest change under the selected mode, and rerun it.
+   the smallest change under the selected mode, and rerun it. Build tests
+   incrementally rather than writing and freezing all tests first. Confirm the
+   runner actually discovers and executes each new test and that its
+   assertions check the expected result.
 2. Work through each relevant failure path in the same way. Do not add generic
    edge cases unrelated to the feature.
 3. Inspect only the current diff for delegation-only wrappers,
@@ -157,15 +203,18 @@ when it clears. Remove the resolved blocker or restore `- None.` at that time.
    synchronized. Use one short table-cell outcome and never paste raw logs or
    claim a result that did not run. Mark a row passed only when the test asserts
    the stated expected result; otherwise correct the test or expected result.
-6. Set both statuses to `verified` only when every planned scenario passes and
-   no blocker remains.
+6. Set both statuses to `verified` only when every planned scenario passes, no
+   blocker remains, and no selected independent gate is still pending.
 7. Run the consistency check. Behavior-preserving implementation changes remain
    `in_progress` until affected validation is rerun and supports `verified`.
 
 ## Consistency Check
 
 Before finishing, re-read this feature's map row, plan, cited requirements,
-linked General Designs, and any linked Storyboard. Record each result once, in
+linked Architecture Design and Testing Strategy sections, and any linked
+Storyboard; for validation, the Plan and the sources it names. Confirm the
+current position matches the recorded statuses, results, and blockers. Record
+each result once, in
 the plan, and keep the map row to status only; a cited requirement is delivered
 only when at least one Map row cites it and every citing Map row is `verified`,
 so do not mark requirements anywhere else. Keep visual flow in the Storyboard
@@ -178,5 +227,11 @@ resolution needs a product, UI, or technical decision.
 ## Completion
 
 Report code and documents changed, happy- and failure-path results, broader
-validation, consistency edits, and remaining blockers. Do not require a
-separate sync or fresh-context approval step.
+validation, consistency edits, and remaining blockers. List test, fixture,
+skip or disable, and runner, filter, or configuration changes with a reason for
+each removed, skipped, or loosened check, so a reviewer can inspect them in the
+diff. State readiness and any pending selected gate, or for validation the
+status and conclusion. When the work changed build or test commands, project
+structure, or instruction routes, report that an instruction-impact assessment
+by `coding-agent-instructions` is needed; do not edit `AGENTS.md` here. Do not
+require a separate sync or fresh-context approval step.

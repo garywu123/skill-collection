@@ -1,7 +1,9 @@
 # <Project> Code Style
 
-Every code-style rule for this repository lives here. `AGENTS.md` routes to this
-file and holds no code-style rule itself.
+Every shared code-style rule for this repository lives here. `AGENTS.md` routes
+to this file and holds no code-style rule itself. Component and project
+boundaries and dependency direction live in the
+[Architecture Design](architecture.md), not here.
 
 Rules below are binding instructions. A rule that configured tooling already
 enforces is not restated here; the table routes to that tooling instead.
@@ -17,15 +19,23 @@ enforces is not restated here; the table routes to that tooling instead.
 Do not restate what these tools enforce. When a tool and this file disagree, the
 tool wins and this file is wrong; report it.
 
-## Module Boundaries
+## Scoped Rules
+
+| Scope | File | Local difference |
+|---|---|---|
+| `<subproject>/` | [`<subproject>/docs/code-style.md`](../<subproject>/docs/code-style.md) | `<why this scope differs>` |
+
+A scoped file holds only its local differences and follows every shared rule
+here. Delete this section when no scope differs.
+
+## Modules
 
 Keep the rules the project actually adopted; delete the rest.
 
 - Give each module one responsibility statable in one sentence. Split a module
   whose name needs "and".
-- Depend on `<direction, for example: UI -> application -> domain; domain
-  depends on nothing>`. Do not add a dependency that reverses or short-circuits
-  it.
+- Follow the dependency direction in the Architecture Design; do not add a
+  dependency that reverses or short-circuits it.
 - Keep a type, function, or field private until a second caller outside the
   module needs it. Widening visibility is a deliberate contract change.
 - Put shared behavior in `<location>` only when at least two modules use it.

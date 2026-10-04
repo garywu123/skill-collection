@@ -1,24 +1,47 @@
 ---
 name: feature-storyboard
-description: Create or revise one low-fidelity HTML Storyboard that shows a UI Feature's key screens, states, and transitions. Invoke explicitly, by name, to visualize, wireframe, preview, or confirm a desktop or mobile interaction. Do not use for non-UI work, production UI, implementation planning, or high-fidelity prototypes.
+description: Create or revise one low-fidelity HTML Storyboard that shows the key screens, states, and transitions of a UI Feature or of an early product question taken from a Product Brief or Functional Specification section before Features are mapped. Invoke explicitly, by name, to visualize, wireframe, preview, or confirm a desktop or mobile interaction. Do not use for non-UI work, production UI, confirming requirements, implementation planning, or high-fidelity prototypes.
 disable-model-invocation: true
 ---
 
 # Feature Storyboard
 
-Make one UI Feature visually reviewable without implementing it. This Skill is
-optional and independently invocable; a Feature can proceed without it when its
-visual behavior is already clear.
+Make one UI Feature or early product question visually reviewable without
+implementing it. This Skill is optional and independently invocable; work can
+proceed without it when the visual behavior is already clear.
+
+## Input
+
+Use one of these sources:
+
+- `feature`: a Feature Map row. Name a new file
+  `docs/storyboards/<feature-id>-<slug>.html`, or revise the existing early
+  Storyboard that already shows this behavior.
+- `early`: before Feature mapping, a Product Brief, a Functional Specification
+  section, or an explicit product question. Name the file with a stable topic
+  slug, `docs/storyboards/<topic-slug>.html`, and never invent a Feature ID.
+  Use the topic slug instead of a Feature ID in the title and eyebrow.
+
+When a mapped Feature later covers an early Storyboard, keep its path, `S*`, and
+`T*` IDs; that Feature's Plan links the same file. Rename it only when the user
+asks, and then report every link to update.
+
+A Storyboard illustrates; it does not confirm a requirement. Mark a state or
+transition that shows unconfirmed behavior with `candidate` in its inventory
+purpose or action cell, and list the unresolved question in the header. Report
+it to the requirement owner instead of treating the sketch as a decision.
 
 ## Output
 
-Create or update `docs/storyboards/<feature-id>-<slug>.html` from
+Create or update the file named above from
 [the template](assets/storyboard.template.html). Copy
 [the shared stylesheet](assets/_storyboard.css) to
 `docs/storyboards/_storyboard.css` the first time and reuse it unchanged for
 later Features. Copy [the optional runtime](assets/_storyboard.js) to
 `docs/storyboards/_storyboard.js` only for explicit click-through mode.
 Do not overwrite existing shared assets unless the user asks to upgrade them.
+In the copied template, replace the `F01` title and eyebrow with the Feature ID
+or topic slug.
 
 The HTML is the source of truth and its browser rendering is the review view.
 Export a PNG only when the user requests a shareable snapshot; do not maintain
@@ -90,12 +113,15 @@ request has crossed into a prototype or implementation task.
 
 ## Workflow
 
-1. Read repository guidance, the Product Brief, the target Feature Map row,
-   relevant visual guidance, and any existing Storyboard for this Feature.
+1. Read repository guidance, the Product Brief, the target Feature Map row or
+   the named Brief, Specification section, or product question, relevant
+   visual guidance, and any existing Storyboard for this Feature or topic.
 2. State the visual question being reviewed. Identify only the states and
    transitions needed to answer it, covering relevant happy and failure paths.
-3. If more than six states seem necessary, recheck Feature scope and report the
-   smallest useful narrowing or split; do not silently change the Feature Map.
+   Separate behavior the sources confirm from candidate behavior.
+3. If more than six states seem necessary, recheck Feature or question scope
+   and report the smallest useful narrowing or split; do not silently change
+   the Feature Map or the product sources.
 4. Reuse the shared assets, write the feature HTML, and render it in a browser.
    Check readable content, phone or desktop overflow, stable IDs, every declared
    transition target, and static behavior without JavaScript. If browser
@@ -108,17 +134,19 @@ request has crossed into a prototype or implementation task.
 ## Consistency Check
 
 Before finishing, re-read the Feature Map row and any existing Feature Plan for
-this Feature. Keep visible states and transitions here; do not copy product
-scope, shared architecture, implementation design, tests, or lifecycle status.
-Fix stale IDs, names, and paths in this Storyboard. If its behavior conflicts
-with an existing Plan, the Plan does not link this HTML, or its referenced
-`S*`/`T*` IDs changed, report that the Plan needs revision instead of silently
-editing it.
+this Feature, or for `early`, the named Brief or Specification section and any
+Plan that already links this file. Keep visible states and
+transitions here; do not copy product scope, shared architecture,
+implementation design, tests, or lifecycle status. Fix stale IDs, names, and
+paths in this Storyboard. If its behavior conflicts with an existing Plan, the
+Plan does not link this HTML, or its referenced `S*`/`T*` IDs changed, report
+that the Plan needs revision instead of silently editing it. Report candidate
+behavior for the Brief or Specification owner without editing those sources.
 
 ## Completion
 
-Report the Storyboard path, form factor, state and transition IDs, fixture
-assumptions, rendering checks, and unresolved visual decisions. Stop without
-creating a Feature Plan or implementation. Do not add approval metadata or a
-separate approval gate. Pause when an unresolved visual decision would change
-observable behavior.
+Report the Storyboard path, form factor, source, state and transition IDs,
+candidate behavior, fixture assumptions, rendering checks, and unresolved
+visual decisions. Stop without creating a Feature ID, Map row, Feature Plan, or
+implementation. Do not add approval metadata or a separate approval gate. Pause
+when an unresolved visual decision would change observable behavior.

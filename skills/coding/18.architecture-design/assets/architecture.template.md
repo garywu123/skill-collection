@@ -1,4 +1,4 @@
-# <System or Stack> General Design
+# <System> Architecture Design
 
 **Scope:** <What this design owns and which Feature Maps use it.>
 
@@ -11,12 +11,10 @@
 <Upstream and downstream systems, external integrations, and the system's
 responsibility at each boundary.>
 
-## Architecture
+## Components
 
 <Major components, communication and data flow, and one small diagram only when
 prose is less clear.>
-
-## Responsibilities
 
 | Component | Owns | Does not own |
 |---|---|---|
@@ -27,6 +25,7 @@ prose is less clear.>
 - **Runtime and language:** <required choices>
 - **Framework, datastore, and test tools:** <required choices>
 - **Significant dependencies:** <only dependencies that affect architecture or contracts>
+- **Deployment:** <how the system runs and its operating assumptions>
 
 ## Contracts And Data Ownership
 
@@ -34,16 +33,20 @@ prose is less clear.>
 
 ## Quality Constraints
 
-- <Source-backed performance, security, reliability, or deployment constraint
-  and its design consequence. Delete this section when none affects the design.>
+| Subject | Conditions | Property or budget | Source | Verification |
+|---|---|---|---|---|
+| <component or flow> | <workload, data, hardware> | <required property or `open decision`> | <requirement or evidence> | <Testing Strategy section or check> |
+
+<Delete this section when no constraint affects the design.>
 
 ## Invariants
 
-- <A rule every linked Feature Map must preserve.>
+- <A rule every Feature must preserve.>
 
-## Worked Example
+## Open Decisions
 
-<One representative end-to-end flow that clarifies the contracts.>
+- <Unresolved decision or bounded validation question, the decision it informs,
+  and its owner. Delete this section when empty.>
 
-<Do not add requirement wording, delivery order, status, tests, exhaustive
-dependency inventories, class designs, or speculative infrastructure.>
+<Do not add requirement wording, Feature lists, delivery order, status, test
+cases, class designs, code-level style rules, or speculative infrastructure.>

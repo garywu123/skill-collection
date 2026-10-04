@@ -20,6 +20,10 @@
 
 **Out:** <nearby work deliberately postponed>
 
+## Product Constraints
+
+- **<Subject>**: <required property or budget> when <operating conditions>. Source: <user decision or document location>. <Delete this section when no constraint is confirmed.>
+
 ## Open Questions
 
-- <A question that could change purpose, users, core flows, or MVP scope. Delete this section when none.>
+- <A question that could change purpose, users, core flows, MVP scope, or a product constraint. Delete this section when none.>

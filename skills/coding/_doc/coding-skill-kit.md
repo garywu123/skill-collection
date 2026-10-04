@@ -6,18 +6,19 @@ plan and real test results) without a heavyweight process.
 
 This guide is an onboarding tutorial with one real worked example. The flow
 diagram, Skill list, and document-ownership rules live in
-[`skills/coding/README.md`](../skills/coding/README.md); this page only shows
+[`skills/coding/README.md`](../README.md); this page only shows
 what running the kit looks like.
 
 > [!NOTE]
-> Lifecycle Skills are invoked by you, by name (`/product-brief`,
-> `/feature-map`, and so on in Claude Code). The AI does not pick one from
-> conversation. Each prompt below names the Skill it runs.
+> Upstream lifecycle Skills such as `/product-brief` and
+> `/architecture-design` are invoked by you, by name. `feature-map`,
+> `feature-plan`, and `feature-delivery` can also be selected from your
+> request. Each prompt below names the Skill it runs.
 
 ## Real example: standing up "DockFlow WMS"
 
 This walkthrough is taken from this repository's own
-[WMS workflow example](../skills/coding/examples/wms-workflows.md), which is
+[WMS workflow example](../examples/wms-workflows.md), which is
 used to validate the kit itself. The prompts are real, not illustrative.
 
 ### 1. Explore product direction
@@ -37,7 +38,11 @@ nothing written to disk yet.
 会影响产品目的、用户、核心流程或 MVP 边界的未决事项放到 Open Questions。
 ```
 
-Writes `docs/product-brief.md` and stops.
+Writes `docs/product-brief.md` and stops. Product-level limits you confirm,
+such as a response-time budget, go under its Product Constraints; unset budgets
+stay open questions. `/product-brief` can also review a draft against interview
+notes you name, separating your confirmed decisions from model suggestions and
+superseded statements.
 
 ### 3. Generate agent instruction files
 
@@ -53,26 +58,43 @@ the next step owns them.
 
 ```text
 /code-style 为 DockFlow WMS 写 `docs/code-style.md`。后端是 C#，前端是 TypeScript，
-报表查询是 SQL。工具已强制的规则只路由，重点写模块边界、文件结构、注释意图、公共 API
+报表查询是 SQL。工具已强制的规则只路由，重点写模块组织、文件结构、注释意图、公共 API
 文档，以及关键算法要解释到什么程度。写完把 `AGENTS.md` 的路由补上。
 ```
 
-Asks you to confirm the language set, then writes `docs/code-style.md` with one
-section per confirmed language plus the cross-language module, structure,
-comment, and documentation rules, and updates the `AGENTS.md` route to it.
+Runs `code-style` in `define` mode: asks you to confirm the language set, then
+writes `docs/code-style.md` with one section per confirmed language plus the
+cross-language module, structure, comment, and documentation rules, and updates
+the `AGENTS.md` route to it. Dependency direction between components stays in
+the Architecture Design. Later, `audit` reports a named scope's deviations and
+`apply` brings an authorized scope into line without changing the rules.
 
-### 5. Create the MVP Feature Map
+### 5. Record the shared architecture
 
 ```text
-/feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map 和共享技术方向。
-包含 F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；不要创建 Plan 或代码。
+/architecture-design 基于已定稿的 DockFlow WMS Brief 写 Architecture Design：手持端与
+后台的边界、ASN 和库存数据所有权、关键契约、部署假设。只记录当前 MVP 需要的决定，
+没有来源的性能预算列为待决，不要创建 Feature Map。
+```
+
+Writes `docs/architecture.md`, the single owner of shared technical direction.
+A reusable test rule set can follow with `/testing-strategy`, which writes
+`docs/testing.md`.
+
+### 6. Create the MVP Feature Map
+
+```text
+/feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map，链接现有
+Architecture Design。包含 F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；
+不要创建 Plan 或代码。
 ```
 
 Writes `docs/feature-map.md` with the new Feature row starting at status
-`planned`. DockFlow fits one map, so no Functional Specification, Roadmap, or
-General Design is created; the example file shows the scale variant.
+`planned` and a link to the Architecture Design. DockFlow fits one map, so no
+Functional Specification or Roadmap is created; the example file shows the
+scale variant.
 
-### 6. Plan one Feature, then deliver it
+### 7. Plan one Feature, then deliver it
 
 ```text
 /feature-plan 为 F02 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用
@@ -85,15 +107,23 @@ General Design is created; the example file shows the scale variant.
 ```
 
 Status only becomes `verified` when every planned scenario has an actual
-passing result, not when the code merely compiles. Delivery updates the Plan
-and the Map row only; it never edits an upstream document.
+passing result, not when the code merely compiles. When you select an
+independent review, finishing the code is only readiness; the Feature stays
+`in_progress` until that review passes. Delivery updates the Plan and the Map
+row only; it never edits an upstream document. The Plan starts with its current
+execution position, so a new session can resume without the earlier chat.
+
+A bounded technical question without a Feature, such as whether a library meets
+a load target, uses the same pair: `/feature-plan` writes a standalone
+validation plan at `docs/plans/<topic>.md`, and `/feature-delivery` runs it and
+records whether execution completed separately from the conclusion.
 
 ## What to read next
 
 - Full scenarios, including a product too large for one map, onboarding an
   *existing* project, and a mid-flight requirement change:
-  [`examples/wms-workflows.md`](../skills/coding/examples/wms-workflows.md)
+  [`examples/wms-workflows.md`](../examples/wms-workflows.md)
 - Flow, Skill list, and document-ownership rules:
-  [`skills/coding/README.md`](../skills/coding/README.md)
+  [`skills/coding/README.md`](../README.md)
 - Adding or changing a Skill in this kit:
-  [`skill-authoring`](../skills/coding/skill-authoring/SKILL.md)
+  [`skill-authoring`](../skill-authoring/SKILL.md)

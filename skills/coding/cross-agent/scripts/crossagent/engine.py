@@ -20,7 +20,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, backlog, gitops, history, prompts, providers, schemas, store
+from . import __version__, backlog, gitops, history, prompts, providers, schemas, store, testchanges
 from . import config as cfg
 from .errors import GitError, UsageError
 
@@ -74,10 +74,7 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
     if not artifact_path.is_relative_to(repo):
         raise UsageError(f"Artifact {artifact} is outside the Git repository {repo}")
     artifact_rel = Path(os.path.relpath(artifact_path, project_root)).as_posix()
-    roles = {
-        "producer": cfg.parse_spec(producer or config["defaults"]["producer"]),
-        "reviewer": cfg.parse_spec(reviewer or config["defaults"]["reviewer"]),
-    }
+    roles, role_sources = cfg.resolve_roles(config, stage, {"producer": producer, "reviewer": reviewer})
     for spec in roles.values():
         providers.get(spec.provider).check(cfg.configured_executable(config, spec.provider))
     skill = cfg.find_stage_skill(config, stage)
@@ -103,6 +100,8 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         "settings": {key: config[key] for key in cfg.RUN_SETTINGS},
         "project": cfg.project_settings(config, project_root),
         "roles": {role: spec.as_dict() for role, spec in roles.items()},
+        # Runs saved before stage roles lack this; their saved roles stay authoritative.
+        "role_sources": role_sources,
         "workers": {
             role: {"session_id": None, "generation": 0, "context_tokens": None, "sessions": []} for role in roles
         },
@@ -352,6 +351,10 @@ def status(project_root: Path, run_id: str | None) -> dict:
     if run_id:
         return _event(store.load(project_root, run_id), "Current status.")
     config = cfg.load_config(project_root)
+    effective_roles = {}
+    for stage in cfg.STAGES:
+        specs, sources = cfg.resolve_roles(config, stage)
+        effective_roles[stage] = {role: {**spec.as_dict(), "source": sources[role]} for role, spec in specs.items()}
     return {
         "open_runs": [
             {key: run.get(key) for key in ("run_id", "stage", "artifact", "phase", "final_status", "updated_at")}
@@ -359,6 +362,8 @@ def status(project_root: Path, run_id: str | None) -> dict:
         ],
         "settings": {key: config[key] for key in cfg.RUN_SETTINGS},
         "defaults": config["defaults"],
+        "stages": config["stages"],
+        "effective_roles": effective_roles,
         "config_path": str(cfg.config_path(project_root)),
         "config_exists": cfg.config_path(project_root).is_file(),
         "project_root": str(project_root.resolve()),
@@ -471,9 +476,19 @@ def _review_step(state: dict, progress=None) -> dict:
     if len(diff.encode("utf-8")) > state["settings"]["max_diff_kb"] * 1024:
         raise StepFailed(f"The changes for review {number} exceed max_diff_kb ({state['settings']['max_diff_kb']} KB)")
     to_check = _work_list(state)
+    # Fixed input for this revision: a retry over the same snapshots rebuilds the same summary.
+    changes = testchanges.summarize(root, _review_base(state), before, number, state["checks"])
+    record = {key: changes[key] for key in ("review", "base", "tree", "paths", "markers", "unknowns")}
+    record["sha256"] = hashlib.sha256(changes["text"].encode("utf-8")).hexdigest()
+    state["test_changes"] = [item for item in state.get("test_changes", []) if item["review"] != number] + [record]
+    store.save(state)
+    if progress:
+        progress({"event": "test-changes", "run_id": state["run_id"], "stage": state["stage"], "review": number,
+                  "sha256": record["sha256"], "paths": len(record["paths"]), "markers": len(record["markers"])})
     failure = None
     try:
-        data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(state, number, diff, summary), schemas.REVIEW, progress)
+        data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(state, number, diff, summary, changes["text"]),
+                       schemas.REVIEW, progress)
     except StepFailed as exc:
         failure = exc
     after = gitops.snapshot(root, _index(state))
@@ -742,7 +757,7 @@ def _producer_prompt(state: dict, summary: str | None) -> str:
     return prompt
 
 
-def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None) -> str:
+def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None, test_changes: str | None = None) -> str:
     to_check = [
         {
             "id": finding["id"],
@@ -773,6 +788,7 @@ def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None) -
         earlier={"to_check": to_check, "closed": closed} if to_check or closed else None,
         checks=state["checks"],
         summary=summary,
+        test_changes=test_changes,
     )
 
 
@@ -804,7 +820,10 @@ def _run_summary(state: dict) -> str:
 
 def _run_checks(state: dict, label: str) -> list[dict]:
     results = []
+    reports = state["project"].get("test_reports", {})  # Older saved runs have none.
     for command in state["project"]["delivery_checks"]:
+        report = reports.get(command)
+        report_before = testchanges.report_mtime(state["project_root"], report) if report else None
         try:
             process = subprocess.run(
                 command,
@@ -820,7 +839,10 @@ def _run_checks(state: dict, label: str) -> list[dict]:
         except subprocess.TimeoutExpired:
             code, output = None, "Timed out."
         excerpt = "\n".join(output.splitlines()[-CHECK_EXCERPT_LINES:])[-EXCERPT_CHARS:]
-        results.append({"after": label, "command": command, "exit_code": code, "excerpt": excerpt})
+        result = {"after": label, "command": command, "exit_code": code, "excerpt": excerpt}
+        if report:
+            result["report"] = testchanges.read_report(state["project_root"], report, report_before, code)
+        results.append(result)
     return results
 
 
@@ -844,6 +866,7 @@ def _dry_run(state: dict) -> dict:
         "first": state["first"],
         "skill": state["skill"],
         "roles": state["roles"],
+        "role_sources": state["role_sources"],
         "settings": state["settings"],
         "first_worker": role,
         "command": providers.preview_command(state["roles"][role]["provider"], call),
@@ -914,6 +937,7 @@ def _report(state: dict) -> dict:
         "notes": [note["text"] for note in state["notes"]],
         "error": state["error"],
         "roles": state["roles"],
+        "role_sources": state.get("role_sources"),
         "workers": state["workers"],
         "producer_summary": state["producer_summaries"][-1] if state["producer_summaries"] else None,
         "producer_checkpoints": state.get("producer_checkpoints", []),
@@ -938,6 +962,7 @@ def _event(state: dict, message: str, **extra) -> dict:
         "producer_steps": state["producer_steps"],
         "settings": state["settings"],
         "roles": state["roles"],
+        "role_sources": state.get("role_sources"),
         "workers": state["workers"],
         "producer_summary": state["producer_summaries"][-1] if state["producer_summaries"] else None,
         "producer_checkpoints": state.get("producer_checkpoints", []),
@@ -970,6 +995,8 @@ def _event(state: dict, message: str, **extra) -> dict:
         event["state_path"] = str(_run_dir(state) / "state.json")
     if state["checks"]:
         event["checks"] = state["checks"]
+    if state.get("test_changes"):
+        event["test_changes"] = state["test_changes"][-1]
     event.update(extra)
     return event
 

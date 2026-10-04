@@ -161,12 +161,22 @@ extra_dirs = []
 | `allowed_commands` | 当前 Claude Producer 适配器用它生成命令允许规则；不等于所有 provider 的通用沙箱，也不能覆盖平台的拒绝规则。 |
 | `delivery_checks` | CLI 在 `general` / `feature-delivery` Producer 完成后实际执行的检查；空列表不表示测试通过。只填写你信任、适合当前阶段的命令。 |
 | `extra_dirs` | 额外目录，Producer 可写、Reviewer 可读；不要为了方便授予无关目录。 |
+| `test_reports` | 可选。把某条 `delivery_checks` 命令映射到它写出的 JUnit XML 报告，例如 `test_reports = { "python -m pytest --junitxml=reports/unit.xml" = "reports/unit.xml" }`。只有该命令本次重写、可解析、每个 testsuite 声明的总数与 testcase 一致、每个用例只有一种结果、只含标准 JUnit 元素和状态值且没有重复/重跑条目的报告才给出计数；报告放在已忽略的目录。旧配置不需要此项。 |
 
 `[projects."."]` 表示当前项目根目录；始终从同一项目根目录调用 CLI，进入子目录会使用另一份配置路径。旧的绝对路径分区仍可解析，但用户目录文件不会自动加载。如需继续使用旧文件，通过 `CROSS_AGENT_CONFIG` 显式指定；也可在新建 repo 配置时明确提供旧设置，初始化不会自动迁移或修改旧文件。即使是写计划的 `general` 阶段也会运行 `delivery_checks`，所以本例先确保基线测试存在且能通过。
 
 角色格式为 `<provider>:<model>:<effort>`，三项都必须明确提供；`claude`、`codex` 和 `codex::high` 会报错。填入所选 CLI 和账号支持的模型与 effort；完整字段只保证配置明确，不证明模型访问权限。Codex 的 effort 通过 `model_reasoning_effort` 传给 CLI，见 [OpenAI 官方配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。新配置的 `[defaults]` 只属于当前 repo；`start --producer` / `--reviewer` 可用完整角色覆盖该次 run，不改写配置文件，也不能弥补缺失的项目配置。
 
-配置控制 worker，不会改变当前 Orch 对话自己的模型或 effort。每个 run 会保存启动时的设置；修改配置不会改变已经打开的 run。
+不同阶段需要不同模型或 effort 时，在可选的 `[stages.<阶段>]` 中用同样的完整格式设置 `producer` / `reviewer`，例如：
+
+```toml
+[stages.feature-delivery]
+producer = "claude:claude-opus-5-5:high"
+```
+
+每个角色依次取：该次 `start --producer` / `--reviewer` 覆盖、阶段角色、`[defaults]`。`status` 的 `effective_roles` 显示各阶段最终选择和来源；`start`、`--dry-run` 和 `status --run` 显示该 run 的 `roles` 与 `role_sources`。未知阶段或键、不完整的角色、缺少 `[cli]` 路径的 provider，都会在创建 run 和启动 worker 之前失败。没有 `[stages]` 的旧完整配置照常使用 `[defaults]`。
+
+配置控制 worker，不会改变当前 Orch 对话自己的模型或 effort。每个 run 会保存启动时的角色、Skill 路径、命令和预算；修改配置不会改变已经打开的 run。阶段角色出现前保存的 run 没有 `role_sources`（显示为 `null`），继续使用其保存的角色。
 
 若要使用其他配置文件，必须让启动 CLI 的进程继承该变量：
 
@@ -184,7 +194,7 @@ $env:CROSS_AGENT_CONFIG = 'D:/local-config/cross-agent-demo.toml'
 python $crossAgentCli status
 ```
 
-检查 `config_path`、`project_root`、`project`、`defaults`、`settings` 和 `open_runs`。缺少配置文件、匹配的项目分区或必填参数时，`status` 会返回错误；只在你明确要求初始化时使用 `init`。空的 `delivery_checks` 必须明确写成 `[]`，表示没有配置验证，不表示测试通过。如果相同 artifact 已有打开的 run，应恢复它或明确决定放弃，不要直接创建第二个。
+检查 `config_path`、`project_root`、`project`、`defaults`、`effective_roles`、`settings` 和 `open_runs`。缺少配置文件、匹配的项目分区或必填参数时，`status` 会返回错误；只在你明确要求初始化时使用 `init`。空的 `delivery_checks` 必须明确写成 `[]`，表示没有配置验证，不表示测试通过。如果相同 artifact 已有打开的 run，应恢复它或明确决定放弃，不要直接创建第二个。
 
 ### 3.3 共享 workspace 配置与 CLI 路径
 
@@ -250,6 +260,8 @@ Orch 先在对话里列出两个阶段及验收条件，再检查配置和已有
 
 1. `general` / `docs/refactor-plan.md`：Claude 产出计划，Codex 只读评审，Orch 裁决。通过并关闭后，才进入下一阶段。
 2. `general` / `names.py`：新的 Claude 读取已审计划，补测试并修改实现；CLI 执行配置的检查；新的 Codex 评审最终变更。
+
+每次评审前，CLI 还会从本轮 snapshot 范围生成确定性的测试变更摘要，作为该 revision 固定的 Reviewer 输入：测试、fixture/mock 和 runner/配置路径（新增、修改、删除）及原始 hunk，支持框架的 skip/disable/only 和常见过滤参数（带行号），测试路径中断言类行数的增减，以及每条检查的退出码和计数来源。计数只来自 `test_reports` 中新鲜的 JUnit XML，仅代表该命令；控制台输出不解析，其他情况一律显示未知。摘要按命名约定和固定模式检测，动态 skip、自定义 runner 和断言强度都检测不到；“未检测到变化”不代表测试充分，Reviewer 仍需自己判断需求覆盖和断言。`next --stream` 会先输出 `test-changes` 事件，`status --run` 的 `test_changes` 给出路径、标记和 `sha256`。Producer 的增量 TDD 测试不会被冻结。
 
 发现有效的范围内重大问题时，Orch 接受 finding 并让 Producer 修订；可选建议不自动扩张任务。涉及行为、范围或权威方向变化的决定仍需你回答。详细裁决规则以 Skill 为准。
 
@@ -319,7 +331,7 @@ python $crossAgentCli close --run $crossAgentRun
 python $crossAgentCli start --stage general --artifact names.py --first produce --request 'Implement the independently reviewed docs/refactor-plan.md. Preserve behavior and existing tests; add unittest coverage as needed. Run python -m unittest discover -s tests -v before and after the change. Record actual results in the plan. No dependencies, subagents, scope changes, or commits.'
 ```
 
-随后仍按上述状态逐步推进。`general` 没有自动附加生命周期 Skill，`--request` 就是工作范围的主要依据，不能只写“继续”。
+随后仍按上述状态逐步推进。`general` 默认不附加生命周期 Skill，`--request` 就是工作范围的主要依据，不能只写“继续”。
 
 ## 6. 换成 Feature Map、架构或 Roadmap
 
@@ -335,9 +347,25 @@ python $crossAgentCli start --stage general --artifact names.py --first produce 
 
 ```text
 为现有系统提出模块拆分设计与分阶段迁移 Roadmap，明确职责、依赖、风险、
-验收和回退方案。先检查现有权威设计；适用时使用 feature-map 的 General Design /
-Roadmap 结构，否则作为有明确产物的 general 设计任务。评审后等我批准，不改生产代码。
+验收和回退方案。先检查现有权威设计；设计用 general 阶段并在请求中写明按
+architecture-design Skill 编写 docs/architecture.md，Roadmap 再用 feature-map。
+评审后等我批准，不改生产代码。
 ```
+
+`general` 默认不注入 Skill 正文，所以请求里要写明 `architecture-design` 的路径和产物。只有配置了 `[stages.general]` 的 `skill` 时，CLI 才把该 Skill 正文注入 Producer 和 Reviewer；它对使用这份配置的所有 `general` run 生效，所以只在这些 run 都属于该 Skill 时设置，例如专门做架构设计的配置。
+
+`feature-delivery` 阶段的独立评审是选定关卡：Producer 完成后只报告 readiness，关卡行
+保持 `not run`；Feature Plan 和 Map 保持 `in_progress`，validation Plan 照常记录执行状态
+和结论，但没有 Map 或 `verified`。`close` 前 Orch 记录 Plan、Map（如有）和本次审阅 diff
+中文件的 hash；`close` 追加 `docs/review-backlog.md` 属于 CLI 记账，不计入。run 以
+`independently-passed` 结束并关闭、且这些 hash 未变时，Orch 只做一次仅改状态的收尾：
+关卡结果和当前位置，Feature 再加 `verified`；hash 变化则报告而不收尾。
+`completed-by-orchestrator` 则保持关卡 `not run` 并报告缺少独立通过。交付中发现多个独立
+结果、上游错误或用户授权了变更时，Orch 在已授权目标内按上游 owner -> 受影响的
+Architecture Design / Testing Strategy -> `feature-map` -> `feature-plan` -> Delivery
+的顺序协调，只把实质选择交给你。被 `blocked` 的 Delivery run 仍占用 artifact，关闭它
+需要你同意；失败的 run 可以 `park`。没有 Feature 的有界实验用 `feature-plan` 写
+`docs/plans/<topic>.md`，再用 `feature-delivery` 执行，不需要 Feature ID。
 
 CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general` 四种 stage，不存在 `roadmap` 或 `refactor` 子命令。`general` 不应被用来绕过本来适用的生命周期前提。
 
@@ -349,7 +377,7 @@ CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general`
 - **再次 initiate 没有更新命令或角色**：已有设置会保留，建议分别在 `proposed_differences` 和 `proposed_role_differences` 中报告。明确要求修改现有配置，不能把重复初始化当作覆盖操作。
 - **版本显示 unknown**：查看 `codex_version.reason`，可能是网络、超时、不可识别的输出或预发布版。它不表示最新，也不表示版本必然过旧；恢复检测条件后可再次初始化，不会覆盖配置。
 - **初始化成功但不能运行 worker**：初始化只校验配置；继续核对 CLI 安装、登录、模型权限、所用阶段的 Skill 和真实检查结果。`checks_configured` 不代表 `checks_executed`。
-- **找不到阶段 Skill**：默认从 `cross-agent` 的同级目录寻找。完整部署后应有对应目录；特殊布局可在配置中设置 `[stages.feature-plan]` 的 `skill` 为正确 `SKILL.md` 路径。
+- **找不到阶段 Skill**：默认从 `cross-agent` 的同级目录寻找。完整部署后应有对应目录；特殊布局可在配置中设置 `[stages.feature-plan]` 的 `skill` 为正确 `SKILL.md` 路径。配置的路径不存在时，`start` 在创建 run 前失败。
 - **配置了命令但仍被拒绝**：允许规则不能覆盖 provider 的安全边界。缩小命令、改用普通测试文件或请求明确授权；不要关闭保护来强行通过。
 - **context / effort / subagent 数字缺失**：provider 不一定提供。context 是最近一次父会话用量测量，不是持续精确的剩余容量；只有观察到窗口上限才能计算占比。
 - **什么时候换人或压缩**：阶段/独立工作项之间、计划 checkpoint 后新开会话；其他调用优先 resume，只有 context 超阈值或 session 明确失效才替换。timeout 保留最后可用的 parent context 测量，旧 session 留在历史中。provider 自身压缩与 CLI 换会话分别报告。
@@ -363,7 +391,7 @@ CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general`
 
 Feature Plan 提前评估可验证的功能区域、依赖、阶段验收与交接，并决定串行还是值得
 委派。小功能保持单阶段；较大 Feature 在同一份 Plan 中安排执行 segment，预留验证和
-checkpoint 时间。30 分钟是单次 worker 调用的硬上限，规划不能保证所有测试都在限时内。
+checkpoint 时间，每段结束时更新 Plan 开头的当前执行位置。30 分钟是单次 worker 调用的硬上限，规划不能保证所有测试都在限时内。
 Producer 最多同时三个 sub-agent；共享接口、schema、整合与整体回归留在父会话。
 
 `next --stream` 的 `skill-loaded` 表示完整正文已注入本次 prompt，`method` 为
