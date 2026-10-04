@@ -179,8 +179,9 @@ needs no Product Brief, Feature Map, or Feature ID. Read it, the sources it
 names, and the Testing Strategy when present. Run only its procedure within its
 budget and stop conditions; keep experiment code where the Plan places it and
 change production code only when the Plan includes it. Record each evidence
-result and keep the current position true. Set the Plan's status to
-`in_progress`, then `completed` when every planned evidence item exists, or
+result with its tested tree as in Delivery Loop step 5, and keep the current
+position true. Set the Plan's status to `in_progress`, then `completed` when
+every planned evidence item exists, or
 `incomplete` when a stop condition, exhausted budget, or failure ends execution
 first; use `blocked` only for a concrete condition. Set the conclusion from the
 decision criteria only after `completed`. A `not supported` conclusion is a
@@ -216,6 +217,20 @@ decision owner's document.
    synchronized. Use one short table-cell outcome and never paste raw logs or
    claim a result that did not run. Mark a row passed only when the test asserts
    the stated expected result; otherwise correct the test or expected result.
+   Bind each final result to the tree it tested: the revision when the command
+   ran (`git log -1 --format=%h`), the relevant source/test paths, and whether
+   they had uncommitted changes. When they did, add a short locator that
+   distinguishes that content, such as a digest of the `git hash-object` IDs
+   of every relevant non-ignored file then present, tracked or untracked. Keep
+   it in the cell or a linked private receipt; never commit raw logs or private
+   data. A later change to those paths invalidates the affected result;
+   committing the unchanged tested content or editing unrelated paths does not,
+   and the result keeps its tested revision rather than a newer HEAD. After
+   history is rewritten or paths move, keep cited identifiers and add an
+   old -> new mapping in the owning Plan or Map only when correspondence is
+   verified, for example by equal tree or blob content; otherwise record
+   provenance as unknown and never infer it from a commit subject. This is bookkeeping, not a new gate, retest loop, pre-test
+   commit, or authority to change Git history or upstream documents.
 6. Set both statuses to `verified` only when every planned scenario passes, no
    blocker remains, and no selected independent gate is still pending.
 7. Run the consistency check. Behavior-preserving implementation changes remain
