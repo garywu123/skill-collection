@@ -79,7 +79,7 @@ Set-Location D:/code/examples/name-cleaner
 git rev-parse --show-toplevel
 ```
 
-项目必须在 Git 工作树中，因为 CLI 用 Git 快照隔离本次变更。只有确认是新项目、尚未处于 Git 工作树中时，才运行 `git init`。Cross-agent 不自动 commit。
+项目必须在 Git 工作树中，因为 CLI 用 Git 快照隔离本次变更。只有确认是新项目、尚未处于 Git 工作树中时，才运行 `git init`。Cross-agent 不会自行决定 commit：只有你的请求或项目规则明确授权时，Orch 才按 section 提交本地 commit（见下文“执行阶段、进度和恢复”）。
 
 项目应有适用的 `AGENTS.md`，写清边界和真实验证命令。运行过程中不要让其他人或其他会话同时修改该工作树；不同 artifact 的 run 也不代表文件系统隔离。
 
@@ -405,6 +405,23 @@ sub-agent 活动；有心跳不代表验收通过。
 `questions`、`outcomes` 为空，`blocker` 为 null。下一次 `next` 创建新 Producer session
 继续，不提前送审。每 run 最多八个 checkpoint；原始 baseline、Feature ID、findings、
 待传递回答与总 review 预算保持原样，全部完成后才执行整体验证并交给 Reviewer。
+
+明确授权 commit 时（例如请求写“每完成一个 section 就提交本地 commit”），Orch 在 worker
+停止后提交每个 section：checkpoint 在下一次 `next` 之前，完成的阶段在 `close` 和仅改
+状态的收尾之后。它先看 `git status` 和本 section 的 diff，只按路径提交授权的变更，不用
+`git add -A`，保留你其他的暂存、未跟踪文件、私有配置和 `close` 追加的 backlog。message
+写任务、section 和真实结果，例如 `checkpoint, not independently reviewed` 或
+`completed-by-orchestrator`；checkpoint 只带 segment 的定向检查，整体 `delivery_checks`
+和独立评审在阶段结束时才运行，commit 本身不代表通过。默认不 amend、push、reset、checkout
+或空 commit；没有相关 diff 时不为凑 commit 新建文档。失败或未完成的 section 可以保留为
+标明结果的本地恢复 commit，但依赖工作停止，run 保持打开，不回滚、不关闭、不重置预算；
+`automatic_recovery_available` 时仍按原规则调用一次 `next`，`retry-producer`、`park` 等
+沿用原有授权规则。提交不改变工作树和 run 状态，所以最终 Reviewer 仍从原始 baseline
+看到已提交的 segment。checkpoint 在 commit 之前保存，后续 Producer 只收到原始请求和该
+checkpoint，因此执行阶段的 `start --request` 要写明“继续前先运行
+`git log -1 --format=%h` 读取当前 revision”；新 run 的 `start --request` 直接写明 revision。
+CLI 不把 commit 写入 history 或 run 状态，也不修改已保存的 checkpoint。
+Producer 和 Reviewer 永不 commit。
 
 Producer timeout 或明确瞬态连接/限流错误会自动恢复一次，每 run 共用这个上限，包括
 升级 CLI 后的旧 failed run。默认优先 resume 之前的 Producer；context 超阈值才换新。

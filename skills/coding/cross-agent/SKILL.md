@@ -344,7 +344,9 @@ next call starts a fresh Producer session. Report the checkpoint and continue
 the already-authorized Plan. There are at most eight checkpoints per run; they
 do not consume or reset a revision/review budget. The original baseline remains
 the final review boundary. Only `done` runs whole-stage checks and hands off for
-independent review. Never treat a checkpoint as verified completion.
+independent review. Never treat a checkpoint as verified completion. When
+commits are authorized, commit the checkpoint as described in Section Commits
+before calling `next`.
 
 When the user explicitly authorizes recovery after a Reviewer execution failure,
 fix the external cause first, then use `cross-agent retry-review --run <id>`
@@ -529,6 +531,57 @@ A `failed` or `blocked` run stays open, and blocks new runs on its artifact,
 until the user decides. Close it only when the user says to abandon it; a run
 stopped in any other unfinished phase also needs `--abandon`.
 
+## Section Commits
+
+Commit only when the user's explicit request or a project rule authorizes
+commits for the current task. Neither this Skill nor a stage Skill grants that
+authority; without it, report each section's outcome and leave changes
+uncommitted. With it, this session commits every finished bounded section
+before starting dependent work; workers never commit, and the Reviewer stays
+read-only. A section is one bounded design, planning, review or delivery run,
+or a reviewed Plan's execution segment ending in a checkpoint, not every
+heading or file.
+
+1. Commit only while no worker runs: after a checkpoint event, or after a run
+   stops as `done`, `failed`, `blocked` or parked. For a completed stage,
+   commit after `close` and any status-only finalization edit.
+2. Inspect `git status` and the section's diff. Stage only the exact
+   authorized source and result paths, then commit them by pathspec
+   (`git commit -m <message> -- <paths>`), so the user's other staged entries,
+   unrelated or untracked files, private configuration and the backlog that
+   `close` appends stay out. Never use `git add -A`. If a section file also
+   holds unrelated edits, report it instead of committing.
+3. Base the message on actual evidence: name the task or item, the section,
+   and its real outcome, such as `checkpoint, not independently reviewed`,
+   `independently-passed`, `completed-by-orchestrator`, `failed` or
+   `incomplete`, with the checks that actually ran. A checkpoint carries the
+   Producer's targeted segment checks; whole-stage `delivery_checks` run only
+   after a Producer returns `done` or finalization, and the selected independent gate only
+   when the stage's review finishes. Neither a
+   commit nor Orchestrator completion makes a section verified or passed, and
+   no extra review is required per segment beyond the selected gates.
+4. Do not amend, push, reset, check out, rebase or create empty commits unless
+   the user asks. Without a relevant diff, record the outcome in an existing
+   artifact that already owns it, such as the status-only edit, or in the next
+   section commit's message; never create a document to force a commit.
+5. A failed or incomplete section may be kept in a local recovery commit with
+   that truthful outcome. It stops dependent work, not the run's own
+   recovery: when `automatic_recovery_available`, still call `next` once as
+   the Run Loop directs. The commit neither spends nor restores a recovery,
+   revision or review allowance. `retry-producer`, `retry-review`, `park` and
+   `close --abandon` keep their existing authorization rules; never roll back.
+6. Committing changes neither the work tree nor run state. An open run's
+   original baseline, findings, checkpoints and spent budgets stay
+   authoritative, so the final review still covers earlier committed segments.
+7. Report each commit's revision (`git rev-parse --short HEAD`). A checkpoint
+   is saved before its commit, and a continuation Producer receives only the
+   original request and that checkpoint, so an execution stage's
+   `start --request` must tell every continuation Producer to read the current
+   revision with `git log -1 --format=%h` (Producers may always run read-only
+   `git log`) before more work. A new run's `start --request` names the
+   actual revision with its scope, decisions and checks. The CLI neither
+   records commits in history or run state nor edits saved checkpoints.
+
 ## Boundaries
 
 - Each worker runs only its assigned stage. The Orchestrator advances only
@@ -542,7 +595,7 @@ stopped in any other unfinished phase also needs `--abandon`.
   backlog review or names an item ID.
 - Do not start another run on the same artifact to obtain more reviews; the
   budget is the point.
-- Do not commit.
+- Commit only as described in Section Commits; workers never commit.
 
 ## Completion
 
@@ -550,7 +603,8 @@ Report the final status and what it means: `independently-passed` means an
 independent review left nothing accepted, while `completed-by-orchestrator`
 means this session accepted the final state during finalization. Also report
 reviews and Producer revisions used, findings by disposition, finalization
-edits, checks and their results, backlog items written, open user decisions,
+edits, checks and their results, backlog items written, section commits made
+or why none was made, open user decisions,
 defects you noticed yourself, and a failed run's state path. Report the retained
 history path and any unknown or partial token coverage. Update the chat agenda
 and continue an authorized next stage; stop at the requested endpoint.

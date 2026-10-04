@@ -74,6 +74,17 @@ Producer 的 timeout/明确瞬态连接错误每 run 自动恢复一次，优先
 执行阶段的 `checkpoint` 保存真实验收证据与未完成工作，下一次 `next` 新开 Producer
 session；仍为同一个 run，原始 baseline、findings 和 review 预算保留，不提前送审。
 每 run 最多八个 checkpoint；全部完成后才整体检查并交给 Reviewer。
+只有用户请求或项目规则明确授权 commit 时，Orch 才在每个完成的有界 section（一次设计、
+规划、审阅或交付 run，或 Plan segment 的 checkpoint）结束、worker 停止后提交本地 commit：
+只按路径提交该 section 的变更，不碰用户其他暂存、未跟踪文件和私有配置；message 写真实
+结果（checkpoint 未独立审阅、`independently-passed`、`completed-by-orchestrator`、失败
+等），commit 不代表验证通过；默认不 amend、push、reset 或空 commit。失败 section 可保留
+恢复 commit，但停止依赖工作、不回滚也不关闭 run；可用的一次自动恢复照常进行，commit
+既不消耗也不补充任何预算。commit 不改变 run 的原始 baseline、findings 和预算，最终评审
+仍覆盖已提交的 segment。checkpoint 先于 commit 保存，所以执行阶段的 `start --request`
+要求每个后续 Producer 先用 `git log -1 --format=%h` 读取当前 revision；新 run 的请求直接
+写明 revision。worker 永不 commit；直接调用的
+Feature Delivery 只有获得明确授权时才按 segment commit。Skill 本身不构成 commit 授权。
 每次评审都附带该 revision 固定的确定性测试变更摘要：测试、fixture/mock、runner/配置路径
 与原始 hunk，支持框架的 skip/过滤标记，以及检查退出码；计数只来自 `test_reports`
 配置的新鲜 JUnit XML，其余为未知。未检测到变化不代表测试充分。
@@ -133,8 +144,8 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`feature-map`](20.feature-map/SKILL.md) | 选择合适规模的 MVP 交付结构：小项目一张 Map，大项目拆为 Roadmap 和子 Map；只管结果、依赖和状态，链接 Architecture Design | `docs/feature-map.md`，或 `docs/feature-maps/` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature，或拆 Feature 前一个早期产品问题的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html`；早期为 `docs/storyboards/<topic-slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划（分段、当前执行位置、风险与测试设计）；或为有界技术问题写 standalone validation 计划 | `docs/features/<feature-id>-<slug>.md`；validation 为 `docs/plans/<topic>.md` |
-| [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，增量 TDD 并记录真实测试结果；选定独立关卡时只报告 readiness；或执行 validation 计划并分别记录执行状态与结论 | 更新代码、Feature Plan 和 Feature Map 状态；validation 只更新其计划 |
-| [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort（可按阶段设置）和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；每阶段独立 Producer/Reviewer run，限定审阅次数并裁决 findings，每次评审附确定性测试变更摘要，按功能/主题保留调用历史 | 项目根目录 `.cross-agent/config.toml`；各阶段 artifact 与对话进度；`.cross-agent/history/` 的时间与用量 CSV，`history` 可汇总；非阻塞遗留项追加到 `docs/review-backlog.md` |
+| [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，增量 TDD 并记录真实测试结果；选定独立关卡时只报告 readiness；或执行 validation 计划并分别记录执行状态与结论；在 Orch 下不 commit，直接调用且明确授权时按 segment commit | 更新代码、Feature Plan 和 Feature Map 状态；validation 只更新其计划 |
+| [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort（可按阶段设置）和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；每阶段独立 Producer/Reviewer run，限定审阅次数并裁决 findings，每次评审附确定性测试变更摘要，按功能/主题保留调用历史；明确授权时由 Orch 逐 section 提交本地 commit | 项目根目录 `.cross-agent/config.toml`；各阶段 artifact 与对话进度；`.cross-agent/history/` 的时间与用量 CSV，`history` 可汇总；非阻塞遗留项追加到 `docs/review-backlog.md` |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 | [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |

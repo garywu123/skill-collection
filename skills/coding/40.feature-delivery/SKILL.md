@@ -91,8 +91,21 @@ At every segment boundary and before any checkpoint, update the Plan's current
 position: completed and next segment, remaining checks, and material blockers.
 Record a decision that changes the Plan in its `## Decisions` with the reason.
 
-On recovery, inspect the current diff, Plan results, and checkpoint before doing
-more work; a failed call may have left useful edits. Resume incomplete work
+Commit only with explicit authorization from the user's request or a project
+rule; this Skill grants none. Within cross-agent, never commit: the
+Orchestrator owns section commits, so record the real checks and next work and
+return the checkpoint or result. When directly invoked with authorization,
+commit each finished segment before the next: stage only its own paths,
+preserve unrelated, staged and private files, never amend, push, reset or make
+an empty commit unless asked, and name the Feature, segment and actual outcome
+without implying `verified` before every gate passes. A failed segment may be
+kept in a local recovery commit labeled as failed; stop dependent work instead
+of rolling back.
+
+On recovery or a checkpoint continuation, inspect the current revision
+(`git log -1 --format=%h`), the uncommitted diff, Plan results, and checkpoint
+before doing more work; a failed call may have left useful edits, and segments
+committed since the checkpoint no longer appear in the uncommitted diff. Resume incomplete work
 without repeating a completed segment or inventing successful checks. Finish
 with whole-feature integration, regression checks, and the consistency check;
 only then report `done` and update status according to real acceptance results.
@@ -226,8 +239,9 @@ resolution needs a product, UI, or technical decision.
 
 ## Completion
 
-Report code and documents changed, happy- and failure-path results, broader
-validation, consistency edits, and remaining blockers. List test, fixture,
+Report code and documents changed, any authorized commits, happy- and
+failure-path results, broader validation, consistency edits, and remaining
+blockers. List test, fixture,
 skip or disable, and runner, filter, or configuration changes with a reason for
 each removed, skipped, or loosened check, so a reviewer can inspect them in the
 diff. State readiness and any pending selected gate, or for validation the

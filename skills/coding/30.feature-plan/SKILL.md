@@ -154,7 +154,9 @@ work fits the executor's context and time allowance; with cross-agent, size each
 segment for the configured worker timeout (default 30 minutes), leaving time for
 verification and a checkpoint. This is an estimate; long commands may still time
 out. Group by verifiable behavior and actual dependencies, not speculative class
-inventories.
+inventories. A segment boundary is also a recovery point that an executor
+authorized to commit can commit on its own; the Plan itself authorizes no
+commit.
 
 Propose subagents only for substantial independent tasks with stable contracts,
 disjoint ownership and resources, and focused verification, when execution

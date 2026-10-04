@@ -137,6 +137,82 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(h.next(run_id)["final_status"], "independently-passed")
         self.assertIn("all segments", h.calls("reviewer")[0]["prompt"])
 
+    def test_section_commits_keep_original_baseline_budget_and_review_scope(self):
+        # Fake providers only; Git commits happen in the Harness's disposable temporary repository.
+        segment = produce(status="checkpoint", write={"src/one.txt": "segment one"})
+        segment["output"]["summary"] = "S1 accepted: focused check passed; next S2."
+        fix = produce(status="checkpoint", write={"src/two.txt": "segment two fixed"})
+        fix["output"]["summary"] = "R1-001 fix segment checked; next finish the revision."
+        h = Harness(self, {"producer": [segment, produce(write={"src/two.txt": "segment two"}), fix,
+                                        produce(outcomes=[("R1-001", "fixed")])],
+                           "reviewer": [review(findings=[finding()]), review(earlier=[("R1-001", "resolved")])]})
+        (h.repo / "unrelated.txt").write_text("user file\n", encoding="utf-8")
+        (h.repo / "staged.txt").write_text("user staged\n", encoding="utf-8")
+        git = lambda *args: subprocess.run(["git", *args], cwd=h.repo, check=True, capture_output=True,
+                                           text=True).stdout
+        git("add", "--", "staged.txt")
+
+        def commit_section(message, *paths):
+            git("add", "--", *paths)
+            git("commit", "-q", "-m", message, "--", *paths)
+            self.assertEqual(git("show", "--name-only", "--format=", "HEAD").split(), list(paths))
+
+        handoff = "Before continuing after a checkpoint, run git log -1 --format=%h to read the committed revision."
+        run_id = h.start("produce", "--request", handoff)["run_id"]
+        baseline = h.state(run_id)["trees"]["baseline"]
+        self.assertEqual(h.next(run_id)["phase"], "produce")
+        commit_section("demo S1: checkpoint, not independently reviewed", "src/one.txt")
+        self.assertEqual(h.next(run_id)["phase"], "review")
+        self.assertEqual(h.next(run_id)["phase"], "awaiting-decision")
+        first_review = h.calls("reviewer")[0]["prompt"]
+        self.assertIn("segment one", first_review, "committed checkpoint changes stay in the review diff")
+        self.assertIn("segment two", first_review)
+        h.decide(run_id, decision("R1-001", "accepted"))
+        self.assertEqual(h.next(run_id)["phase"], "produce")
+        commit_section("demo S2: revision checkpoint, not independently reviewed", "src/two.txt")
+        state = h.state(run_id)
+        self.assertEqual((state["trees"]["baseline"], state["reviews_done"], state["producer_steps"]),
+                         (baseline, 1, 1))
+        self.assertEqual([item["id"] for item in state["findings"]], ["R1-001"])
+        self.assertEqual(h.next(run_id)["phase"], "review")
+        self.assertEqual(h.next(run_id)["final_status"], "independently-passed")
+        self.assertIn("segment two fixed", h.calls("reviewer")[1]["prompt"])
+        self.assertEqual(h.state(run_id)["trees"]["baseline"], baseline)
+        self.assertEqual(len(h.state(run_id)["producer_checkpoints"]), 2)
+        self.assertEqual(git("status", "--porcelain", "--", "unrelated.txt", "staged.txt").splitlines(),
+                         ["A  staged.txt", "?? unrelated.txt"])
+        # Instruction supply only: fresh continuation Producers receive the revision handoff, not proof of compliance.
+        producers = h.calls("producer")
+        for index in (1, 3):
+            self.assertIsNone(producers[index]["session_id"])
+            self.assertIn(handoff, producers[index]["prompt"])
+
+    def test_failed_section_recovery_commit_keeps_one_automatic_recovery(self):
+        # Fake provider; the failed state is simulated in the Harness's disposable repository, as for legacy runs.
+        h = Harness(self, {"producer": [produce(write={"src/one.txt": "segment one done"})],
+                           "reviewer": [review()]})
+        git = lambda *args: subprocess.run(["git", *args], cwd=h.repo, check=True, capture_output=True,
+                                           text=True).stdout
+        run_id = h.start("produce")["run_id"]
+        state = h.state(run_id)
+        baseline = state["trees"]["baseline"]
+        state.update(phase="failed", final_status="failed",
+                     error={"message": "The producer (fake) timed out after 1800 s", "raw_excerpt": ""})
+        (h.repo / ".cross-agent" / "runs" / run_id / "state.json").write_text(json.dumps(state))
+        (h.repo / "src").mkdir()
+        (h.repo / "src" / "one.txt").write_text("segment one partial", encoding="utf-8")
+        status = h.run("status", "--run", run_id)
+        self.assertTrue(status["automatic_recovery_available"])
+        git("add", "--", "src/one.txt")
+        git("commit", "-q", "-m", "demo S1: failed, local recovery commit", "--", "src/one.txt")
+        recovered = h.next(run_id)
+        self.assertEqual((recovered["phase"], recovered["producer_auto_retries"]), ("review", 1))
+        self.assertIn("Inspect existing edits", h.calls("producer")[0]["prompt"])
+        self.assertEqual(h.state(run_id)["trees"]["baseline"], baseline)
+        self.assertEqual(h.next(run_id)["final_status"], "independently-passed")
+        self.assertIn("segment one done", h.calls("reviewer")[0]["prompt"])
+        self.assertIn("failed, local recovery commit", git("log", "-1", "--format=%s"))
+
     def test_revision_checkpoints_do_not_replenish_last_revision(self):
         h = Harness(self, {"producer": [produce(), produce(status="checkpoint"),
                                         produce(outcomes=[("R1-001", "fixed")])],
