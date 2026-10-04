@@ -179,9 +179,10 @@ needs no Product Brief, Feature Map, or Feature ID. Read it, the sources it
 names, and the Testing Strategy when present. Run only its procedure within its
 budget and stop conditions; keep experiment code where the Plan places it and
 change production code only when the Plan includes it. Record each evidence
-result with its tested tree as in Delivery Loop step 5, and keep the current
-position true. Set the Plan's status to `in_progress`, then `completed` when
-every planned evidence item exists, or
+result with its tested tree, and any failed run before its rerun, as in
+Delivery Loop steps 4 and 5, and keep the current position true. Set the
+Plan's status to `in_progress`, then `completed` when every planned evidence
+item exists, or
 `incomplete` when a stop condition, exhausted budget, or failure ends execution
 first; use `blocked` only for a concrete condition. Set the conclusion from the
 decision criteria only after `completed`. A `not supported` conclusion is a
@@ -212,7 +213,22 @@ decision owner's document.
    item only when current intended behavior and constraints do not require it;
    do not perform repo-wide cleanup.
 4. Run the plan's focused commands, then the relevant broader regression,
-   build, lint, or type checks required by the repository.
+   build, lint, or type checks required by the repository. Before rerunning a
+   failed check, preserve its command and scope, the failing test ID (or that
+   none is available when discovery or the command itself failed; never invent
+   one), the exit status, a concise failure excerpt, and relevant conditions,
+   bound to the tested tree as in step 5. Keep raw output private; put a short
+   locator in the Plan result or residual risk. When a later run passes and the
+   cause is unidentified, record the first failure and the later outcome
+   separately and name an unresolved risk with the smallest proposed
+   reproduction or diagnostic step and its limits; a passing retry never makes
+   the failure resolved. When cause and repair are evidenced, record the
+   resolution and the affected checks rerun on the changed tree. A
+   deterministic planned failure still prevents acceptance. Decide the effect
+   on status from the Plan's criteria, remaining checks, selected gates, and
+   the requester's risk scope, with an explicit, justified disposition; what
+   they leave unknown or unmet stays so. This preserves evidence; it adds no
+   gate, retry count, Tester, or user question per benign transient.
 5. Record each real result in the Feature Plan and keep the Feature Map status
    synchronized. Use one short table-cell outcome and never paste raw logs or
    claim a result that did not run. Mark a row passed only when the test asserts
