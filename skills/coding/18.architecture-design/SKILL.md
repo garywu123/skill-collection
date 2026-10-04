@@ -1,7 +1,7 @@
 ---
 name: architecture-design
 description: Explore, create, migrate, update, or review one project Architecture Design - the single owner of durable cross-feature components, boundaries, contracts, data ownership, dependency direction, deployment assumptions, technology choices, and technical quality constraints. Invoke explicitly, by name, to design a new system, record or change shared technical direction, move architecture out of a Feature Map or General Design, or review an architecture. Do not use for product requirements, Feature lists or delivery order, code-level style rules, test strategy, per-feature plans, or implementation.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Architecture Design

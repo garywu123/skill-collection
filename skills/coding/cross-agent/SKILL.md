@@ -1,7 +1,7 @@
 ---
 name: cross-agent
 description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch; initiate creates repo-local configuration with model/effort defaults and checks Codex CLI freshness without starting workers. Coordinate Producer and read-only Reviewer stages, report live progress, retain worker time/token CSV history, adjudicate findings, and continue through user-authorized stages using Claude Code or Codex through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review."
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Cross-Agent

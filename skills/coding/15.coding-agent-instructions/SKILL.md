@@ -1,7 +1,7 @@
 ---
 name: coding-agent-instructions
 description: Create, refresh, audit, or assess the instruction impact of changes to a software project's canonical AGENTS.md and any genuinely scope-specific nested AGENTS.md files. Invoke explicitly, by name, to establish or continuously calibrate repository guidance after project setup, structural or tooling changes, recurring agent failures, or delivery milestones, or to decide whether a change to architecture, testing strategy, commands, project structure, or document routes requires an instruction update. Do not use it for a repository with no code; do not create product direction, feature plans, code, reports, tool-specific adapters, or code-style rules owned by the code-style files.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Coding Agent Instructions

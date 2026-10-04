@@ -1,7 +1,7 @@
 ---
 name: functional-spec
 description: Explore, create, revise, or review one optional Functional Specification that lists the numbered observable functional and product-level quality requirements of a product too large for one Feature Map. Invoke explicitly, by name, only when the Product Brief is final and the MVP needs more than one Feature Map, or to check an existing specification against its Brief and the user's authorized interview evidence. Do not use for a product that fits one Feature Map, for technical design, delivery order, or per-feature planning.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Functional Specification

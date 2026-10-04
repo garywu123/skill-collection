@@ -1,7 +1,7 @@
 ---
 name: testing-strategy
 description: Create, update, or review one project Testing Strategy - reusable rules for test levels, business invariants, correctness oracles, fixtures and data scale, mocks, test discovery and skips, environments, resource measurement, regression triggers, and when independent testing is warranted. Invoke explicitly, by name, to establish or revise how a project tests, or to review a strategy against its requirements and architecture. Do not use for per-feature test cases or results, writing or running tests, product requirements or budgets, architecture, or code style.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Testing Strategy

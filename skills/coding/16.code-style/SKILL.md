@@ -1,7 +1,7 @@
 ---
 name: code-style
 description: Define, audit, or apply a project's code-style contract - docs/code-style.md plus scoped subproject style files only for genuine local differences - covering file and code structure, in-code module organization, comment intent, API documentation, and explanation of key steps and algorithms, with one section per language the repository actually uses, then keep the AGENTS.md route to it. Invoke explicitly, by name, to set up, extend, or review coding conventions, comment rules, or documentation rules, or to bring an authorized code scope into line with established rules. Do not use it for architectural dependency direction or system boundaries, general AGENTS.md guidance, formatter, linter, or analyzer configuration changes, product direction, feature plans, or new application behavior.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Code Style

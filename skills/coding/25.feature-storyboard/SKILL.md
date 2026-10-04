@@ -1,7 +1,7 @@
 ---
 name: feature-storyboard
 description: Create or revise one low-fidelity HTML Storyboard that shows the key screens, states, and transitions of a UI Feature or of an early product question taken from a Product Brief or Functional Specification section before Features are mapped. Invoke explicitly, by name, to visualize, wireframe, preview, or confirm a desktop or mobile interaction. Do not use for non-UI work, production UI, confirming requirements, implementation planning, or high-fidelity prototypes.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Feature Storyboard
