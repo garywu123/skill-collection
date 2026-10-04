@@ -13,7 +13,7 @@ Otherwise delete this note and that column.>
 
 | ID | Feature | User outcome | Requirements | Depends on | Status |
 |---|---|---|---|---|---|
-| F01 | <short name> | <one observable result> | `FS-AAA-001` | None | planned |
+| F10 | <short name> | <one observable result> | `FS-AAA-001` | None | planned |
 
 Use `planned`, `in_progress`, `blocked`, or `verified`. Use `blocked` only when
 a named, concrete condition prevents progress; otherwise active work is

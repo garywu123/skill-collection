@@ -85,7 +85,7 @@ A reusable test rule set can follow with `/testing-strategy`, which writes
 
 ```text
 /feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map，链接现有
-Architecture Design。包含 F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；
+Architecture Design。包含 F20 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；
 不要创建 Plan 或代码。
 ```
 
@@ -97,12 +97,12 @@ scale variant.
 ### 7. Plan one Feature, then deliver it
 
 ```text
-/feature-plan 为 F02 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用
+/feature-plan 为 F20 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用
 相关 S*、T*；先设计 happy path，再设计相关 failure path 和验证命令。
 ```
 
 ```text
-/feature-delivery 按现有 F02 Plan 自动完成入库收货，只实现该 Feature。先写和运行聚焦
+/feature-delivery 按现有 F20 Plan 自动完成入库收货，只实现该 Feature。先写和运行聚焦
 测试，再做最小实现；运行计划验证和相关回归，把真实结果写回 Plan 并同步 Map。
 ```
 

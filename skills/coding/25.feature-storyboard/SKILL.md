@@ -40,7 +40,7 @@ Create or update the file named above from
 later Features. Copy [the optional runtime](assets/_storyboard.js) to
 `docs/storyboards/_storyboard.js` only for explicit click-through mode.
 Do not overwrite existing shared assets unless the user asks to upgrade them.
-In the copied template, replace the `F01` title and eyebrow with the Feature ID
+In the copied template, replace the `F10` title and eyebrow with the Feature ID
 or topic slug.
 
 The HTML is the source of truth and its browser rendering is the review view.
@@ -56,6 +56,13 @@ fixture values only.
 ## Visual Contract
 
 - Choose one generic `sb-phone` or `sb-desktop` shell unless the user needs both.
+- When the project's design document defines a desktop app shell, mirror its
+  regions in every desktop frame with the region primitives below; otherwise
+  use the default desktop shell. The shell definition stays in that document,
+  never in this Skill or `_storyboard.css`.
+- Text inside `.sb-device` is only UI copy that would ship. Put reviewer
+  explanations, fixture notes, and rationale outside it: in the header, the
+  inventory, or a `p.sb-note` after `.sb-device`.
 - Use CSS classes provided by `_storyboard.css` and interaction data hooks
   established by the template and optional runtime. Do not invent
   feature-specific classes or runtime hooks, or add inline styles, a UI
@@ -89,13 +96,19 @@ desktop:
 article.sb-frame.sb-desktop [id=S*, data-state, tabindex=-1]
 ├─ p.sb-frame__label
 └─ .sb-device
-   ├─ .sb-topbar
-   └─ .sb-window
-      ├─ .sb-sidebar
-      └─ .sb-content
+   ├─ .sb-topbar           titlebar
+   ├─ .sb-window
+   │  ├─ .sb-nav           app shell only: activity or navigation bar
+   │  ├─ .sb-sidebar       side panel
+   │  ├─ .sb-content       main area
+   │  ├─ .sb-panel         app shell only: bottom panel
+   │  └─ .sb-inspector     app shell only: inspector
+   └─ .sb-statusbar        app shell only: status bar
 ```
 
-Feature content belongs inside `.sb-content` or `.sb-sidebar`. Its public
+The default desktop shell uses only `.sb-topbar`, `.sb-sidebar`, and
+`.sb-content`. For a project app shell, include only the regions that shell
+defines. Feature content belongs inside these regions. Its public
 primitives are layout (`.sb-stack`, `.sb-row`, `.sb-actions`), blocks
 (`.sb-card`, `.sb-banner`, `.sb-dialog`, `.sb-list`, `.sb-list-item`), and muted
 text (`.sb-muted`). For controls, `.sb-field` can contain a native `input` or
@@ -114,8 +127,9 @@ request has crossed into a prototype or implementation task.
 ## Workflow
 
 1. Read repository guidance, the Product Brief, the target Feature Map row or
-   the named Brief, Specification section, or product question, relevant
-   visual guidance, and any existing Storyboard for this Feature or topic.
+   the named Brief, Specification section, or product question, the project's
+   app-shell, layout, or design-language guidance such as a GUI design
+   document, and any existing Storyboard for this Feature or topic.
 2. State the visual question being reviewed. Identify only the states and
    transitions needed to answer it, covering relevant happy and failure paths.
    Separate behavior the sources confirm from candidate behavior.
@@ -123,7 +137,8 @@ request has crossed into a prototype or implementation task.
    and report the smallest useful narrowing or split; do not silently change
    the Feature Map or the product sources.
 4. Reuse the shared assets, write the feature HTML, and render it in a browser.
-   Check readable content, phone or desktop overflow, stable IDs, every declared
+   Check readable content, phone or desktop overflow, project shell regions,
+   in-device copy, stable IDs, every declared
    transition target, and static behavior without JavaScript. If browser
    rendering is unavailable, run structural checks and report the unverified
    visual risk instead of claiming the rendering passed.

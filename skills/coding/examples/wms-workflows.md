@@ -1,7 +1,7 @@
 # WMS 工作流使用示例
 
 生命周期 Skill 由人点名调用，下面每条指令都以 `/skill-name` 开头。新项目使用
-`DockFlow WMS`，核心 UI Feature 是 `F02 入库收货`；既有项目使用 `StockPilot`；
+`DockFlow WMS`，核心 UI Feature 是 `F20 入库收货`；既有项目使用 `StockPilot`；
 规模化项目使用 `FleetDock`。
 
 ## 使用约定
@@ -100,38 +100,38 @@ Open Decisions；停止于设计。
 
 ```text
 /feature-map 基于已定稿的 DockFlow WMS Brief 创建最小 MVP Feature Map，链接现有
-Architecture Design。包含 F02 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；
+Architecture Design。包含 F20 入库收货：操作员扫描 ASN 并确认实收数量。只保留 MVP；
 不要创建 Plan 或代码。
 ```
 
 预期：Feature Map；输出 `docs/feature-map.md`，链接 `docs/architecture.md`，不写技术
 方向；新行从 `planned` 开始；停止于地图。
 
-### 10. 按需创建 F02 Storyboard
+### 10. 按需创建 F20 Storyboard
 
 ```text
-/feature-storyboard 为 F02 创建低保真手持设备 HTML Storyboard，展示扫描 ASN、确认实收数量和无效 ASN。
+/feature-storyboard 为 F20 创建低保真手持设备 HTML Storyboard，展示扫描 ASN、确认实收数量和无效 ASN。
 使用代表性假数据，所有状态静态可见且不用 JavaScript。不要创建 Plan 或实现代码。
 ```
 
-预期：Feature Storyboard；输出 `docs/storyboards/F02-*.html` 和首次使用时的共享
+预期：Feature Storyboard；输出 `docs/storyboards/F20-*.html` 和首次使用时的共享
 CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告未验证风险并停止。
 
-### 11. 创建 F02 Feature Plan
+### 11. 创建 F20 Feature Plan
 
 ```text
-/feature-plan 为 F02 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用相关 S*、T*；
+/feature-plan 为 F20 创建可执行 Feature Plan。读取 Map、代码约定和 Storyboard，引用相关 S*、T*；
 先设计 happy path，再设计相关 failure path 和验证命令。不要实现或创建额外任务清单。
 ```
 
-预期：Feature Plan；输出 `docs/features/F02-*.md`，结果为 `not run`；停止于计划。
+预期：Feature Plan；输出 `docs/features/F20-*.md`，结果为 `not run`；停止于计划。
 
 ### 12. 选择一种 Delivery 方式
 
 自动实现：
 
 ```text
-/feature-delivery 按现有 F02 Plan 自动完成入库收货，只实现该 Feature。先写和运行聚焦测试，再做最小
+/feature-delivery 按现有 F20 Plan 自动完成入库收货，只实现该 Feature。先写和运行聚焦测试，再做最小
 实现；运行计划验证和相关回归，把真实结果写回 Plan 并同步 Map。不要实现其他 Feature。
 ```
 
@@ -141,31 +141,31 @@ CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告�
 如果希望自己写核心实现，则改用：
 
 ```text
-/feature-delivery 用 guided 方式带我完成 F02。我写核心实现；你负责测试和 fixture，每次告诉我下一个
+/feature-delivery 用 guided 方式带我完成 F20。我写核心实现；你负责测试和 fixture，每次告诉我下一个
 文件、symbol 或 signature 及所需行为，等我完成再检查。不要改我的文件或推进其他 Feature。
 ```
 
 预期：Delivery `guided`；等待时保持 `in_progress`。具体条件阻止继续时才
 `blocked`；最终由真实结果决定是否 `verified`。
 
-## 场景二：F02 开发中突然变更
+## 场景二：F20 开发中突然变更
 
-现在 F02 还要记录破损数量并选择隔离库位。先更新设计和计划，再另行授权实现。
+现在 F20 还要记录破损数量并选择隔离库位。先更新设计和计划，再另行授权实现。
 本例主动把文档调整和实现拆成两次请求，以明确授权边界；这不是流程强制的审批关卡。
 
 ### 1. 只协调文档变化
 
 ```text
-/feature-map F02 入库收货的需求变了：确认收货时必须记录破损数量，破损数量大于零时
-还要选择隔离库位。只更新 F02 的 Feature Map 行，报告受影响的 Storyboard 和 Plan。
+/feature-map F20 入库收货的需求变了：确认收货时必须记录破损数量，破损数量大于零时
+还要选择隔离库位。只更新 F20 的 Feature Map 行，报告受影响的 Storyboard 和 Plan。
 ```
 
 ```text
-/feature-storyboard 按更新后的 F02 Map 行修订 Storyboard，补充破损数量和隔离库位状态。
+/feature-storyboard 按更新后的 F20 Map 行修订 Storyboard，补充破损数量和隔离库位状态。
 ```
 
 ```text
-/feature-plan 按更新后的 F02 Map 行和 Storyboard 修订 Feature Plan，引用新的 S* 与 T*。
+/feature-plan 按更新后的 F20 Map 行和 Storyboard 修订 Feature Plan，引用新的 S* 与 T*。
 保留不受影响且仍有效的测试结果，受影响的结果改为 not run。不授权实现。
 ```
 
@@ -181,14 +181,14 @@ CSS；报告 `S*`、`T*` 和 rendering checks。浏览器不可用时才报告�
 - Plan 的 `## Decisions` 记录一行变更原因和影响，开头的当前执行位置指向需要重跑的
   场景；组织要求变更单时只链接它，不另建 CR 文档。
 
-如果已在 `cross-agent` 中授权完成 F02，Orch 可以按同样的上游优先顺序协调这三次修订，
+如果已在 `cross-agent` 中授权完成 F20，Orch 可以按同样的上游优先顺序协调这三次修订，
 只为实质的产品选择询问你。
 
 ### 2. 确认后再实现变化
 
 ```text
-/feature-delivery F02 的 Map、Storyboard 和 Plan 变化已经确认。现在请按修订后的 Plan 自动实现破损
-数量与隔离库位流程，只修改 F02 所需代码和测试。重新运行受影响场景及相关回归，
+/feature-delivery F20 的 Map、Storyboard 和 Plan 变化已经确认。现在请按修订后的 Plan 自动实现破损
+数量与隔离库位流程，只修改 F20 所需代码和测试。重新运行受影响场景及相关回归，
 记录真实结果并同步 Plan 和 Map 状态。
 ```
 
@@ -197,7 +197,7 @@ blocker，并把 Plan 与 Map 都设为 `blocked`；否则以验证证据决定 
 `verified`。
 
 在 `cross-agent` 中执行这一步时，Reviewer 还会收到该 revision 的测试变更摘要：
-被删除或改写的 F02 测试、新的 skip 或过滤参数、fixture 变化和检查的计数来源。摘要
+被删除或改写的 F20 测试、新的 skip 或过滤参数、fixture 变化和检查的计数来源。摘要
 只是检测信号；没有检测到变化时，Reviewer 仍要对照修订后的 Plan 判断破损数量和隔离
 库位场景是否真正被测试和断言。
 
@@ -230,27 +230,27 @@ Map 只包含当前尚待交付的 MVP，不要重建历史功能清单；新 ro
 预期：三次点名。资料充分时输出或协调 `docs/product-brief.md`、`docs/architecture.md`
 与 `docs/feature-map.md`；不足时停止于具体问题。
 
-### 2. 只为下一项工作准备 F02
+### 2. 只为下一项工作准备 F20
 
 ```text
-/feature-storyboard StockPilot 下一项工作是 Feature Map 中的 F02 入库收货：扫描 ASN
+/feature-storyboard StockPilot 下一项工作是 Feature Map 中的 F20 入库收货：扫描 ASN
 并确认实收数量。为它创建低保真手持设备 Storyboard。
 ```
 
 ```text
-/feature-plan 为 StockPilot 的 F02 创建引用 Storyboard S*、T* 的 Feature Plan。检查现有
+/feature-plan 为 StockPilot 的 F20 创建引用 Storyboard S*、T* 的 Feature Plan。检查现有
 .NET 8 API、React UI 和代表性测试来制定最小改动；不要实现，也不要给其他历史 Feature
 补建 Plan。如果出现会改变可见行为的实质冲突，停下询问，不要创建不可靠的 Plan。
 ```
 
-预期：两次点名。没有实质可见冲突时输出 F02 HTML 与 Plan；若有冲突，停止于决策点
+预期：两次点名。没有实质可见冲突时输出 F20 HTML 与 Plan；若有冲突，停止于决策点
 且不创建不可靠的 Plan；始终停止于实现前。
 
 ### 3. 按现有工程约定交付
 
 ```text
-/feature-delivery 请按 StockPilot 的 F02 Feature Plan 自动交付该 Feature，沿用现有 .NET 8、React、
-测试和目录约定。只实现 F02，运行聚焦测试和必要回归，把真实结果写回 Plan 并同步
+/feature-delivery 请按 StockPilot 的 F20 Feature Plan 自动交付该 Feature，沿用现有 .NET 8、React、
+测试和目录约定。只实现 F20，运行聚焦测试和必要回归，把真实结果写回 Plan 并同步
 Feature Map；不要因为发现其他旧代码问题而扩大范围。
 ```
 
@@ -313,7 +313,7 @@ Map 行；Roadmap 分配不算交付，某个 FS 需求至少被一行 Map 引�
 - 修复或扩展同一个用户结果时，`/feature-plan` 重开原 Plan，复用原 Feature ID；失效
   结果回到 `not run`，Plan 与 Map 回到 `planned`，再由 `/feature-delivery` 实现。
 - 出现可独立交付的新用户结果时，先用 `/feature-map` 分配全项目唯一的新 Feature ID，
-  再创建新 Plan；不要把它塞进旧 Plan 或创建 `F02-v2`。
+  再创建新 Plan；不要把它塞进旧 Plan 或创建 `F20-v2`。
 - 修改 Architecture Design 时，先用 `/architecture-design` 更新设计并报告全部受影响行
   和 Plan；再用 `/feature-map` 把旧证据不再证明当前设计的行回到 `planned`，随后分别用
   `/feature-plan` 协调受影响 Plan，再重新 Delivery。未受影响且证据仍有效的 Feature
@@ -378,7 +378,7 @@ ASN 时操作员看到什么？用 topic slug，不要编 Feature ID，未确认
 ```
 
 预期：输出 `docs/storyboards/unknown-asn-scan.html`，`S*`/`T*` 稳定，未确认状态标
-`candidate`，不写产品逻辑，报告浏览器检查结果。之后 F02 的 Plan 直接链接这个文件。
+`candidate`，不写产品逻辑，报告浏览器检查结果。之后 F20 的 Plan 直接链接这个文件。
 
 ### 3. 分范围代码风格：定义、审计、应用
 

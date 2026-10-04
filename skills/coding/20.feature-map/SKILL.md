@@ -23,8 +23,10 @@ child map described below.
 
 Keep the map concise and each Feature one independently useful outcome.
 Execution segments and subagent choices belong in that Feature's Plan; a long
-implementation alone does not justify another Map row. Use stable IDs such as
-`F01` that are unique across every child map and never reuse or renumber them.
+implementation alone does not justify another Map row. Give new Features stable
+IDs spaced by ten, such as `F10`, `F20`, and `F30`, unique across every child
+map; the unused numbers between them are reserved for inserted Features. Never
+reuse or renumber an ID, including existing ones.
 Put only MVP features in the main table; mention later ideas in one short
 section when needed.
 
@@ -126,8 +128,9 @@ pending migration.
    scope, report the missing decision and stop. Do not create or revise the
    Product Brief or Functional Specification as part of this Skill.
 3. Identify the smallest coherent MVP feature set and its dependency order.
-   Preserve existing IDs; choose the next unused project-wide ID for a new
-   outcome.
+   Preserve existing IDs; give a new outcome the next unused project-wide
+   multiple of ten, or an unused number between two IDs when it is inserted
+   between them.
 4. Decide whether that set fits one map. Use the scale layout only when the
    required outcomes and dependencies cannot remain clear in one map; stop as
    described above when the required Functional Specification is absent.

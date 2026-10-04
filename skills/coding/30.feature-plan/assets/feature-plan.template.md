@@ -1,14 +1,18 @@
-# <F01: Feature Name>
+# <F10: Feature Name>
 
 **Status:** planned
 
 **Current position:** Not started. Next: <first segment>. Remaining checks: all. Blockers: none.
 
-**Sources:** [Product Brief](../product-brief.md), [Owning Feature Map](<actual-relative-map-path>) row `F01`
+**Sources:** [Product Brief](../product-brief.md), [Owning Feature Map](<actual-relative-map-path>) row `F10`
 
 <Add cited requirement IDs and applicable Architecture Design and Testing Strategy links; delete this note when absent.>
 
 **Storyboard:** None
+
+**UI placement:** <shell regions this Feature uses>, per [<design document>](<path>)
+
+<Keep UI placement only for a UI Feature in a project whose design document defines an app shell; delete it and this note otherwise.>
 
 ## Outcome
 
@@ -22,10 +26,10 @@
 
 ## Implementation
 
-1. <Small vertical implementation step and likely touchpoints.>
-2. <Next step.>
+- Step 10: <Small vertical implementation step and likely touchpoints.>
+- Step 20: <Next step.>
 
-<For substantial work, replace this list and note with a compact table:
+<For substantial work, replace this list and note with a compact table whose segments are also `Step 10`, `Step 20`:
 Segment | Outcome | Owned areas | Prerequisites/contracts | Constraints | Focused checks | Handoff/remaining integration | Delegation.
 Default to one serial segment; end larger sequences with whole-feature validation.>
 

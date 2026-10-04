@@ -55,7 +55,9 @@ When a related Storyboard exists, either `docs/storyboards/<feature-id>-*.html`
 or an early topic Storyboard that the request names for this Feature, link it and
 reference its stable `S*` state and `T*` transition IDs where relevant; do not
 copy its visual content. A Storyboard is otherwise optional and this Skill does
-not create one.
+not create one. For a UI Feature in a project whose design document defines an
+app shell, add one short UI placement line naming the shell regions this Feature
+uses and linking that document instead of restating it.
 
 Leave actual results `not run` until a command has really run, and never paste
 raw logs into the Plan. List a failure path only when this Feature can actually
@@ -131,7 +133,9 @@ becomes mandatory only when the user or project rules select it.
    native platform; an installed dependency; then the minimum new code. Stop at
    the first option that satisfies the intended outcome and current constraints.
 4. Derive risks and questions as described above. Define the smallest
-   implementation sequence and concrete tests. For a behavior-preserving
+   implementation sequence and concrete tests. Number steps and segments
+   `Step 10`, `Step 20`, leaving gaps for inserted steps; never use `S10`,
+   which collides with Storyboard `S*` IDs. For a behavior-preserving
    simplification, plan revalidation of the intended observable behavior
    without promoting accidental code behavior into a requirement. Reference
    relevant Storyboard states and transitions by ID.
@@ -147,7 +151,7 @@ Keep one Plan per independently useful Feature outcome. Long execution alone
 calls for segments in that Plan, not new Features or Plans.
 
 Default to one serial segment. For substantial work, replace the implementation
-list with a compact table: segment ID, outcome, owned areas, prerequisites and
+list with a compact table: segment ID such as `Step 10`, outcome, owned areas, prerequisites and
 shared contracts, applicable constraints, focused checks, and handoff with the
 remaining integration. Place boundaries where a behavior is verifiable and the
 work fits the executor's context and time allowance; with cross-agent, size each
