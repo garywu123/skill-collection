@@ -1,6 +1,6 @@
 ---
 name: feature-storyboard
-description: Create or revise one low-fidelity HTML Storyboard that shows the key screens, states, and transitions of a UI Feature or of an early product question taken from a Product Brief or Functional Specification section before Features are mapped. Invoke explicitly, by name, to visualize, wireframe, preview, or confirm a desktop or mobile interaction. Do not use for non-UI work, production UI, confirming requirements, implementation planning, or high-fidelity prototypes.
+description: Create or revise low-fidelity HTML Storyboards for a UI Feature, or for an early product question taken from a Product Brief or Functional Specification section before Features are mapped, as clickable wireframe-app stories (one user story per file) that show the key screens, states, and transitions. Invoke explicitly, by name, to visualize, wireframe, preview, or confirm a desktop or mobile interaction. Do not use for non-UI work, production UI, confirming requirements, implementation planning, or high-fidelity prototypes.
 disable-model-invocation: false
 ---
 
@@ -14,17 +14,19 @@ proceed without it when the visual behavior is already clear.
 
 Use one of these sources:
 
-- `feature`: a Feature Map row. Name a new file
+- `feature`: a Feature Map row. Name a single-story file
   `docs/storyboards/<feature-id>-<slug>.html`, or revise the existing early
-  Storyboard that already shows this behavior.
+  Storyboard that already shows this behavior. A Feature with several stories
+  uses `<feature-id>-<n>-<story-slug>.html` per story and keeps
+  `<feature-id>-<slug>.html` as their index.
 - `early`: before Feature mapping, a Product Brief, a Functional Specification
   section, or an explicit product question. Name the file with a stable topic
   slug, `docs/storyboards/<topic-slug>.html`, and never invent a Feature ID.
   Use the topic slug instead of a Feature ID in the title and eyebrow.
 
 When a mapped Feature later covers an early Storyboard, keep its path, `S*`, and
-`T*` IDs; that Feature's Plan links the same file. Rename it only when the user
-asks, and then report every link to update.
+`T*` IDs; that Feature's Plan links the same file, or the index for several
+stories. Rename it only when the user asks, and then report every link to update.
 
 A Storyboard illustrates; it does not confirm a requirement. Mark a state or
 transition that shows unconfirmed behavior with `candidate` in its inventory
@@ -33,22 +35,34 @@ it to the requirement owner instead of treating the sketch as a decision.
 
 ## Output
 
-Create or update the file named above from
-[the template](assets/storyboard.template.html). Copy
-[the shared stylesheet](assets/_storyboard.css) to
-`docs/storyboards/_storyboard.css` the first time and reuse it unchanged for
-later Features. Copy [the optional runtime](assets/_storyboard.js) to
-`docs/storyboards/_storyboard.js` only for explicit click-through mode.
-Do not overwrite existing shared assets unless the user asks to upgrade them.
-In the copied template, replace the `F10` title and eyebrow with the Feature ID
-or topic slug.
+The default form is a story app: one file plays one complete user story, from
+its starting screen to its goal, like the real app drawn as a wireframe. One
+device is visible at a time; menus, dialogs, and feedback appear over the same
+screen; the reviewer clicks the marked controls and can restart. Branches that
+belong to the story, such as Cancel, a refusal, or a failure, stay in it and
+return to its path. A different goal is a different story.
+
+Create or update each story from [the template](assets/storyboard.template.html).
+Copy [the shared stylesheet](assets/_storyboard.css) and
+[the runtime](assets/_storyboard.js) to `docs/storyboards/` the first time and
+reuse them unchanged. When a project copy predates the story-app primitives,
+replace both copies from the Skill and report it; do not edit them otherwise.
+In the copied template, replace the `F10` title, eyebrow, and story number.
+
+A Feature with several stories also gets an index file with the template's
+header but no device: a `.sb-list` linking every story with its goal and its
+`S*` and `T*` ranges; each story keeps its own inventory. A
+static board with every state visible is the exception, for comparing
+alternatives of one screen side by side; omit `data-interactive` there.
 
 The HTML is the source of truth and its browser rendering is the review view.
 Export a PNG only when the user requests a shareable snapshot; do not maintain
 HTML and PNG as two canonical artifacts.
 
-Two to four states is normal and six is the maximum. Give every state a stable
-ID such as `S1` or `S2-error` and every transition a stable ID such as `T1`.
+A story usually has four to ten states; more than twelve, or a second goal,
+means split it. A static board has two to four states and at most six. In a
+story, give every state a stable ID `S<story>.<n>` such as `S2.3` and every
+transition `T<story>.<n>`; a static board uses `S1`, `S2-error`, and `T1`.
 Include a visible state and transition inventory so later work can reference the
 behavior without reading CSS or JavaScript. Use representative, non-sensitive
 fixture values only.
@@ -69,12 +83,19 @@ fixture values only.
   framework, web fonts, a CDN, or a build step.
 - Keep the design deliberately low fidelity: layout, hierarchy, controls,
   feedback, and decisions matter; brand polish and production animation do not.
-- Default to a static board with every state visible. Links to `#S*` targets can
-  express the flow without JavaScript.
-- For explicit click-through review, add `data-interactive` to the board and
-  load the shared runtime with `<script src="_storyboard.js" defer></script>`.
-  It may only switch declared states and reset to the declared initial state.
+- A story sets `data-interactive` on the board and loads the shared runtime
+  with `<script src="_storyboard.js" defer></script>`. The runtime only shows
+  one declared state at a time, starting at the state named by the URL
+  fragment or else the initial one, and restarts at the initial one; without
+  JavaScript, or when printed, every state is shown with working `#S*` links.
   Do not write feature-specific JavaScript.
+- Draw every state as the whole screen at that moment. Put a menu, dialog, or
+  toast in the same `.sb-device`, after `.sb-window` and its status bar, so it
+  overlays the screen. Mark the control that continues the story with
+  `.sb-hotspot`, and give each state one short `p.sb-note` saying what to try.
+- Draw platform UI the story depends on, such as a native file dialog or a
+  browser permission prompt, as a stand-in with plausible fixture content and
+  say so in the header; never leave such a step undrawn.
 - Never use network calls, storage, random outcomes, real delays, authentication,
   domain calculations, or product validation logic. Show each deterministic
   outcome as a declared state instead.
@@ -110,9 +131,12 @@ The default desktop shell uses only `.sb-topbar`, `.sb-sidebar`, and
 `.sb-content`. For a project app shell, include only the regions that shell
 defines. Feature content belongs inside these regions. Its public
 primitives are layout (`.sb-stack`, `.sb-row`, `.sb-actions`), blocks
-(`.sb-card`, `.sb-banner`, `.sb-dialog`, `.sb-list`, `.sb-list-item`), and muted
-text (`.sb-muted`). For controls, `.sb-field` can contain a native `input` or
-`select`; use `.sb-input` for the same control styling without that wrapper.
+(`.sb-card`, `.sb-banner`, `.sb-dialog`, `.sb-list`, `.sb-list-item`), overlays
+(`.sb-menu` with `.sb-menu__separator`, `.sb-modal` around a `.sb-dialog`,
+`.sb-toast`), state marks (`.sb-hotspot`, `.sb-selected`), and muted text
+(`.sb-muted`, which also marks a disabled control together with
+`aria-disabled="true"`). For controls, `.sb-field` can contain a native `input`
+or `select`; use `.sb-input` for the same control styling without that wrapper.
 Use `.sb-button` and optional `.sb-button--primary` for actions. Use only the
 established hooks that apply:
 `data-storyboard`, `data-initial`, `data-state`, `data-active`, `data-go`, and
@@ -133,17 +157,19 @@ request has crossed into a prototype or implementation task.
 2. State the visual question being reviewed. Identify only the states and
    transitions needed to answer it, covering relevant happy and failure paths.
    Separate behavior the sources confirm from candidate behavior.
-3. If more than six states seem necessary, recheck Feature or question scope
-   and report the smallest useful narrowing or split; do not silently change
-   the Feature Map or the product sources.
+3. List the user stories the question needs, one goal each, with their
+   branches. If a story exceeds twelve states, split it; if the Feature needs
+   many stories, recheck its scope and report the smallest useful narrowing;
+   do not silently change the Feature Map or the product sources.
 4. Reuse the shared assets, write the feature HTML, and render it in a browser.
    Check readable content, phone or desktop overflow, project shell regions,
-   in-device copy, stable IDs, every declared
-   transition target, and static behavior without JavaScript. If browser
-   rendering is unavailable, run structural checks and report the unverified
-   visual risk instead of claiming the rendering passed.
-5. For click-through mode, also exercise each declared path and Reset. Fix only
-   the Storyboard; do not implement product behavior.
+   in-device copy, stable IDs, every declared transition target, unreachable
+   states, and the all-states view without JavaScript. If browser rendering is
+   unavailable, run structural checks and report the unverified visual risk
+   instead of claiming the rendering passed.
+5. Play each story: follow every declared path and Restart, and check that
+   overlays do not hide the control they depend on. Fix only the Storyboard;
+   do not implement product behavior.
 6. Run the consistency check.
 
 ## Consistency Check
@@ -160,8 +186,8 @@ behavior for the Brief or Specification owner without editing those sources.
 
 ## Completion
 
-Report the Storyboard path, form factor, source, state and transition IDs,
-candidate behavior, fixture assumptions, rendering checks, and unresolved
-visual decisions. Stop without creating a Feature ID, Map row, Feature Plan, or
-implementation. Do not add approval metadata or a separate approval gate. Pause
-when an unresolved visual decision would change observable behavior.
+Report the Storyboard and story paths, form factor, source, state and
+transition IDs, candidate behavior, fixture assumptions, rendering checks, and
+unresolved visual decisions. Stop without creating a Feature ID, Map row,
+Feature Plan, or implementation. Do not add approval metadata or a separate
+approval gate. Pause when an unresolved visual decision would change observable behavior.

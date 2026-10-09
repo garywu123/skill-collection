@@ -3,68 +3,84 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>F10 · Feature Storyboard</title>
+  <title>F10 Story 1 · STORY NAME</title>
   <link rel="stylesheet" href="_storyboard.css">
+  <script src="_storyboard.js" defer></script>
 </head>
 <body>
-  <main class="sb-document" data-storyboard data-initial="S1">
+  <main class="sb-document" data-storyboard data-interactive data-initial="S1.1">
     <header class="sb-document__header">
       <div>
-        <p class="sb-eyebrow">F10 · Feature Storyboard</p>
-        <h1>FEATURE NAME</h1>
-        <p>Review question: DOES THIS FLOW MATCH THE INTENDED BEHAVIOR?</p>
+        <p class="sb-eyebrow">F10 · Story 1 · Feature Storyboard</p>
+        <h1>USER GOAL OF THIS STORY</h1>
+        <p>Review question: CAN THE USER REACH THIS GOAL, AND DO THE BRANCHES BEHAVE AS INTENDED? Click the dashed controls.</p>
       </div>
-      <button class="sb-button" type="button" data-reset data-interactive-control hidden>
-        Reset preview
-      </button>
+      <a class="sb-button" href="#S1.1" data-reset data-interactive-control hidden>Restart story</a>
     </header>
 
-    <section class="sb-flow" aria-label="Storyboard states">
-      <article class="sb-frame sb-phone" id="S1" data-state data-active tabindex="-1">
-        <p class="sb-frame__label"><strong>S1</strong> · Initial</p>
+    <section class="sb-flow" aria-label="Story states">
+      <article class="sb-frame sb-desktop" id="S1.1" data-state data-active tabindex="-1">
+        <p class="sb-frame__label"><strong>S1.1</strong> · Starting screen</p>
         <div class="sb-device">
-          <header class="sb-topbar">SCREEN TITLE</header>
-          <div class="sb-content sb-stack">
-            <label class="sb-field">
-              <span>FIELD LABEL</span>
-              <input value="Representative fixture" readonly>
-            </label>
-            <a class="sb-button sb-button--primary" href="#S2" data-go="S2" data-transition="T1">
-              Continue
-            </a>
+          <header class="sb-topbar sb-row">
+            <span>APP</span><a class="sb-hotspot" href="#S1.2" data-go="S1.2" data-transition="T1.1">File</a><span>Help</span>
+          </header>
+          <div class="sb-window">
+            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
+            <div class="sb-content sb-stack"><strong>REPRESENTATIVE CONTENT</strong></div>
+          </div>
+        </div>
+        <p class="sb-note">ONE SHORT REVIEWER HINT: open the File menu.</p>
+      </article>
+
+      <article class="sb-frame sb-desktop" id="S1.2" data-state tabindex="-1">
+        <p class="sb-frame__label"><strong>S1.2</strong> · Menu open</p>
+        <div class="sb-device">
+          <header class="sb-topbar sb-row"><span>APP</span><span>File</span><span>Help</span></header>
+          <div class="sb-window">
+            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
+            <div class="sb-content sb-stack"><strong>REPRESENTATIVE CONTENT</strong></div>
+          </div>
+          <ul class="sb-menu" role="menu" aria-label="File">
+            <li role="none"><a class="sb-hotspot" href="#S1.3" data-go="S1.3" data-transition="T1.2" role="menuitem"><span>COMMAND</span><span class="sb-muted">Ctrl+K</span></a></li>
+            <li class="sb-menu__separator" role="separator"></li>
+            <li role="none"><span role="menuitem">OTHER COMMAND</span></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="sb-frame sb-desktop" id="S1.3" data-state tabindex="-1">
+        <p class="sb-frame__label"><strong>S1.3</strong> · Confirm</p>
+        <div class="sb-device">
+          <header class="sb-topbar sb-row"><span>APP</span><span>File</span><span>Help</span></header>
+          <div class="sb-window">
+            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
+            <div class="sb-content sb-stack"><strong>REPRESENTATIVE CONTENT</strong></div>
+          </div>
+          <div class="sb-modal">
+            <section class="sb-dialog sb-stack" role="alertdialog" aria-modal="true" aria-labelledby="S1.3-title">
+              <strong id="S1.3-title">CONFIRMATION TITLE THAT WOULD SHIP</strong>
+              <span>CONSEQUENCE COPY THAT WOULD SHIP</span>
+              <div class="sb-actions">
+                <a class="sb-button" href="#S1.1" data-go="S1.1" data-transition="T1.3">Cancel</a>
+                <a class="sb-button sb-button--primary sb-hotspot" href="#S1.4" data-go="S1.4" data-transition="T1.4">Confirm</a>
+              </div>
+            </section>
           </div>
         </div>
       </article>
 
-      <article class="sb-frame sb-phone" id="S2" data-state tabindex="-1">
-        <p class="sb-frame__label"><strong>S2</strong> · Confirm</p>
+      <article class="sb-frame sb-desktop" id="S1.4" data-state tabindex="-1">
+        <p class="sb-frame__label"><strong>S1.4</strong> · Done</p>
         <div class="sb-device">
-          <header class="sb-topbar">CONFIRM ACTION</header>
-          <div class="sb-content sb-stack">
-            <div class="sb-card">
-              <strong>FIXTURE SUMMARY</strong>
-              <p>CONSEQUENCE COPY THAT WOULD SHIP</p>
-            </div>
-            <div class="sb-actions">
-              <a class="sb-button" href="#S1" data-go="S1" data-transition="T2">Back</a>
-              <a class="sb-button sb-button--primary" href="#S3" data-go="S3" data-transition="T3">
-                Confirm
-              </a>
-            </div>
+          <header class="sb-topbar sb-row"><span>APP</span><span>File</span><span>Help</span></header>
+          <div class="sb-window">
+            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
+            <div class="sb-content sb-stack"><strong>UPDATED CONTENT</strong></div>
           </div>
+          <div class="sb-toast" role="status">✓ VISIBLE COMPLETION FEEDBACK</div>
         </div>
-        <p class="sb-note">OPTIONAL REVIEWER NOTE OUTSIDE THE DEVICE</p>
-      </article>
-
-      <article class="sb-frame sb-phone" id="S3" data-state tabindex="-1">
-        <p class="sb-frame__label"><strong>S3</strong> · Completed</p>
-        <div class="sb-device">
-          <header class="sb-topbar">RESULT</header>
-          <div class="sb-content sb-stack">
-            <div class="sb-banner" role="status">VISIBLE COMPLETION FEEDBACK</div>
-            <a class="sb-button" href="#S1" data-go="S1" data-transition="T4">Start again</a>
-          </div>
-        </div>
+        <p class="sb-note">End of the story. <a href="#S1.1" data-reset>Restart story</a></p>
       </article>
     </section>
 
@@ -73,18 +89,19 @@
       <table>
         <thead><tr><th>ID</th><th>State</th><th>Purpose</th></tr></thead>
         <tbody>
-          <tr><td><code>S1</code></td><td>Initial</td><td>Starting information and primary action.</td></tr>
-          <tr><td><code>S2</code></td><td>Confirm</td><td>Consequence is visible before commitment.</td></tr>
-          <tr><td><code>S3</code></td><td>Completed</td><td>Observable successful result.</td></tr>
+          <tr><td><code>S1.1</code></td><td>Starting screen</td><td>Where the story begins.</td></tr>
+          <tr><td><code>S1.2</code></td><td>Menu open</td><td>The command is discoverable.</td></tr>
+          <tr><td><code>S1.3</code></td><td>Confirm</td><td>Consequence is visible before commitment.</td></tr>
+          <tr><td><code>S1.4</code></td><td>Done</td><td>Observable successful result.</td></tr>
         </tbody>
       </table>
       <table>
         <thead><tr><th>ID</th><th>From</th><th>Action</th><th>To</th></tr></thead>
         <tbody>
-          <tr><td><code>T1</code></td><td><code>S1</code></td><td>Continue</td><td><code>S2</code></td></tr>
-          <tr><td><code>T2</code></td><td><code>S2</code></td><td>Back</td><td><code>S1</code></td></tr>
-          <tr><td><code>T3</code></td><td><code>S2</code></td><td>Confirm</td><td><code>S3</code></td></tr>
-          <tr><td><code>T4</code></td><td><code>S3</code></td><td>Start again</td><td><code>S1</code></td></tr>
+          <tr><td><code>T1.1</code></td><td><code>S1.1</code></td><td>File</td><td><code>S1.2</code></td></tr>
+          <tr><td><code>T1.2</code></td><td><code>S1.2</code></td><td>COMMAND</td><td><code>S1.3</code></td></tr>
+          <tr><td><code>T1.3</code></td><td><code>S1.3</code></td><td>Cancel</td><td><code>S1.1</code></td></tr>
+          <tr><td><code>T1.4</code></td><td><code>S1.3</code></td><td>Confirm</td><td><code>S1.4</code></td></tr>
         </tbody>
       </table>
     </section>

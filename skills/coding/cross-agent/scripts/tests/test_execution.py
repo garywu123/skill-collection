@@ -319,15 +319,14 @@ class ExecutionTests(unittest.TestCase):
                                 "import time; exec('while True:\\n print(1, flush=True); time.sleep(0.02)')"], call)
             self.assertLess(time.monotonic() - started, 5)
 
-    def test_implicit_policy_is_enabled_only_for_the_three_agreed_skills(self):
+    def test_implicit_policy_is_enabled_for_the_agreed_skills(self):
         coding = Path(__file__).resolve().parents[3]
-        for name in ("20.feature-map", "30.feature-plan", "40.feature-delivery"):
+        for name in ("20.feature-map", "30.feature-plan", "40.feature-delivery", "cross-agent"):
             folder = coding / name
             self.assertIn("disable-model-invocation: false", (folder / "SKILL.md").read_text())
-            self.assertNotIn("Invoke explicitly, by name", (folder / "SKILL.md").read_text())
+            self.assertNotIn("Invoke explicitly", (folder / "SKILL.md").read_text())
             self.assertEqual((folder / "agents" / "openai.yaml").read_text().strip(),
                              "policy:\n  allow_implicit_invocation: true")
-        self.assertIn("disable-model-invocation: true", (coding / "cross-agent" / "SKILL.md").read_text())
 
 
     def test_replan_parks_and_resumes_with_original_delivery_baseline_and_budget(self):

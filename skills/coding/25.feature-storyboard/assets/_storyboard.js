@@ -30,6 +30,8 @@
       }
     };
 
+    board.toggleAttribute("data-running", true);
+
     for (const control of board.querySelectorAll("[data-interactive-control]")) {
       control.hidden = false;
     }
@@ -60,6 +62,7 @@
       activate(targetId);
     });
 
-    activate(initialId ?? fallbackId, false);
+    const linkedId = decodeURIComponent(location.hash.slice(1));
+    activate(states.has(linkedId) ? linkedId : initialId ?? fallbackId, false);
   }
 })();

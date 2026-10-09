@@ -32,7 +32,9 @@ Include only what applies:
 - production and test projects, their locations, and verified entry commands;
   use separate test projects where the stack expects them, such as .NET test
   `.csproj` files, without requiring one per test category;
-- unit, integration, and end-to-end boundaries;
+- unit, component, integration, and end-to-end boundaries, choosing the
+  smallest level that detects each distinct failure; multiple levels need
+  different failure coverage, including real browser/native boundaries;
 - business invariants with links to their requirement sources;
 - correctness oracles for algorithms and data transformations;
 - fixture provenance, representative and worst supported scale, and limits on
@@ -45,7 +47,9 @@ Include only what applies:
 
 State a command only when configuration, automation, or an observed successful
 run verifies it. Line coverage and a green exit code do not establish behavior
-coverage or assertion strength.
+coverage or assertion strength. Reuse adequate cases and strengthen existing
+assertions before adding cases, fixtures, mocks, or another test project.
+Apply this rule in Feature Plans; do not turn the strategy into a case list.
 
 ## Oracles And Measurement
 
@@ -102,6 +106,8 @@ its owning source; report it instead of writing it here.
 - Commands are verified; skip, discovery, and isolation rules prevent silent
   non-execution.
 - Independent-testing conditions name concrete verification gaps.
+- Additional test levels or infrastructure close an identified coverage gap;
+  they do not merely repeat the same assertions at greater cost.
 
 ## Consistency Check
 

@@ -22,13 +22,14 @@ Product Brief
   -> Feature Delivery (auto | guided)
 ```
 
-`feature-map`、`feature-plan`、`feature-delivery` 可由模型根据用户请求自动选择，也可
+`feature-map`、`feature-plan`、`feature-delivery`、`cross-agent` 可由模型根据用户请求自动选择，也可
 显式调用。它们共享一份 `SKILL.md` 正文和 description：Claude Code 用 frontmatter 的
 `disable-model-invocation: false`；Codex 用同目录 `agents/openai.yaml` 的
-`policy.allow_implicit_invocation: true`。其他生命周期 Skills 与 `cross-agent` 保持
+`policy.allow_implicit_invocation: true`。其他生命周期 Skills 保持
 显式调用边界；Copilot 的发现依其客户端支持，不能假定它识别这两个平台专用字段。
 自动选择 Skill 不扩大授权：只请求规划时停在规划，要求完成一个 Feature 时可按已授权
-结果衔接必要规划和交付；缺失产物本身不授权创建新产品范围。
+结果衔接必要规划和交付；缺失产物本身不授权创建新产品范围。小范围直接修改或普通一次评审
+不必启动 Cross-agent；仅在协调与独立评审的收益值得 worker 和上下文成本时自动选择它。
 
 Product Brief 和 Functional Spec 可以对照用户授权的访谈证据编写或 `review`：区分用户
 原话和模型建议、已确认决定和候选、最新决定和被取代的说法；有出处时保留位置或简短
@@ -50,7 +51,11 @@ Feature Map 拆独立用户结果；Feature Plan 评估执行规模、依赖、�
 用紧凑表安排多个执行 segment/session，最后整体回归。Plan 没有固定行数上限，但只写
 本 Feature 的内容；开头保持当前执行位置（已完成/下一段、剩余检查、blocker），新
 session 不依赖旧对话即可接手。Plan 读取 Testing Strategy，按真实用户、数据、负载和
-失败后果推导风险，只问少量会改变设计或验收的问题。Feature Delivery 按计划执行并重新
+失败后果推导风险，先读取已确认决定，只问会改变设计或验收的未决问题，不为失败用例凑数量。
+Testing Strategy 要求各测试层覆盖不同失败，优先复用或加强已有用例；Delivery 只为覆盖缺口
+增补测试，仍执行所有必要关卡。Reviewer 的问题应有实际触发条件、后果和最小修复建议，新增
+测试应说明现有覆盖漏掉什么；Orch 裁决证据，不自动接受严重性标签。交接保留当前决定、下一步、
+未解决问题和验证出处，不累积每轮叙述，也不丢失独有证据。Feature Delivery 按计划执行并重新
 核实委派边界；只有收益超过背景加载和整合成本的独立任务才开 sub-agent，最多同时三个，
 并受环境限制。
 
@@ -142,7 +147,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`architecture-design`](18.architecture-design/SKILL.md) | 探索、编写、审阅唯一的共享架构：组件边界、契约、数据所有权、依赖方向、部署假设和技术质量约束；把 Map 内的技术方向或既有 General Design 迁移过来 | `docs/architecture.md`，或沿用既有 General Design 路径 |
 | [`testing-strategy`](19.testing-strategy/SKILL.md) | 编写或审阅可复用的项目测试规则：测试层级、业务不变量、算法 oracle、fixture 规模、资源测量方法、回归和独立测试条件；未定预算记为待决 | `docs/testing.md` |
 | [`feature-map`](20.feature-map/SKILL.md) | 选择合适规模的 MVP 交付结构：小项目一张 Map，大项目拆为 Roadmap 和子 Map；只管结果、依赖和状态，链接 Architecture Design | `docs/feature-map.md`，或 `docs/feature-maps/` |
-| [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需展示一个 UI Feature，或拆 Feature 前一个早期产品问题的关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html`；早期为 `docs/storyboards/<topic-slug>.html` |
+| [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需把一个 UI Feature，或拆 Feature 前一个早期产品问题，做成可点击的线框 app 故事（一个文件一个用户故事），展示关键状态和交互 | `docs/storyboards/<feature-id>-<slug>.html`；多个故事时为 `<feature-id>-<n>-<story-slug>.html` 加索引 `<feature-id>-<slug>.html`；早期为 `docs/storyboards/<topic-slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划（分段、当前执行位置、风险与测试设计）；或为有界技术问题写 standalone validation 计划 | `docs/features/<feature-id>-<slug>.md`；validation 为 `docs/plans/<topic>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，增量 TDD 并记录真实测试结果，每个最终结果（含 validation 证据）绑定实际测试的 revision、相关路径和 dirty 内容标识（后续相关变更才使其失效）；重跑失败检查前保留命令、测试 ID（无则注明不可得）、退出码和简短失败摘要，原因不明的先失败后通过记为未解决风险而非已修复；选定独立关卡时只报告 readiness；或执行 validation 计划并分别记录执行状态与结论；在 Orch 下不 commit，直接调用且明确授权时按 segment commit | 更新代码、Feature Plan 和 Feature Map 状态；validation 只更新其计划 |
 | [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort（可按阶段设置）和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；每阶段独立 Producer/Reviewer run，限定审阅次数并裁决 findings，每次评审附确定性测试变更摘要，按功能/主题保留调用历史；明确授权时由 Orch 逐 section 提交本地 commit | 项目根目录 `.cross-agent/config.toml`；各阶段 artifact 与对话进度；`.cross-agent/history/` 的时间与用量 CSV，`history` 可汇总；非阻塞遗留项追加到 `docs/review-backlog.md` |

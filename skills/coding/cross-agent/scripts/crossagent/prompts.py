@@ -55,6 +55,12 @@ def producer_prompt(
         "- In outcomes, report every accepted finding listed above as fixed or not-fixed, with a rationale. "
         "Return an empty outcomes list when none is listed.",
         "- Change only what the request, the accepted findings, and the Skill's consistency check require.",
+        "- Read confirmed decisions before asking. If a safeguard depends on an unresolved usage choice, "
+        "return needs-user-decision with the question and its consequence before making dependent edits; "
+        "do not invent guarantees or repeat answered questions.",
+        "- Reuse adequate tests; strengthen or add them for a distinct coverage gap, preserving required checks.",
+        "- Keep the summary to current decisions and sources, changed behavior, completed/next work, "
+        "open failures or gates, and tested-evidence locators; do not replay earlier rounds or raw logs.",
         "- Do not commit, and do not start another lifecycle stage.",
         "- For an execution stage, return checkpoint only after a planned segment and its focused checks, "
         "when more authorized work remains. Summarize acceptance evidence, stable contracts, and the next "
@@ -133,6 +139,18 @@ def reviewer_prompt(
         "- risk: a concrete security, permission, data-loss, or irreversible-action risk.",
         "Give each finding evidence: a rule citation, a path:line, or a failing command. "
         "Rate its severity as blocker, major, or minor.",
+        "Use claim, evidence, and recommendation to explain the supported trigger, unmet promise or concrete "
+        "risk, user consequence, and smallest adequate correction. Concrete code-supported security or "
+        "data-loss risks need no invented product requirement. Distinguish product, test, and environment "
+        "failures; unknown causes stay unknown.",
+        "Before requesting another test or test layer, name the distinct failure existing coverage misses; "
+        "prefer strengthening an existing case. Preserve necessary protections and required gates.",
+        "For a missing authoritative decision that prevents judging a requested outcome, state the acceptance "
+        "gap, checked sources, consequence, and question for Orch in the existing finding fields. Do not "
+        "invent a defect, guarantee, or severity just to transport a question; optional uncertainty is notes. "
+        "Do not represent a necessary unresolved acceptance gap as satisfied.",
+        "Start with the supplied artifact, diff, findings and check evidence; inspect relevant source sections "
+        "as needed to verify them, without reconstructing unrelated project history.",
         "Put alternative designs, style preferences without a rule, speculative future concerns, unrelated "
         "cleanup, optional refactoring, and improvement ideas in notes.",
     ]

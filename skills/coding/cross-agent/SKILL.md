@@ -1,6 +1,6 @@
 ---
 name: cross-agent
-description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Invoke explicitly as cross-agent or Orch; initiate creates repo-local configuration with model/effort defaults and checks Codex CLI freshness without starting workers. Coordinate Producer and read-only Reviewer stages, report live progress, retain worker time/token CSV history, adjudicate findings, and continue through user-authorized stages using Claude Code or Codex through the bundled CLI. Do not invent product scope, bypass a required human gate, or use for an ordinary one-pass review."
+description: "Act as the user's PM-style Orchestrator for a bounded task: design, roadmap, refactor planning and execution, or selected Features. Use when the user asks for cross-agent or Orch, or a bounded task benefits from coordinated Producer and independent Reviewer stages. Explicit initiate requests create repo-local configuration and check Codex CLI freshness without starting workers. Report progress, retain worker time/token CSV history, adjudicate findings, and continue through authorized stages using Claude Code or Codex through the bundled CLI. Do not invent scope, bypass a human gate, or use for a small direct edit or ordinary one-pass review."
 disable-model-invocation: false
 ---
 
@@ -41,6 +41,11 @@ version detection uses the selected Codex. CLI paths are read at each worker
 call, including existing runs; saved roles, commands, and budgets are unchanged.
 
 ## Mode Selection
+
+Automatic selection does not expand the user's task or require this workflow
+for every edit. Use it when coordination and independent review justify the
+worker/context cost; prefer the direct owning Skill for a small bounded task
+without that need. Explicit user workflow choices and selected gates prevail.
 
 Resolve the mode before the run procedure. An explicit `initiate`, `init`, or
 request to initialize Cross-agent configuration selects initialization below.
@@ -211,8 +216,14 @@ One CLI run handles one stage, while this conversation owns the agenda. After
 closing a completed run, continue to the next already-authorized stage without
 asking again. Start fresh Producer and Reviewer sessions at each stage or
 independent work item; within a stage, use the CLI's resume/rotation mechanism.
-Pass the reviewed artifact and a short handoff of scope, decisions, and checks,
-not the prior transcript. An unresolved decision, failed check, or unaccepted
+Pass the reviewed artifact and a short handoff of scope, current decisions and
+their sources, completed/next work, unresolved findings, gates, and tested
+evidence locators, not the prior transcript. Start with CLI status and this
+handoff; open cited source sections or diff hunks when needed for judgment.
+Replace obsolete active instructions with a short supersession reason while
+keeping unique evidence recoverable in existing history or references. Do not
+create another tracker. Worker rotation does not rotate this Orch session.
+An unresolved decision, failed check, or unaccepted
 upstream result stops dependent stages. `completed-by-orchestrator` is not an
 independent review pass: if the user's gate requires that pass, stop there.
 
@@ -266,7 +277,14 @@ run`, keep a Feature `in_progress`, and report the missing independent pass.
    because snapshots would count those edits as the run's.
 4. Check the project's configured commands against the stage's verification
    needs. `delivery_checks` run after Producer changes for `feature-delivery`
-   and `general`; use stage-appropriate configuration for document-only work.
+   and `general`. Before start, explicitly select an existing complete
+   task-appropriate configuration with `CROSS_AGENT_CONFIG` when necessary,
+   inspect it with `status`, and retain required gates and authorized
+   permissions. Record its locator and reason in the existing request/handoff,
+   keeping private paths out of tracked documents. Keep it available for later
+   calls. Selection does not authorize configuration edits; report a missing
+   suitable configuration. Do not switch it or drop saved checks to evade a
+   failure. Document work must not inherit unrelated application checks.
    Missing commands must be reported, not silently counted as successful tests.
    An optional `test_reports` table in the project section maps a configured
    check command to the JUnit XML report it writes; only an explicit
@@ -476,9 +494,21 @@ A valid finding names an unmet requested outcome, a conflict with an
 authoritative input, a real validation failure, an internal contradiction, a
 regression from the latest change, or a concrete security, permission,
 data-loss, or irreversible-action risk. It cites a rule, a `path:line`, or a
-failing command. Read the cited evidence and the artifact lines the finding
-concerns, and little else; a small context keeps your judgment sharp across
-runs.
+failing command. Require a supported trigger, unmet promise or concrete risk,
+user consequence, and smallest adequate correction in the existing finding
+fields. Judge that evidence rather than automatically accepting a severity
+label; the eligibility rules above still apply. For an added test, identify
+the distinct failure existing coverage misses. Read cited evidence and the
+relevant artifact/source sections, expanding only to resolve the finding.
+
+If a missing authoritative decision prevents judging a requested outcome,
+use the Reviewer's evidenced acceptance gap and question in existing finding
+prose. Resolve it from a cited user decision or ask before `decide`; leave it
+pending while waiting, and carry the answer and source into adjudication
+guidance. Do not invent a requirement or severity to turn an optional question
+into a blocker, or dismiss a genuine unresolved gap to obtain a pass. If the
+existing route cannot honestly represent the gap, report the limitation.
+Questions do not create extra reviews or revisions.
 
 Give every non-accepted finding a rationale a person can act on later and a
 priority (`high`, `medium`, `low`, or `none`), because it may reach the review

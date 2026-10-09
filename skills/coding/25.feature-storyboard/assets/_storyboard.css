@@ -309,18 +309,109 @@ input {
   display: none !important;
 }
 
-[data-storyboard][data-interactive] .sb-flow {
+[data-storyboard][data-interactive][data-running] .sb-flow {
   display: block;
 }
 
-[data-storyboard][data-interactive] .sb-frame {
+[data-storyboard][data-interactive][data-running] .sb-frame {
   display: none;
-  max-width: 960px;
+  max-width: 1240px;
   margin: 0 auto;
 }
 
-[data-storyboard][data-interactive] .sb-frame[data-active] {
+[data-storyboard][data-interactive][data-running] .sb-desktop .sb-device {
+  width: min(100%, 1200px);
+}
+
+[data-storyboard][data-interactive][data-running] .sb-frame[data-active] {
   display: block;
+}
+
+/* Click-through app mode: menus, modals, and toasts drawn over one device. */
+.sb-device {
+  position: relative;
+}
+
+.sb-menu {
+  position: absolute;
+  top: 46px;
+  left: 120px;
+  z-index: 2;
+  min-width: 240px;
+  margin: 0;
+  padding: 6px 0;
+  border: 1px solid var(--sb-ink);
+  border-radius: 6px;
+  background: var(--sb-paper);
+  box-shadow: 5px 5px 0 var(--sb-soft);
+  list-style: none;
+  font-weight: 400;
+}
+
+.sb-menu > li > a,
+.sb-menu > li > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 7px 14px;
+  color: var(--sb-ink);
+  text-decoration: none;
+}
+
+.sb-menu > li > .sb-muted {
+  color: var(--sb-muted);
+}
+
+.sb-menu > li > a:hover {
+  background: var(--sb-soft);
+}
+
+.sb-menu__separator {
+  margin: 4px 0;
+  border-top: 1px solid var(--sb-line);
+}
+
+.sb-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: safe center;
+  overflow: auto;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.sb-modal > .sb-dialog {
+  width: min(100%, 520px);
+  max-width: none;
+  margin: 0;
+}
+
+.sb-toast {
+  position: absolute;
+  right: 16px;
+  bottom: 40px;
+  z-index: 2;
+  padding: 10px 14px;
+  border: 1px solid var(--sb-ink);
+  border-radius: 6px;
+  background: var(--sb-paper);
+  box-shadow: 4px 4px 0 var(--sb-soft);
+}
+
+.sb-hotspot {
+  outline: 2px dashed var(--sb-accent);
+  outline-offset: 3px;
+  cursor: pointer;
+}
+
+.sb-topbar a {
+  color: inherit;
+}
+
+.sb-selected {
+  background: var(--sb-soft);
 }
 
 @media (max-width: 720px) {
@@ -366,11 +457,11 @@ input {
     padding: 0;
   }
 
-  [data-storyboard][data-interactive] .sb-flow {
+  [data-storyboard][data-interactive][data-running] .sb-flow {
     display: grid;
   }
 
-  [data-storyboard][data-interactive] .sb-frame {
+  [data-storyboard][data-interactive][data-running] .sb-frame {
     display: block;
   }
 }

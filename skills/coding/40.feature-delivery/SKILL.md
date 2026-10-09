@@ -59,8 +59,8 @@ division briefly and continue from the current behavior.
 
 In `guided` mode, for each behavior:
 
-1. Normally write or update the focused test and fixtures, run them, and confirm
-   the intended failure when practical.
+1. Reuse an adequate focused test, or strengthen/add it and its fixtures for
+   a coverage gap. Run it and confirm the intended failure when practical.
 2. Tell the user the implementation file, symbol or signature, and required
    behavior. For a user-assigned function, provide a complete function-body
    draft that the user can type into the file: include the expected control
@@ -90,6 +90,10 @@ new revision. Do not checkpoint trivial work just to create sessions.
 At every segment boundary and before any checkpoint, update the Plan's current
 position: completed and next segment, remaining checks, and material blockers.
 Record a decision that changes the Plan in its `## Decisions` with the reason.
+Keep handoffs to current decisions, completed/next work, open failures and
+gates, and tested-evidence locators. Replace superseded instructions with a
+short reason and recoverable source; preserve unique evidence instead of
+repeating the conversation or every earlier result.
 
 Commit only with explicit authorization from the user's request or a project
 rule; this Skill grants none. Within cross-agent, never commit: the
@@ -199,10 +203,12 @@ decision owner's document.
    row to `in_progress`. For simplification, first establish and run the
    focused baseline for intended behavior. Report a baseline failure before
    changing implementation unless the Plan explicitly includes fixing it. Work
-   through the plan's happy paths first. For each behavior, add or update a
-   focused test, confirm it fails for the intended reason when practical, make
-   the smallest change under the selected mode, and rerun it. Build tests
-   incrementally rather than writing and freezing all tests first. Confirm the
+   through the plan's happy paths first. For each behavior, reuse adequate
+   focused coverage; strengthen or add a test only for a gap, using the
+   Testing Strategy's smallest adequate level. Confirm the intended failure
+   when practical, make the smallest change under the selected mode, and
+   rerun the relevant test. Build tests incrementally rather than writing and
+   freezing all tests first. Confirm the
    runner actually discovers and executes each new test and that its
    assertions check the expected result.
 2. Work through each relevant failure path in the same way. Do not add generic
@@ -213,8 +219,12 @@ decision owner's document.
    item only when current intended behavior and constraints do not require it;
    do not perform repo-wide cleanup.
 4. Run the plan's focused commands, then the relevant broader regression,
-   build, lint, or type checks required by the repository. Before rerunning a
-   failed check, preserve its command and scope, the failing test ID (or that
+   build, lint, or type checks required by the repository. Required gates
+   still run at their required boundaries; repeat discretionary broad suites
+   only after a relevant change, failure, or unresolved verification gap.
+   Classify a failure as product, test, environment, or still unknown before
+   choosing a repair; an environment failure is not proof of a product defect.
+   Before rerunning a failed check, preserve its command and scope, the failing test ID (or that
    none is available when discovery or the command itself failed; never invent
    one), the exit status, a concise failure excerpt, and relevant conditions,
    bound to the tested tree as in step 5. Keep raw output private; put a short

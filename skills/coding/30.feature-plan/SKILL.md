@@ -41,7 +41,10 @@ segment, remaining checks, and material blockers. Keep it true whenever a
 segment, check, blocker, or source changes. Record key decisions and changes
 with one-line reasons in `## Decisions`; keep transcripts, prompts, and routine
 activity logs out. A fresh executor must be able to resume from the Plan and the
-repository references it names, without the prior conversation.
+repository references it names, without the prior conversation. Replace
+superseded instructions in the active view with a short decision and source
+locator; preserve unique evidence in existing history or retained references,
+including unresolved failures. Do not accumulate a narrative of every round.
 
 Link to the Product Brief, the owning Feature Map, and the applicable
 Architecture Design and Testing Strategy sections instead of copying them. A
@@ -61,8 +64,8 @@ uses and linking that document instead of restating it.
 
 Leave actual results `not run` until a command has really run, and never paste
 raw logs into the Plan. List a failure path only when this Feature can actually
-cause it or must handle it; two to four rows is normal. Do not work through a
-category checklist.
+cause it or must handle it. There is no case-count target; do not work through
+a category checklist.
 
 ## Status And Changes
 
@@ -96,13 +99,16 @@ workloads, data, failure consequences, and changed boundaries, inspecting
 project evidence first. Plan tests for the risks that matter; do not restate the
 strategy.
 
-Ask only a small number of high-value questions whose answers change the design
-or acceptance, and say why each matters. For a data-loading Feature these might
-cover the representative and worst supported dataset size, old and new data
-resident together, cancellation, repeated runs, peak versus steady memory,
-target hardware, response time, and recovery; select from such examples rather
-than using them as a checklist. Search external sources only for a relevant
-uncertainty, cite primary sources, and mark applicability.
+Read prior decisions before asking; preserve confirmed answers unless new
+evidence conflicts. Ask only unresolved questions whose answers change design
+or acceptance, in user terms, explaining the consequence: where and by whom
+the app is used, whether edits overlap, what data must survive a failure, or
+whether retrying manually is acceptable. Select only material questions, not
+a fixed interview. In existing scenario rows or decision prose, connect a
+proposed safeguard or test to its supported trigger, source, user consequence,
+and simplest acceptable behavior. Do not assume local use means trusted input
+or dispensable data. Search external sources only for a relevant uncertainty,
+cite primary sources, and mark applicability.
 
 A missed case under an existing requirement belongs in this Plan. A new
 business rule or resource budget needs a decision by its owning source: record

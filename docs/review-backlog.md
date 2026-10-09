@@ -57,3 +57,16 @@ current: `open`, `promoted`, `resolved`, or `dismissed`.
 - Evidence: `Request 1(b) includes scroll containment in the structural CSS.`, `skills/coding/25.feature-storyboard/assets/_storyboard.css:106 and :123 specify only minimum heights.`, `skills/coding/25.feature-storyboard/assets/_storyboard.css:126 adds overflow:auto without a bounded height or shrinkable vertical track.`
 - Proposed change: Give the app-shell viewport a bounded height and allow its content regions to shrink and scroll, while preserving the default and phone shells.
 - Rationale: Minor: static boards rarely need to demonstrate in-region scrolling; add a bounded height and shrinkable tracks if a board needs it.
+
+## RB-0005: The revision introduced a UTF-8 byte-order mark at the start of the plan file: line 1 now begins...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261008-144809-general-0e4c`, finding `R2-001`
+- Artifact: `docs/coding-agent/lean-workflow-plan.md` (general)
+- Base: `27ef961` with uncommitted changes
+- Claim: The revision introduced a UTF-8 byte-order mark at the start of the plan file: line 1 now begins with U+FEFF before the level-one heading, whereas the previous revision and the rest of the repository's Markdown start with a plain `#`. Strict parsers and scripts that read the file as plain UTF-8 see `﻿# ...` as the first line, so the title may not be recognized as an ATX heading, which conflicts with the repository Markdown style the plan claims to have checked.
+- Evidence: `Review diff, first hunk: `-# Lean Skill Workflow Change Plan` replaced by `+﻿# Lean Skill Workflow Change Plan`; the only difference on that line is the leading byte-order mark`, `docs/coding-agent/lean-workflow-plan.md:1`, `AGENTS.md, Markdown Style: 'Use one level-one title and ATX headings without skipping levels'; plan line 'Planning verification: ... checked this plan's scope, relative links, headings and whitespace' did not catch the encoding change`
+- Proposed change: Save the file as UTF-8 without a byte-order mark so line 1 starts with `#`; no content change is needed. Suitable for note-only disposition or the Orchestrator's finalization batch since it is a one-byte encoding fix.
+- Rationale: Valid minor encoding regression; it does not earn another revision. After closing this planning run, remove the BOM as an explicitly reported mechanical correction, correct the check-result attribution, and record the final review outcome without changing the reviewed design. Both accepted R1 findings are resolved. The pre-existing invocation-policy check remains failed and the user decision remains open; do not claim independently-passed.
