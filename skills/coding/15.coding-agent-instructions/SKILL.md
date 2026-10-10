@@ -67,6 +67,15 @@ that file and write no code-style rule here. When the file does not exist yet,
 omit the route and report that `code-style` should run.
 
 Create or update `AGENTS.md` from [the template](assets/agents.template.md).
+When the user explicitly selects the Feature workflow for this project, use
+[the optional profile](assets/feature-workflow.profile.md). Replace its app
+name and preserve approved naming differences; include only supported routes.
+Selection approves the profile's branch/local-commit policy for subsequently
+authorized work, not implementation scope, push, merge, or history rewriting.
+Reconcile its commit authorization with the template's default boundary rather
+than keeping both. Without selection, omit it and preserve existing policy.
+Keep model/effort and runtime parameters in cross-agent configuration; keep
+step acceptance/results in the Plan and procedures in their owning Skills.
 At 80 source lines, review duplicated explanations, nonexistent routes, empty
 sections, and rules better owned by a linked document or nested `AGENTS.md`.
 Treat 100 lines as a strong review threshold, not a validity gate. When a file

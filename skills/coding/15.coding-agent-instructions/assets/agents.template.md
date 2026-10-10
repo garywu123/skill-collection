@@ -33,6 +33,13 @@ Keep only commands verified by project configuration, automation, or an
 observed successful run. State the working directory, trigger, and relevant
 scope. Delete this section when no command is verified.
 
+## Optional Feature Workflow
+
+If explicitly selected for this project, insert the adapted rules from
+[the Feature workflow profile](feature-workflow.profile.md), reconcile the
+commit boundary below, and remove these authoring notes. Otherwise delete this
+section. Never include unselected policy or unresolved placeholders.
+
 ## Boundaries
 
 - Do not create, amend, or push commits unless the user explicitly requests it.

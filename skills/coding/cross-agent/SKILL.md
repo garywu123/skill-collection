@@ -260,6 +260,42 @@ changed; report it instead of finalizing. This edit is not a repair; anything
 more needs a new run. After `completed-by-orchestrator`, leave the gate `not
 run`, keep a Feature `in_progress`, and report the missing independent pass.
 
+## Orchestrator Context Handoff
+
+Manage the Orch context at stage boundaries, not on an elapsed-time schedule.
+Worker `rotate_at_tokens`, provider compaction, and Orch chat compaction are
+different mechanisms; worker rotation never rotates this session. This Skill
+adds no compaction timer, token threshold, or runtime setting.
+
+- At each delivery checkpoint, ensure the owning Plan records the completed
+  and next segment, actual checks, blockers, and any authorized commit. A
+  checkpoint alone does not require Orch compaction.
+- After a Plan independently passes and before Delivery starts, and after a
+  Feature finishes and before the next starts, assess whether old transcripts,
+  repeated review rounds, or superseded instructions crowd the active context.
+  Prepare a short handoff when compaction or a fresh Orch chat would help.
+- Prepare that handoff while no worker is running, after consuming its result
+  and recording any decisions. Preserve pending questions, unresolved findings,
+  failures, and required gates; compaction never resolves or drops them.
+- Keep task and authorization scope, artifact locators, stage/item/run ID,
+  branch and current revision, selected roles/config locator, current position,
+  remaining checks, evidence locators, and next action. Link the Plan and CLI
+  status instead of copying their contents or the old transcript. Keep private
+  paths and credentials out of tracked artifacts and worker requests.
+- Use the host's supported compaction mechanism only when available. Otherwise
+  retain the handoff for automatic compaction or an authorized chat transition.
+  A prepared summary is not proof that compaction happened; report only an
+  observed event. Never estimate context utilization from cumulative usage.
+- After compaction or a new Orch session, re-read applicable instructions,
+  inspect CLI status and the current revision/diff, then read the Plan's current
+  position and cited evidence needed for the next action. Continue the existing
+  run and its saved budgets and gates; do not restart work or invent acceptance.
+
+Keep durable Feature position and results in the existing Plan/Map and run
+mechanics in the CLI. Add no separate memory file or project tracker. Outside
+the existing write-ownership windows, the Orch does not edit project files to
+prepare a handoff; require the Producer to leave the Plan current instead.
+
 ## Preconditions
 
 1. Work from the project root: the directory whose `AGENTS.md` governs the

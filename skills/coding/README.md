@@ -172,6 +172,17 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | Validation Plan | 一个有界问题的假设、输入、oracle、步骤、指标、预算与停止条件、证据、判定标准、执行状态和结论 | Feature ID、Map 状态、所支持决定的正文 |
 | Review Backlog | `cross-agent` 裁决后未进入本次修订的非阻塞遗留项及其理由 | 未告知用户的当前 blocker、prompt、transcript、token 日志、快照、需求或计划内容 |
 
+`cross-agent` 在 checkpoint 保持 Plan 的当前位置，并在 Plan -> Delivery、Feature
+完成等阶段边界评估 Orch 上下文是否需要压缩。交接只保留当前授权、artifact/run、revision、
+未完成工作、关卡和证据出处；worker rotation 不轮换 Orch，不增加定时器或独立 memory 文件。
+压缩后先核对 CLI status、当前 revision/diff 和 Plan，再继续原 run 与预算。
+
+`coding-agent-instructions` 提供
+[可选 Feature 工作流 profile](15.coding-agent-instructions/assets/feature-workflow.profile.md)。
+只有用户为当前项目明确选用后，才把 cross-agent、独立 review、Step 验证、ponytail 与
+branch/本地 commit 约定写入 AGENTS；这不启动 Feature，也不授权 push、merge 或历史改写。
+项目名和命名差异在项目中确定，模型/effort 留在 cross-agent 配置，具体步骤和结果留在 Plan。
+
 下游文档链接上游文档，不复制上游内容。用户指定的既有 domain knowledge 只是可选
 输入，不由任何 Skill 创建或维护。
 
