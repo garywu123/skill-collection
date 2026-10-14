@@ -141,8 +141,8 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | Skill | 作用 | 默认产物 |
 |---|---|---|
 | [`product-brief`](10.product-brief/SKILL.md) | 探索、记录或对照授权访谈证据审阅产品目的、用户、核心流程、MVP 边界和已确认的产品级约束 | 探索和审阅时仅对话；定稿时写 `docs/product-brief.md` |
-| [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库创建、审计或持续校准 `AGENTS.md`；变化后做 instruction-impact assessment；纯非代码仓库交由所属集合的同类 Skill | 根 `AGENTS.md`；只有真实局部差异时才增加 nested `AGENTS.md`；assessment 结果在报告中 |
-| [`code-style`](16.code-style/SKILL.md) | `define` 确认实际语言并写出结构、模块组织、注释意图、文档和关键算法说明的规范；`audit` 报告指定范围的偏差；`apply` 在授权代码范围内按既有规则做保持行为的修改并运行已验证检查 | `docs/code-style.md`、真实局部差异的 `<subproject>/docs/code-style.md`，以及 `AGENTS.md` 中的一行路由 |
+| [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库创建、审计或持续校准 `AGENTS.md`；变化后做 instruction-impact assessment；纯非代码仓库交由所属集合的同类 Skill | 根 `AGENTS.md`；只有真实局部差异时才增加 nested `AGENTS.md`；缺失时复制只读链接检查器 `scripts/Test-DocLinks.ps1`（不覆盖已有文件，按版本头报告差异），首次运行验证后在 `AGENTS.md` 加入它的命令；assessment 结果在报告中 |
+| [`code-style`](16.code-style/SKILL.md) | `define` 确认实际语言和项目，未被用户或项目文档另行决定的规则直接采用 owner 默认 profile（`Step n:` 注释、API 文档格式等），写出结构、模块组织、注释意图、文档和关键算法说明的规范；缺失的 `.editorconfig` 和 `.vscode` 文件先给用户看模板内容、确认后才创建，已有配置只读并报告差异；`audit` 和 `apply` 先跑 formatter，在有界范围内按大小分批（必要时用 subagent），`audit` 只报告，`apply` 做保持行为的修改并运行已验证检查 | `docs/code-style.md`；多项目 workspace 中每个项目一份继承根文件的 `<project>/docs/code-style.md`；缺失时创建的 `.editorconfig` 和 `.vscode/*.json`；`AGENTS.md` 中的路由和一条 Working-rules 规则 |
 | [`functional-spec`](17.functional-spec/SKILL.md) | 仅当 MVP 需要多张 Feature Map 时，列出编号的可观察功能和产品级质量需求；可对照 Brief 和授权访谈证据审阅 | `docs/functional-spec.md` |
 | [`architecture-design`](18.architecture-design/SKILL.md) | 探索、编写、审阅唯一的共享架构：组件边界、契约、数据所有权、依赖方向、部署假设和技术质量约束；把 Map 内的技术方向或既有 General Design 迁移过来 | `docs/architecture.md`，或沿用既有 General Design 路径 |
 | [`testing-strategy`](19.testing-strategy/SKILL.md) | 编写或审阅可复用的项目测试规则：测试层级、业务不变量、算法 oracle、fixture 规模、资源测量方法、回归和独立测试条件；未定预算记为待决 | `docs/testing.md` |
@@ -161,7 +161,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 |---|---|---|
 | Product Brief | 产品目的、用户、核心流程、MVP 边界；没有 Spec 时保存已确认的产品级约束 | 需求编号、架构、流程、访谈记录 |
 | Coding Agent Instructions | 路由、优先级、已验证命令、边界、工作与报告规则；基于权威证据持续校准 | 产品内容、技术方向、代码风格规则、一次性任务状态、工具专用适配层、assessment 记录 |
-| `docs/code-style.md` | 仓库共享的代码风格规则，每种语言一节，外加模块组织、结构、注释、文档等跨语言规范，并列出 scoped 文件；工具已强制的规则只路由不复述；`<subproject>/docs/code-style.md` 只保存真实局部差异 | 产品或流程内容、架构依赖方向与系统边界、工具配置本身、重复的共享规则 |
+| `docs/code-style.md` | 仓库共享的代码风格规则，每种语言一节，外加模块组织、结构、注释、文档等跨语言规范，并列出每个项目文件；工具已强制的规则只路由不复述；多项目 workspace 中每个项目的 `<project>/docs/code-style.md` 以继承根文件开头，只保存本项目的局部规则，没有时写 `Local Rules: None.` | 产品或流程内容、架构依赖方向与系统边界、工具配置本身、重复的共享规则 |
 | Functional Spec | 编号的可观察功能和产品级质量需求、排除项、未决决策 | 状态、追溯表、架构、交付顺序 |
 | Architecture Design | 共享的系统上下文、组件职责、契约、数据所有权、依赖方向、技术选型、部署假设、质量约束（主体、条件、属性或预算、来源、验证引用）和不变量；既有 General Design 即为此文档；仅在需要大量独立指导时按栈拆分 | 需求原文、Feature 列表、顺序、状态、测试用例、代码级风格规则 |
 | Testing Strategy | 可复用的测试层级、业务不变量与来源、算法 oracle、fixture 与 mock 限制、发现与 skip 规则、资源测量方法、回归和独立测试条件 | 逐 Feature 用例、测试结果、产品需求或资源预算本身 |

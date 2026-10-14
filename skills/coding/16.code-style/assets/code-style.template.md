@@ -3,7 +3,7 @@
 Every shared code-style rule for this repository lives here. `AGENTS.md` routes
 to this file and holds no code-style rule itself. Component and project
 boundaries and dependency direction live in the
-[Architecture Design](architecture.md), not here.
+[Architecture Design](<architecture-path>), not here.
 
 Rules below are binding instructions. A rule that configured tooling already
 enforces is not restated here; the table routes to that tooling instead.
@@ -19,14 +19,15 @@ enforces is not restated here; the table routes to that tooling instead.
 Do not restate what these tools enforce. When a tool and this file disagree, the
 tool wins and this file is wrong; report it.
 
-## Scoped Rules
+## Project Files
 
-| Scope | File | Local difference |
+| Project | File | Local rules |
 |---|---|---|
-| `<subproject>/` | [`<subproject>/docs/code-style.md`](../<subproject>/docs/code-style.md) | `<why this scope differs>` |
+| `<project>/` | [`<project>/docs/code-style.md`](<project-code-style-path>) | `<one-line summary of its local rules, or None>` |
 
-A scoped file holds only its local differences and follows every shared rule
-here. Delete this section when no scope differs.
+Every project in this workspace has one file. It inherits every rule here and
+holds only its local differences. Delete this section for a single-project
+repository.
 
 ## Modules
 
@@ -59,7 +60,9 @@ Keep the rules the project actually adopted; delete the rest.
 
 Comments carry intent. Code already carries mechanics.
 
-- Explain why, not what. Delete a comment that restates the line below it.
+- Before every important step, write a `Step n:` comment that states what the
+  step achieves; a complex step adds a concrete example. Other comments explain
+  why. Never restate one line of code.
 - Record the reason for a non-obvious choice: a constraint, a workaround, a
   performance trade-off, an upstream defect, or a deliberate deviation from the
   rules in this file. Link the issue or source when one exists.
@@ -84,6 +87,8 @@ Comments carry intent. Code already carries mechanics.
   wherever a value carries one.
 - Give each module or package a short entry point comment or README stating what
   it owns and what it deliberately does not.
+- `<Documentation layout from the default profile, for example: every element
+  on its own lines, content indented four spaces.>`
 - `<Additional project documentation rule.>`
 
 ## <Language one, for example C#>
@@ -102,3 +107,5 @@ Comments carry intent. Code already carries mechanics.
 - Separate happy-path and failure-path tests as `<for example:
   *HappyPathTests and *FailurePathTests>`.
 - A test name states the scenario and the expected observable result.
+- `<Test-code documentation rule from the default profile, for example: test
+  code needs no API documentation; formatting rules still apply.>`

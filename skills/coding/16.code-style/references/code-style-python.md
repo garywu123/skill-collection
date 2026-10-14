@@ -16,15 +16,17 @@ Read this reference only when Python is a confirmed language for the project.
 - `src` and `tests` layout and plugin declarations;
 - the declared minimum Python version and every supported runtime.
 
-All of these are read-only. Never create or modify Python configuration,
-environments, interpreter selections, lock files, dependencies, or tool
-settings. When cross-language file hygiene is material, consult the
-[EditorConfig baseline](editorconfig-baseline.md) without repeating it here.
+All of these are read-only, except that `define` may create a missing
+`.editorconfig` or `.vscode/` file from the Skill templates as described in
+[formatting configuration](formatting-config.md). Never change existing Python
+configuration, environments, interpreter selections, lock files, dependencies,
+or tool settings; report each difference instead.
 
 ## Precedence And Compatibility
 
 Prefer explicit user direction, then an approved project document, then current
-configuration, then a consistent repository pattern the user confirms. Honor the
+configuration, then the [owner default](#owner-default) for an unenforced rule.
+Honor the
 declared minimum Python version and every supported runtime. A locally selected
 or newly installed interpreter is execution evidence, not permission to raise
 the supported version.
@@ -71,6 +73,16 @@ boundaries belong to the Architecture Design; link them instead of writing them
 here. A consistently observed source pattern is a proposal to confirm, not
 policy.
 
+## Owner Default
+
+Use these unless the user, a project document, or existing configuration says
+otherwise:
+
+- Each module starts with a module docstring.
+- Function docstrings use Google style with `Args`, `Returns`, and `Raises`.
+- 4-space indentation.
+- `Step n:` comments as in the [default profile](default-profile.md).
+
 ## Tests
 
 Detect the framework, plugins, file and test naming, fixtures, parametrization,
@@ -83,6 +95,6 @@ pattern, or command.
 | Finding | Destination |
 |---|---|
 | Formatting, linting, import, typing, or test enforcement | Tooling table route; configuration stays read-only |
-| A decided semantic, structural, or documentation rule | The Python section of `docs/code-style.md`, or of a scoped file when only that subproject differs |
+| A decided semantic, structural, or documentation rule | The Python section of `docs/code-style.md`, or of a project file when only that project uses the rule |
 | A rule that applies to every language | The cross-language sections of `docs/code-style.md` |
 | Unknown or conflicting evidence | Ask, or omit and report |

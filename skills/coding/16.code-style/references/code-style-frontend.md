@@ -14,15 +14,17 @@ framework is a confirmed surface for the project.
 - source, component, style, and test layout;
 - CI workflows, repository tasks, and scripts that establish commands.
 
-All of these are read-only. Never create or modify frontend configuration,
-package files, lockfiles, dependencies, framework choices, or design systems.
-For cross-language indentation and file hygiene, consult the
-[EditorConfig baseline](editorconfig-baseline.md) without repeating it here.
+All of these are read-only, except that `define` may create a missing
+`.editorconfig` or `.vscode/` file from the Skill templates as described in
+[formatting configuration](formatting-config.md). Never change existing
+frontend configuration, package files, lockfiles, dependencies, framework
+choices, or design systems; report each difference instead.
 
 ## Precedence And Compatibility
 
 Prefer explicit user direction, then an approved project document, then current
-configuration, then a consistent repository pattern the user confirms. Honor the
+configuration, then the [owner default](#owner-default) for an unenforced rule.
+Honor the
 declared browser and runtime targets, the module system, the configured
 TypeScript or JavaScript language level, and the installed framework version.
 Do not infer policy from a globally installed or newer tool.
@@ -66,6 +68,32 @@ direction belong to the Architecture Design; link them instead of writing them
 here. A consistently observed source pattern is a proposal to confirm, not
 policy.
 
+## Owner Default
+
+Use these for TypeScript and JavaScript unless the user, a project document, or
+existing configuration says otherwise:
+
+- Each module starts with a comment stating what it owns and what it does not
+  own.
+- Exported functions get JSDoc with `@param`, `@returns`, and `@throws`; each
+  tag on its own line, with its content indented four spaces after ` * `.
+- `Step n:` comments as in the [default profile](default-profile.md).
+- 2-space indentation and print width 100, unless project configuration sets
+  other values.
+
+```ts
+/**
+ * Loads one export window from the API.
+ *
+ * @param end
+ *     Window end, exclusive.
+ * @returns
+ *     Rows ordered by time.
+ * @throws
+ *     ApiError when the server rejects the window.
+ */
+```
+
 ## Framework And Markup
 
 Detect React, Vue, Angular, Svelte, or another framework only when present and
@@ -86,7 +114,7 @@ commands; never invent a framework or command.
 | Finding | Destination |
 |---|---|
 | Formatting, linting, typing, or compatibility enforcement | Tooling table route; configuration stays read-only |
-| A decided semantic, structural, or documentation rule | The frontend section of `docs/code-style.md`, or of a scoped file when only that subproject differs |
+| A decided semantic, structural, or documentation rule | The frontend section of `docs/code-style.md`, or of a project file when only that project uses the rule |
 | A rule that applies to every language | The cross-language sections of `docs/code-style.md` |
 | A detailed UX, design, or accessibility workflow | An existing project document, routed from the style file |
 | Unknown or conflicting evidence | Ask, or omit and report |

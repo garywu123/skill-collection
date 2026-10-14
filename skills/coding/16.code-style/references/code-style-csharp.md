@@ -15,15 +15,17 @@ Inspect only what is needed to separate enforced from unenforced rules:
 - CI workflows, tasks, and scripts that establish commands;
 - test projects and their package references.
 
-All of these are read-only. Never create or modify code-style configuration,
-MSBuild policy, or analyzer packages. When cross-language file hygiene is
-material, consult the
-[EditorConfig baseline](editorconfig-baseline.md) without repeating it here.
+All of these are read-only, except that `define` may create a missing
+`.editorconfig` or `.vscode/` file from the Skill templates as described in
+[formatting configuration](formatting-config.md). Never change existing
+code-style configuration, MSBuild policy, or analyzer packages; report each
+difference instead.
 
 ## Precedence And Compatibility
 
 Prefer explicit user direction, then an approved project document, then existing
-configuration, then a consistent repository pattern the user confirms. Use
+configuration, then the [owner default](#owner-default) for an unenforced rule.
+Use
 modern C# syntax only when the configured `LangVersion` and the lowest target
 framework support it. Report a conflict between these signals rather than
 picking one.
@@ -63,8 +65,7 @@ A consistently observed source pattern is a proposal to confirm, not policy.
 
 ## XML Documentation
 
-When the repository generates or requires XML documentation, write the C#
-documentation rule as:
+Write the C# documentation rule with these element meanings:
 
 - `summary` states the contract, not the member name restated;
 - `param` for every parameter and `typeparam` for every type parameter;
@@ -73,6 +74,27 @@ documentation rule as:
 - `remarks` for thread safety, performance, units, side effects, and edge cases
   when they matter;
 - `inheritdoc` when the inherited contract is still accurate.
+
+## Owner Default
+
+Use these unless the user or a project document says otherwise:
+
+- Full XML documentation on public and internal members, and on key private
+  members: `summary`, `param`, `typeparam`, `returns`, `exception`, and
+  `remarks` for important reminders.
+- Every element on its own lines, with its content indented four spaces after
+  `///`.
+- `Step n:` comments as in the [default profile](default-profile.md).
+- Test code is exempt from XML documentation.
+
+```csharp
+/// <summary>
+///     Builds the parameterized SELECT that reads one export window.
+/// </summary>
+/// <param name="end">
+///     Window end, exclusive. Example: 01:00-05:00 reads rows with time >= 01:00 and < 05:00.
+/// </param>
+```
 
 ## Tests
 
@@ -86,6 +108,6 @@ and never impose a framework or library the repository does not use.
 | Finding | Destination |
 |---|---|
 | Formatting, naming, or diagnostic enforcement | Tooling table route; configuration stays read-only |
-| A decided semantic, structural, or documentation rule | The C# section of `docs/code-style.md`, or of a scoped file when only that subproject differs |
+| A decided semantic, structural, or documentation rule | The C# section of `docs/code-style.md`, or of a project file when only that project uses the rule |
 | A rule that applies to every language | The cross-language sections of `docs/code-style.md` |
 | Unknown or conflicting evidence | Ask, or omit and report |

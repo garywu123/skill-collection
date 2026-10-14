@@ -28,6 +28,10 @@ section when no document route exists.
 - From `<directory>`, run `<setup command>` before `<condition>`.
 - From `<directory>`, run `<focused check>` after changing `<scope>`.
 - From `<directory>`, run `<full check>` only when `<condition>`.
+- From the repository root, run
+  `powershell -ExecutionPolicy Bypass -File scripts/Test-DocLinks.ps1` after
+  editing documentation, and fix each reported link (use `pwsh -File` where
+  Windows PowerShell is unavailable).
 
 Keep only commands verified by project configuration, automation, or an
 observed successful run. State the working directory, trigger, and relevant
