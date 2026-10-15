@@ -15,7 +15,10 @@ Default formatters: C# `ms-dotnettools.csharp`; TypeScript, JavaScript, JSON,
 and YAML `esbenp.prettier-vscode`; Python `charliermarsh.ruff`, or
 `ms-python.black-formatter` when the project already configures Black. XAML and
 SQL get no formatter entry. The Skill ships no `.prettierrc`; a project
-Prettier `printWidth` wins over `max_line_length`.
+Prettier `printWidth` wins over `max_line_length`. Prettier reads `indent_size`
+from `.editorconfig` when no `tabWidth` is set, so the EditorConfig template
+covers every extension Prettier formats in a frontend project, including CSS,
+SCSS, Less, and HTML.
 
 ## Compare Existing Configuration
 

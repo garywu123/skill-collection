@@ -76,17 +76,27 @@ Comments carry intent. Code already carries mechanics.
 - Do not leave commented-out code; version control holds it.
 - Update a comment in the same change as the code it describes. A stale comment
   is a defect.
+- Deletion test: do not write a comment whose removal loses nothing a reader
+  gets from the signature in a few seconds. It applies to every comment and
+  documentation block a language section does not require, including `Step n:`
+  comments; it never removes required documentation.
+- Wrapping: wrap comments at the print width the project or the language
+  section sets, like code. The author of the comment wraps it; formatters such
+  as Prettier do not. An unbreakable token such as a URL may exceed the width.
+  Where no width is set, none is imposed.
 
 ## Documentation
 
-- Document every public API in `<format, for example: XML doc comments,
-  docstrings, TSDoc>` with its contract, not a restatement of its name:
-  parameters and their valid ranges, return value, observable errors, and side
-  effects.
+- Document public APIs in `<format, for example: XML doc comments, docstrings,
+  TSDoc>` to the depth the language section sets, with their contract, not a
+  restatement of their name: parameters and their valid ranges, return value,
+  observable errors, and side effects.
 - Document units, encodings, time zones, and coordinate or currency conventions
   wherever a value carries one.
-- Give each module or package a short entry point comment or README stating what
-  it owns and what it deliberately does not.
+- Give each package, and each module its language section names as a boundary
+  module, a short entry point comment or README stating what it owns and what
+  it deliberately does not; a file with one primary export documents that
+  export instead.
 - `<Documentation layout from the default profile, for example: every element
   on its own lines, content indented four spaces.>`
 - `<Additional project documentation rule.>`

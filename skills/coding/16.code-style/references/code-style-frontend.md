@@ -73,13 +73,42 @@ policy.
 Use these for TypeScript and JavaScript unless the user, a project document, or
 existing configuration says otherwise:
 
-- Each module starts with a comment stating what it owns and what it does not
-  own.
-- Exported functions get JSDoc with `@param`, `@returns`, and `@throws`; each
-  tag on its own line, with its content indented four spaces after ` * `.
+- The deletion test and the wrapping rule of the
+  [default profile](default-profile.md#cross-language-defaults) apply.
+- Module headers: a file with one primary export uses that export's JSDoc as
+  its header and gets no separate module header. A primary export is the one
+  runtime unit a file exports - a function, component, class, or constant; its
+  own props type and other type-only exports that serve it do not count. Write
+  a module header stating what the module owns and does not own only for a
+  boundary module: a package entry (the module a `package.json` `main` or
+  `exports` field names, or a library folder's barrel `index.ts`), an API
+  client, a state model, or a module with two or more independent runtime
+  exports. An application entry that mounts the app, such as `main.tsx`, gets
+  none.
+- Functions: full JSDoc - `@param` per parameter, `@returns` when not void, and
+  `@throws` only for an observable error - only on an exported function used
+  across a module or package boundary. A module here is a source area the
+  Architecture Design defines or, without one, a top-level source folder such
+  as `src/api/`, `src/state/`, or a feature folder. An export crosses the
+  boundary when a file outside its area imports it, which an import search
+  confirms; every export of a boundary module crosses it. Other exports get a
+  one-line summary; add `@param` only where a unit, a range, or the meaning of
+  `null` or `undefined` is unclear from the signature.
+- React components: the JSDoc holds the summary and no `@param props` tag.
+  Document props fields only on a named `<Component>Props` type; each field
+  comment passes the deletion test, and the type needs no JSDoc of its own. An
+  inline props type gets no field comments, so the signature stays on one
+  line. Do not extract a named props type only to hold comments; report an
+  inline field whose unit, range, or null meaning is unclear instead.
+- Layout: a summary-only JSDoc uses the one-line form `/** Summary. */` when it
+  fits the print width; otherwise the multi-line form, wrapped. In a
+  multi-line JSDoc, each tag sits on its own line and its content on the
+  following lines, indented four spaces past the leading asterisk.
 - `Step n:` comments as in the [default profile](default-profile.md).
-- 2-space indentation and print width 100, unless project configuration sets
-  other values.
+- 2-space indentation, including CSS, SCSS, Less, and HTML, and print width
+  100, unless project configuration sets other values.
+
+Full JSDoc, for an API client export used across a module boundary:
 
 ```ts
 /**
@@ -92,6 +121,49 @@ existing configuration says otherwise:
  * @throws
  *     ApiError when the server rejects the window.
  */
+```
+
+A summary-only export and a named props type:
+
+```tsx
+/** Formats a duration in seconds as m:ss. */
+export function formatDuration(seconds: number): string;
+```
+
+```tsx
+type RouteMapProps = {
+  /** Zoom factor; 1 shows the whole map. */
+  zoom: number;
+  onSelect: (nodeId: string) => void;
+};
+```
+
+## Do Not Write
+
+This section illustrates the Owner Default rules above and goes into an `apply`
+brief only when the project's style file adopts them. The summary is from a
+real `AppLogo.tsx`; the same pattern also appeared in the module headers of
+`main.tsx` and `clientId.ts`.
+
+```tsx
+// Do not write: a module header, the same summary again, and a props tag.
+/**
+ * Owns the App logo graphic. Does not own where or at what size it is shown.
+ */
+
+/**
+ * Decorative App logo, a route through three Nodes, coloured by theme variables only.
+ *
+ * @param size
+ *     Width and height in pixels.
+ */
+export function AppLogo({ size }: { size: number }) {
+```
+
+```tsx
+// Write instead: the one-line summary is the file's header.
+/** Decorative App logo, a route through three Nodes, coloured by theme variables only. */
+export function AppLogo({ size }: { size: number }) {
 ```
 
 ## Framework And Markup

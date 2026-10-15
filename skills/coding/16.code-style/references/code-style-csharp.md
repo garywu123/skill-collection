@@ -81,7 +81,9 @@ Use these unless the user or a project document says otherwise:
 
 - Full XML documentation on public and internal members, and on key private
   members: `summary`, `param`, `typeparam`, `returns`, `exception`, and
-  `remarks` for important reminders.
+  `remarks` for important reminders. A private member is key when its
+  documentation passes the deletion test of the
+  [default profile](default-profile.md#cross-language-defaults).
 - Every element on its own lines, with its content indented four spaces after
   `///`.
 - `Step n:` comments as in the [default profile](default-profile.md).

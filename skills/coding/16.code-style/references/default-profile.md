@@ -14,6 +14,14 @@ difference instead of changing that configuration.
 ## Cross-Language Defaults
 
 - Comments carry intent. Never restate one line of code.
+- Deletion test: do not write a comment whose removal loses nothing a reader
+  gets from the signature in a few seconds. It applies to every comment and
+  documentation block a language Owner Default does not require, including
+  `Step n:` comments; it never removes required documentation.
+- Wrapping: wrap comments at the print width the project or the language Owner
+  Default sets, like code. The author of the comment wraps it; formatters such
+  as Prettier do not. An unbreakable token such as a URL may exceed the width.
+  Where no width is set, none is imposed.
 - Before every important step, write a `Step n:` comment that states what the
   step achieves. Other comments explain why: a constraint, a workaround, a
   trade-off, or a deliberate deviation.

@@ -148,8 +148,12 @@ answers. Do not add a reference file for it as part of this run.
       scope;
    2. use the default scope: files changed since a given commit, or a named
       folder or package;
-   3. estimate the scope size;
-   4. fix the remaining deviations yourself or in subagent batches;
+   3. estimate the documentation scope in KB: in-scope files that need comment
+      or documentation work, excluding test code and tool configuration once
+      the formatter has run;
+   4. fix the remaining deviations yourself when that scope fits one batch
+      budget, otherwise in subagent batches by size; read each file once and
+      edit with targeted replacements, never by rewriting a whole file;
    5. verify with the diff, the verified build and tests, and spot checks.
 4. Do not install a tool or create or change its configuration; report a rule
    that needs one.
@@ -190,6 +194,7 @@ change, unresolved conflicts, and the questions left open. Recommend a refresh
 when the language set, projects, tooling, or enforcement configuration later
 changes. For `audit`, report findings only. For `apply`, report the files
 changed, rules applied, the batch plan used (self or N subagents, and waves)
-with actual counts, deviations left with reasons, verification results, and
-behavior risks. Stop without modifying existing tooling configuration, other
-instruction files, or code outside the authorized scope.
+with the actual KB of each batch, and peak context and API calls per subagent
+when the platform reports them, deviations left with reasons, verification
+results, and behavior risks. Stop without modifying existing tooling
+configuration, other instruction files, or code outside the authorized scope.
