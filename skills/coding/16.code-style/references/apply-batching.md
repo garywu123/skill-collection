@@ -27,14 +27,22 @@ Read this reference for `apply` and `audit` of a code scope.
    ```
 
    For a named folder, `$files` is `git ls-files` plus untracked files of that
-   folder. Frontend example patterns: source `\.(ts|tsx|js|jsx)$`; excluded
-   `(^|/)(e2e|tests?|__tests__)/|\.(test|spec)\.[cm]?[jt]sx?$|\.config\.[cm]?[jt]s$`.
+   folder. Prefer the source roots the style file names, such as
+   `apps/*/src/`, as `<path>`. Also drop paths that the formatter's or linter's
+   ignore configuration excludes, such as `.prettierignore` entries or ESLint
+   `ignores`, and generated, vendor, or documentation-asset code such as
+   storyboard scripts; add them to the excluded pattern. Frontend example
+   patterns: source `\.(ts|tsx|js|jsx)$`; excluded
+   `(^|/)(e2e|tests?|__tests__|docs)/|\.(test|spec)\.[cm]?[jt]sx?$|\.config\.[cm]?[jt]s$`.
 4. At most 100 KB, one batch budget: the orchestrating session does the work
    itself, batch by batch, grouped by language and folder. Edit rules, for the
-   session and every subagent: read each file once, where a shell read such as
-   `cat` counts as a read, and do not read it again after your own edit; edit
-   with targeted replacements (the `Edit` tool or an equivalent patch), never a
-   whole-file write.
+   session and every subagent: read each file once; do not read a file again
+   after your own edit; edit with targeted replacements, never a whole-file
+   write and never a generated script that rewrites files. In Claude Code, read
+   with `Read`, not a shell read such as `cat`, because `Edit` accepts only
+   files read through `Read`; then edit with `Edit`. On a platform without a
+   file read tool, such as Codex, one shell read per file is fine; then edit
+   with `apply_patch` or the platform's targeted edit tool.
 5. Above 100 KB: use documentation subagents on a strong model (Sonnet class),
    one per packed batch. Packing: a file larger than 100 KB gets its own
    batch. For the rest, `n = ceil(rest KB / 100)`; fill batches in folder
