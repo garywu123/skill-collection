@@ -29,13 +29,31 @@ def _parser() -> argparse.ArgumentParser:
 
     start = commands.add_parser("start", help="create a run")
     start.add_argument("--stage", required=True, choices=STAGES)
-    start.add_argument("--artifact", required=True, help="path relative to the project root")
-    start.add_argument("--first", required=True, choices=("produce", "review"))
+    start.add_argument("--artifact", help="path relative to the project root; optional during exploration")
+    start.add_argument("--first", required=True, choices=("explore", "produce", "review"))
+    start.add_argument("--skill", help="domain Skill logical name or explicit SKILL.md path")
+    start.add_argument("--skip-review", action="store_true", help="explicit user opt-out of independent review")
+    start.add_argument("--reason", help="source and wording of the user's review opt-out")
     start.add_argument("--request", help="the concrete change or intended outcome")
     start.add_argument("--producer", help="complete <provider>:<model>:<effort> override")
     start.add_argument("--reviewer", help="complete <provider>:<model>:<effort> override")
     start.add_argument("--item", help="stable Feature ID or topic shared across stages; defaults to artifact")
     start.add_argument("--dry-run", action="store_true", help="print the first prompt and command only")
+
+    expert = commands.add_parser("expert", help="run the direct Claude expert in this foreground terminal")
+    expert.add_argument("--run", required=True)
+    expert.add_argument("--release", action="store_true", help="confirm an interrupted expert terminal has stopped")
+    promote = commands.add_parser("promote", help="authorize production after direct exploration")
+    promote.add_argument("--run", required=True)
+    promote.add_argument("--artifact", required=True)
+    promote.add_argument("--request", required=True, help="explicit user write authorization and concrete scope")
+    promote.add_argument("--skip-review", action="store_true")
+    promote.add_argument("--reason")
+    promote.add_argument("--reconcile", help="explicit user reconciliation for changes since exploration began")
+    waive = commands.add_parser("waive-review", help="record the user's opt-out before the first review starts")
+    waive.add_argument("--run", required=True)
+    waive.add_argument("--reason", required=True)
+    commands.add_parser("forget-history", help="delete one closed run's local evidence/history, preserving provider sessions").add_argument("--run", required=True)
 
     next_command = commands.add_parser("next", help="run the next step or print the pending event")
     next_command.add_argument("--run", required=True)
@@ -97,7 +115,21 @@ def main(argv: list[str] | None = None) -> int:
                 reviewer=args.reviewer,
                 dry_run=args.dry_run,
                 item=args.item,
+                skill=args.skill,
+                skip_review=args.skip_review,
+                reason=args.reason,
             )
+        elif args.command in ("expert", "promote", "waive-review", "forget-history"):
+            from . import exploration
+            if args.command == "expert":
+                result = exploration.expert(root, args.run, release=args.release)
+            elif args.command == "promote":
+                result = exploration.promote(root, args.run, artifact=args.artifact, request=args.request,
+                                             skip_review=args.skip_review, reason=args.reason, reconcile=args.reconcile)
+            elif args.command == "waive-review":
+                result = exploration.waive_review(root, args.run, args.reason)
+            else:
+                result = exploration.forget_history(root, args.run)
         elif args.command == "next":
             progress = (lambda event: print(json.dumps(event, ensure_ascii=True), flush=True)) if args.stream else None
             result = engine.next_step(root, args.run, progress=progress)

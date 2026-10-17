@@ -60,19 +60,30 @@ Read this reference for `apply` and `audit` of a code scope.
    section only for a TS/JS batch whose project language section adopts the
    rules it illustrates, that is, it limits module headers to boundary modules
    and sets the export documentation depth; and the batch's file list with KB
-   per file. Instruct the subagent to follow only the carried rules, including
-   any wrapping rule they set, because the formatter does not wrap comments; to
-   follow the edit rules of step 4; to start no subagents; and to return at
+   per file. When several batches run, write the shared part of the brief once
+   to a file outside the work tree, such as the session scratchpad, and give
+   each subagent its path plus its own file list, instead of repeating the
+   rules in every prompt. Instruct the subagent to follow only the carried
+   rules, including any wrapping rule they set, because the formatter does not
+   wrap comments; to
+   follow the edit rules of step 4; to start no subagents; not to build or run
+   tests, because concurrent builds of one solution or package collide on
+   shared output folders such as `obj/`, so the orchestrator builds once after
+   the wave; and to return at
    most 10 lines: the changed files and at most 3 unsure items as `file:line`
    plus one sentence; no diffs or file contents. For `audit`, return files with
    gaps and rule names instead of changed files.
 7. Use a cheap model (Haiku class) only for mechanical leftovers the formatter
-   cannot do, such as turning a one-line `<summary>` into the indented layout,
-   and only when the platform allows choosing a model.
+   cannot do, such as re-laying out existing documentation comments, and only
+   when the platform allows choosing a model.
 8. Verify with `git diff --stat`, the formatter's check mode on the scope, the
    verified build and tests, and 2-3 spot-checked diffs. A documentation diff
    shows only comment lines and formatter output; report any reflowed or
-   changed code line.
+   changed code line. For C# without `GenerateDocumentationFile` in the
+   project files, an ordinary build does not check XML documentation, so also
+   build once with `-p:GenerateDocumentationFile=true` and missing-comment
+   warnings (CS1591) suppressed, without changing any project file, and report
+   new CS15xx or CS0419 warnings against the baseline.
 9. When no subagents are available, for example in Codex, run the same batches
    in sequence.
 10. Budget and cap are defaults; a run may pass a temporary override. Record per
@@ -100,4 +111,7 @@ decides the number of subagents and waves.
 
 About 100 KB of source is roughly 25-30k tokens. With about 53k tokens of fixed
 overhead per subagent, the trial's 197 KB batch peaked at 188k context with
-whole-file rewrites. The budget is a default to tune from recorded runs.
+whole-file rewrites. Edit-heavy batches peak higher: re-laying out C# XML
+documentation took 37-61 targeted edits per batch, and 76-96 KB batches
+peaked at 130-148k context. For such work use a budget of about 80 KB. The
+budget is a default to tune from recorded runs.

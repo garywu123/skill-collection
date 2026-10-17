@@ -84,15 +84,19 @@ Use these unless the user or a project document says otherwise:
   `remarks` for important reminders. A private member is key when its
   documentation passes the deletion test of the
   [default profile](default-profile.md#cross-language-defaults).
-- Every element on its own lines, with its content indented four spaces after
-  `///`.
+- Record positional parameters need no `param` tag; add one only where a unit,
+  a valid range, or the meaning of `null` is unclear from the name and type.
+- Layout: an element whose content is one sentence and whose whole line, with
+  its indentation, fits 100 characters stays on one line, such as
+  `/// <summary>Seconds since the run started.</summary>`. Any longer element
+  sits on its own lines, with its content indented four spaces after `///` and
+  wrapped at 100 characters.
 - `Step n:` comments as in the [default profile](default-profile.md).
 - Test code is exempt from XML documentation.
 
 ```csharp
-/// <summary>
-///     Builds the parameterized SELECT that reads one export window.
-/// </summary>
+/// <summary>Builds the parameterized SELECT that reads one export window.</summary>
+/// <param name="start">Window start, inclusive.</param>
 /// <param name="end">
 ///     Window end, exclusive. Example: 01:00-05:00 reads rows with time >= 01:00 and < 05:00.
 /// </param>

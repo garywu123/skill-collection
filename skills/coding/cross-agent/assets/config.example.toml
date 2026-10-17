@@ -92,6 +92,33 @@ reviewer = "codex:gpt-6.1-sol:xhigh"
 # [stages.feature-plan]
 # skill = "C:/Users/<you>/.agents/skills/feature-plan/SKILL.md"
 
+# Optional domain-expert routing, selected with start --skill <name>.
+# Same Producer handles exploration and production; Reviewer is independent.
+# Precedence: run role override > selected expert > stage > defaults.
+# Existing configurations without these tables keep their current behavior.
+# Paths/IDs above remain explicit; Orch is the current conversation and is not
+# selected here. Either Claude or Codex Orch can launch the configured workers.
+# Direct interactive exploration is verified for Claude only; Codex workers
+# continue to support managed production/review and Orch-mediated discussion.
+[experts.product-brief]
+producer = "claude:claude-opus-5-5:high"
+reviewer = "codex:gpt-6.1-sol:high"
+
+[experts.architecture-design]
+producer = "claude:claude-opus-5-5:high"
+reviewer = "codex:gpt-6.1-sol:xhigh"
+
+[experts.feature-map]
+producer = "claude:claude-opus-5-5:high"
+reviewer = "codex:gpt-6.1-sol:high"
+
+[experts.feature-storyboard]
+producer = "claude:claude-opus-5-5:high"
+reviewer = "codex:gpt-6.1-sol:high"
+
+# Delivery uses existing stage/default roles unless explicitly overridden.
+# No always-on Tester: use standalone validation for a concrete coverage gap.
+
 # Required project commands and directories. '.' keeps the checkout portable.
 # Empty lists are explicit choices, not missing settings. init replaces them
 # with project input when supplied; e.g. allowed_commands = ["dotnet test"].

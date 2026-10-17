@@ -151,6 +151,13 @@ def reviewer_prompt(
         "Do not represent a necessary unresolved acceptance gap as satisfied.",
         "Start with the supplied artifact, diff, findings and check evidence; inspect relevant source sections "
         "as needed to verify them, without reconstructing unrelated project history.",
+        "A Producer summary is navigation, never sole proof of intent or correctness. Independently inspect "
+        "material discussion evidence and upstream sources: for product work verify goals, scope and confirmed "
+        "constraints; for architecture trace boundaries/contracts to product constraints and code/config; "
+        "for delivery inspect affected business paths, implementation and test evidence. Treat assistant ideas "
+        "as candidates unless accepted. Original provider messages prove what that session received, not host-chat "
+        "wording; mark Orch-only quotations/translations as Orch-attested. In notes name material areas/sources "
+        "checked and missing evidence or tool limitations; no findings alone does not establish coverage.",
         "Put alternative designs, style preferences without a rule, speculative future concerns, unrelated "
         "cleanup, optional refactoring, and improvement ideas in notes.",
     ]

@@ -1,6 +1,6 @@
 ---
 name: feature-map
-description: Create the right-sized MVP delivery structure - one concise Feature Map, or at scale a Roadmap of child Feature Maps - holding Feature outcomes, requirement assignments, dependencies, and statuses linked to the project's Architecture Design. Use when the user asks to define, split, or revise MVP Features, delivery stages, or dependencies. Do not author architecture or shared technical direction (use architecture-design), per-feature implementation plans, or requirements.
+description: Explore or create the right-sized MVP delivery structure - one concise Feature Map, or at scale a Roadmap of child Feature Maps - holding Feature outcomes, requirement assignments, dependencies, and statuses linked to the project's Architecture Design. Use when the user asks to discuss, define, split, or revise MVP Features, delivery stages, or dependencies. Do not author architecture or shared technical direction (use architecture-design), per-feature implementation plans, or requirements.
 disable-model-invocation: false
 ---
 
@@ -13,6 +13,21 @@ The map owns reassessing MVP outcomes and dependencies only. Shared technical
 direction and cross-feature architecture belong to the project's Architecture
 Design, owned by `architecture-design`; the map links it. The map never edits
 implementation.
+
+## Mode Selection
+
+A request to discuss or explore a Feature Map or Roadmap selects exploration:
+read the relevant inputs, discuss candidate outcomes, boundaries, dependencies,
+and delivery order, and distinguish confirmed decisions from suggestions.
+Do not write files, assign durable new IDs, or change delivery status. Missing
+product or technical decisions remain with their owning Skills. Ask only about
+decisions that change scope, dependencies, or acceptance.
+
+A concrete request to create, update, or finalize the map authorizes writing
+within that scope. The user may delegate the decomposition decisions; do not
+require a separate approval for each routine row. Continue from confirmed
+discussion in the same expert session when available, then follow Output and
+Workflow. Readiness or leaving an interactive session does not authorize writing.
 
 ## Output
 

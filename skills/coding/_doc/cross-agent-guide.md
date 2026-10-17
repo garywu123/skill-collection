@@ -174,7 +174,7 @@ extra_dirs = []
 producer = "claude:claude-opus-5-5:high"
 ```
 
-每个角色依次取：该次 `start --producer` / `--reviewer` 覆盖、阶段角色、`[defaults]`。`status` 的 `effective_roles` 显示各阶段最终选择和来源；`start`、`--dry-run` 和 `status --run` 显示该 run 的 `roles` 与 `role_sources`。未知阶段或键、不完整的角色、缺少 `[cli]` 路径的 provider，都会在创建 run 和启动 worker 之前失败。没有 `[stages]` 的旧完整配置照常使用 `[defaults]`。
+每个角色依次取：该次 `start --producer` / `--reviewer` 覆盖、所选专家角色、阶段角色、`[defaults]`。`status` 的 `effective_roles` 显示各阶段最终选择和来源；`start`、`--dry-run` 和 `status --run` 显示该 run 的 `roles` 与 `role_sources`。未知阶段或键、不完整的角色、缺少 `[cli]` 路径的 provider，都会在创建 run 和启动 worker 之前失败。没有 `[stages]` 的旧完整配置照常使用 `[defaults]`。
 
 配置控制 worker，不会改变当前 Orch 对话自己的模型或 effort。每个 run 会保存启动时的角色、Skill 路径、命令和预算；修改配置不会改变已经打开的 run。阶段角色出现前保存的 run 没有 `role_sources`（显示为 `null`），继续使用其保存的角色。
 
@@ -217,6 +217,74 @@ claude = "C:/Tools/Claude/claude.exe"
 为每个所选 provider 提供实际安装的绝对路径。缺项或路径无效时会失败，
 不会通过 PATH 选择另一份安装。CLI 路径在每次 worker 调用时读取，因此现有 run 的恢复也使用
 新选择；保存的角色、命令、timeout 和 review 预算保持原样。
+
+## 直接和专家探讨，再继续生产
+
+你可以在 Claude 或 Codex 的当前对话说：
+
+```text
+你现在是 Orch。先让 product-brief 专家和我探讨这个产品，暂不写文件。
+背景是……；已有资料是……。配置使用项目里的专家选择。
+```
+
+Orch 先把相关背景、已知决定、问题和 Skill 给专家，再用当前环境的终端功能打开可见
+终端，运行 `expert --run`。CLI 自身不会另开窗口；直接在 Orch 的隐藏工具进程里运行
+不等于给你打开可操作的终端。
+专家不需要你重新描述任务，也不要求项目代号或标题才能开始。讨论时只读项目；
+要开始写时明确说“按讨论生成 Brief”。退出终端后回 Orch 说“已提交，继续生产和审阅”。
+**单纯退出只是交回控制权**，不会被当作写入授权或完成。Orch 核对原始讨论中的授权、
+现有改动和产物，再恢复同一专家 session 为 Producer，产出后调用独立 Reviewer。
+Reviewer 不需要你删除或丢弃专家 session；审阅期间先暂停写入。
+
+如果说“探讨 Feature Map”，专家讨论候选拆分和依赖，不改文件；如果说“根据已确认
+Brief 和 Architecture 生成 Map，拆分你决定”，则可直接生产。授权针对本次任务，不是
+永久偏好。Brief 到 Map 属于不同阶段，使用新 session 和简短证据交接。
+
+默认正式产出后独立审阅。你可明确说“这轮不需要 review”，Orch 记录原因并报告未独立
+审阅，必要自检和测试仍保留。已选的独立关卡不能因为跳过就标成通过。Reviewer 可要求
+修正或补测，但保持只读，由 Producer 落实；独立 oracle、迁移或浏览器行为确有证据缺口
+时才另用 validation Plan 和新的 Delivery session，不增加常驻 Tester。
+
+不需要新配置文件。沿用 `.cross-agent/config.toml`，按需增加专家路由，例如：
+
+```toml
+[experts.product-brief]
+skill = "product-brief"
+producer = "claude:claude-opus-5-5:high"
+reviewer = "codex:gpt-6.1-sol:high"
+
+[experts.architecture-design]
+skill = "architecture-design"
+producer = "claude:claude-opus-5-5:high"
+reviewer = "codex:gpt-6.1-sol:high"
+```
+
+模型只是可选配置示例，应核对本机 CLI 和账号权限。专家的 Producer 选择也控制探索
+agent；这些设置不改变当前 Orch 的模型。没有专家表时继续使用阶段和默认角色，已有
+Map、Plan 和运行流程无需迁移。直接交互入口目前仅支持 Claude；Codex 专家使用已有的
+Orch 转交问题与证据路径，不声称启动了原生交互 Codex session。
+
+底层调用供排障参考，日常由 Orch 执行：
+
+```powershell
+python $crossAgentCli start --stage general --first explore --skill product-brief --request 'Explore the product with the user using the supplied background; do not write artifacts.'
+$crossAgentRun = '<返回的 run_id>'
+python $crossAgentCli expert --run $crossAgentRun
+# 用户明确授权写入且终端已退出后：
+python $crossAgentCli promote --run $crossAgentRun --artifact docs/product-brief.md --request 'Write the Brief within the explicitly authorized scope; retain confirmed decisions and cite discussion evidence.'
+python $crossAgentCli next --run $crossAgentRun --stream
+```
+
+探索入口保存 baseline；如果期间有文件变化，Orch 先说明差异，取得明确处理方向后用
+`promote --reconcile '<用户对这些变化的处理决定>'`，不能悄悄把变化藏进新 baseline。
+若用户明确不审阅，在 `start --first produce` 或 `promote` 加
+`--skip-review --reason '<用户明确选择及出处>'`。若 Producer 已完成而首次 review 尚未
+开始、也没有 findings，可用 `waive-review --run <run-id> --reason '<明确选择>'`。
+成功结果是 `completed-without-review`，检查失败则需要用户决定；不能清除已有 findings。
+终端中断留下占用标记时，先确认进程已停止，再用 `expert --run <run-id> --release`
+清除失效标记；这不表示提交。会话恢复失败时通过原始讨论证据交给
+新 worker，不能声称原 session 的上下文还在。原文、用户确认、模型建议和 Orch 转述
+分别保留；只有摘要或 Orch 转述的用户意图会明确标注其证明范围。
 
 ## 4. 主案例：先规划，再执行重构
 
@@ -282,6 +350,7 @@ Subagents：请求 2，已确认启动 2，活跃 1。当前正在处理测试�
 
 - `independently-passed`：独立评审后没有待处理的 accepted finding；仍需结合实际检查结果和已披露的未决项理解，不等于形式化证明无缺陷。
 - `completed-by-orchestrator`：预算结束后由 Orch 完成有限收尾，没有再次独立评审；不能冒充前一种状态。
+- `completed-without-review`：你明确跳过本轮独立评审，必要检查已完成；报告应保留跳过原因。
 - `needs-user-decision`、`blocked` 或 `failed`：不能报告为完整交付。
 
 上述小型重构曾用于真实跨模型验证：计划和执行各通过一次独立评审，执行后的 10 项 unittest 通过。过程中遇到内联命令权限限制，改成普通测试文件后完成；这不是保证以后每次都无阻塞。多 subagent 并发和 context 压满后的自动压缩不属于这次真实测试覆盖。
@@ -323,7 +392,7 @@ python $crossAgentCli status --run $crossAgentRun
 python $crossAgentCli close --run $crossAgentRun
 ```
 
-`close` 清理运行状态和记录的 worker 会话，保留项目产物，并按设置追加 backlog。它不是撤销代码，也不是“完成开发”的快捷方式。未完成的 run 只有你明确放弃后才关闭，必要时使用 `--abandon`。关闭后不能再恢复这个 run，因此先保存你需要的结果报告。
+`close` 清理临时运行状态和符合条件的 CLI 自有 worker 会话，保留项目产物、CSV、讨论证据和交接，并按设置追加 backlog。用户提供或参与过的 session 始终保留；导入必要证据失败也不删除源 session。保留的本地证据在 `.cross-agent/history/<run-id>/discussion.json`，交接在同目录 `handoff.json`。明确要求清除这些本地历史时用 `forget-history --run <run-id>`，不会删除 provider session。它不是撤销代码，也不是“完成开发”的快捷方式。未完成的 run 只有你明确放弃后才关闭，必要时使用 `--abandon`。关闭后不能再恢复这个 run，因此先保存你需要的结果报告。
 
 计划关闭且门槛满足后，执行阶段创建另一个 run，明确把已审计划作为输入：
 
@@ -352,9 +421,9 @@ architecture-design Skill 编写 docs/architecture.md，Roadmap 再用 feature-m
 评审后等我批准，不改生产代码。
 ```
 
-`general` 默认不注入 Skill 正文，所以请求里要写明 `architecture-design` 的路径和产物。只有配置了 `[stages.general]` 的 `skill` 时，CLI 才把该 Skill 正文注入 Producer 和 Reviewer；它对使用这份配置的所有 `general` run 生效，所以只在这些 run 都属于该 Skill 时设置，例如专门做架构设计的配置。
+架构 run 使用 `general --skill architecture-design`，不必把共享配置的所有 `general` run 绑定成架构任务。`--skill` 可指定逻辑 Skill 名或 `SKILL.md` 路径；完整正文同时提供给 Producer 与 Reviewer，后者将其作为只读核验标准。
 
-`feature-delivery` 阶段的独立评审是选定关卡：Producer 完成后只报告 readiness，关卡行
+启用 review 的 `feature-delivery` 阶段将独立评审作为选定关卡：Producer 完成后只报告 readiness，关卡行
 保持 `not run`；Feature Plan 和 Map 保持 `in_progress`，validation Plan 照常记录执行状态
 和结论，但没有 Map 或 `verified`。`close` 前 Orch 记录 Plan、Map（如有）和本次审阅 diff
 中文件的 hash；`close` 追加 `docs/review-backlog.md` 属于 CLI 记账，不计入。run 以
@@ -369,7 +438,7 @@ Architecture Design / Testing Strategy -> `feature-map` -> `feature-plan` -> Del
 
 CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general` 四种 stage，不存在 `roadmap` 或 `refactor` 子命令。`general` 不应被用来绕过本来适用的生命周期前提。
 
-`feature-map`、`feature-plan`、`feature-delivery` 现在允许根据用户请求自动选择；共用 `SKILL.md`，分别用 Claude frontmatter 和 Codex `agents/openai.yaml` 声明策略。其他生命周期 Skills 和 Orch 保持显式调用。Cross-agent 不依赖模型碰巧选择正确 Skill：CLI 将指定阶段的完整正文注入 prompt，并显示路径、hash 和加载方式；引用的资源仍按需读取。自动选择不会扩大用户授权或解除 Reviewer 的只读角色。
+`feature-map`、`feature-plan`、`feature-delivery` 现在允许根据用户请求自动选择；共用 `SKILL.md`，分别用 Claude frontmatter 和 Codex `agents/openai.yaml` 声明策略。其他生命周期 Skills 保持各自的显式调用边界；Cross-agent 也可在协调收益明确时自动选择。Cross-agent 不依赖模型碰巧选择正确 Skill：CLI 将指定阶段的完整正文注入 prompt，并显示路径、hash 和加载方式；引用的资源仍按需读取。自动选择不会扩大用户授权或解除 Reviewer 的只读角色。
 
 ## 7. 常见问题
 
@@ -440,12 +509,13 @@ python $crossAgentCli next --run '<run-id>' --stream
 清理项目配置和 run 历史。
 
 
-本次执行机制的自动化验证运行 `python -B -m unittest discover -s
+以下为既有机制的历史验证记录，不是本次探索接入的验证计数：
+`python -B -m unittest discover -s
 skills/coding/cross-agent/scripts/tests`：70 项通过，覆盖假 provider 的恢复、feedback
 回路、checkpoint、只读/schema guard、CLI 选择和真实子进程的硬 timeout。安装后另以
 `status`、`start --dry-run` 与文件 hash 核对两端副本及旧 run 兼容性。模型原生的自动
 Skill 选择、真实 Claude/Codex 的 checkpoint 和失效 session 恢复尚需实际运行验证；
-本轮部署没有启动、关闭或修改现有 F05 run。
+该历史部署没有启动、关闭或修改当时的 F05 run。
 
 ## 失败 Delivery 转回 Feature Plan
 
@@ -458,7 +528,7 @@ run、原始 baseline、findings、剩余预算以及已有 session 全部保留
 旧 diff size guard 可用 `--max-diff-kb <更大值>` 明确增加容量；schema、只读、snapshot
 校验失败不可通过该入口恢复。30 分钟硬 timeout 不变。
 
-验证记录：本次交接与 Windows 原子写入修复后，CLI 回归共 74 项通过。实机验证了
+历史验证记录：交接与 Windows 原子写入修复当时，CLI 回归共 74 项通过。实机验证了
 失败 Delivery 暂存、同一 Plan 的 Codex 独立审阅通过、恢复时新开 Producer、
 S1/S2/S3 checkpoint 连续换新 session，以及原始交付 baseline 与 0/2 审阅预算保留。
 原 run 的命令权限仍为启动时的快照；更新共享配置只影响新 run 的命令权限，

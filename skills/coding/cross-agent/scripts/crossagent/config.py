@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import shutil
 import tempfile
 import tomllib
@@ -21,7 +22,7 @@ STAGE_KEYS = ("skill", *ROLES)
 
 # Settings copied into each run, so a later config edit never changes an open run.
 RUN_SETTINGS = ("max_reviews", "timeout_minutes", "rotate_at_tokens", "backlog_rejected", "max_diff_kb")
-CONFIG_KEYS = (*RUN_SETTINGS, "defaults", "cli", "stages", "projects")
+CONFIG_KEYS = (*RUN_SETTINGS, "defaults", "cli", "stages", "experts", "projects")
 REQUIRED_KEYS = (*RUN_SETTINGS, "defaults", "cli", "projects")
 
 # Read-only Git commands a Producer may run besides the project's allowed_commands.
@@ -77,7 +78,8 @@ def _parse_config(text: str, path: Path) -> dict:
         raise UsageError(f"Missing required config keys {sorted(missing)} in {path}")
     # Stage-path overrides are optional; sibling Skill discovery is unchanged.
     config.setdefault("stages", {})
-    for key in ("defaults", "cli", "stages", "projects"):
+    config.setdefault("experts", {})
+    for key in ("defaults", "cli", "stages", "experts", "projects"):
         if not isinstance(config[key], dict):
             raise UsageError(f"'{key}' in {path} must be a table")
     _check(config, path)
@@ -91,8 +93,8 @@ def _render_config(config: dict) -> str:
     for table in ("defaults", "cli"):
         lines += ["", f"[{table}]"]
         lines += [f"{key} = {json.dumps(value)}" for key, value in config[table].items()]
-    for table in ("stages", "projects"):
-        for name, settings in config[table].items():
+    for table in ("stages", "experts", "projects"):
+        for name, settings in config.get(table, {}).items():
             lines += ["", f"[{table}.{json.dumps(name)}]"]
             lines += [f"{key} = {json.dumps(value)}" for key, value in settings.items()]
     return "\n".join(lines) + "\n"
@@ -226,6 +228,20 @@ def _check(config: dict, path: Path) -> None:
                 except UsageError as exc:
                     raise UsageError(f"[stages.{stage}] {key} in {path}: {exc}") from exc
                 configured_executable(config, spec.provider, path)
+    for expert, settings in config.get("experts", {}).items():
+        if not re.fullmatch(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*", expert):
+            raise UsageError(f"[experts.{expert}] in {path} requires a lowercase kebab-case Skill name")
+        if not isinstance(settings, dict) or set(settings) - set(STAGE_KEYS):
+            raise UsageError(f"[experts.{expert}] in {path} must be a table with only {', '.join(STAGE_KEYS)}")
+        for key, value in settings.items():
+            if not isinstance(value, str) or not value.strip():
+                raise UsageError(f"[experts.{expert}] {key} in {path} must be a nonempty string")
+            if key in ROLES:
+                try:
+                    spec = parse_spec(value)
+                except UsageError as exc:
+                    raise UsageError(f"[experts.{expert}] {key} in {path}: {exc}") from exc
+                configured_executable(config, spec.provider, path)
     for project, settings in config["projects"].items():
         _check_project(settings, path, project)
 
@@ -291,11 +307,23 @@ def parse_spec(text: str) -> RoleSpec:
     return RoleSpec(provider, model, effort)
 
 
-def resolve_roles(config: dict, stage: str, overrides: dict | None = None) -> tuple[dict, dict]:
-    """Effective role specs and their sources: run override, then stage role, then default."""
+def expert_name(expert: str) -> str:
+    """The logical routing key for a Skill name or an explicit SKILL.md path."""
+    if not isinstance(expert, str) or not expert.strip():
+        raise UsageError("Skill selection must be a nonempty name or SKILL.md path")
+    path = Path(expert).expanduser()
+    name = path.parent.name if path.name == "SKILL.md" else expert
+    return re.sub(r"^\d+\.", "", name)
+
+
+def resolve_roles(config: dict, stage: str, overrides: dict | None = None,
+                  expert: str | None = None) -> tuple[dict, dict]:
+    """Resolve each role: run override, expert, stage, then default."""
     roles, sources = {}, {}
+    expert_settings = config.get("experts", {}).get(expert_name(expert), {}) if expert is not None else {}
     for role in ROLES:
         candidates = (("override", (overrides or {}).get(role)),
+                      ("expert", expert_settings.get(role)),
                       ("stage", config["stages"].get(stage, {}).get(role)),
                       ("default", config["defaults"][role]))
         source, value = next(candidate for candidate in candidates if candidate[1])
@@ -342,22 +370,47 @@ def find_stage_skill(config: dict, stage: str) -> Path | None:
 
     `general` has no lifecycle owner, so it supplies a Skill only when one is configured.
     """
-    override = config["stages"].get(stage, {}).get("skill")
-    if override:
-        path = Path(override).expanduser()
+    return find_skill(config, stage)
+
+
+def find_skill(config: dict, stage: str, expert: str | None = None) -> Path | None:
+    """Select an explicit expert Skill, or preserve the stage's existing route.
+
+    Paths are resolved from the calling project's working directory, like
+    existing stage overrides. Logical names discover sibling Skills in either
+    deployed or ordinal-prefixed authoring folders. Selecting a missing expert
+    never silently falls back to another Skill.
+    """
+    if expert is not None:
+        name = expert_name(expert)
+        selector = expert if Path(expert).name == "SKILL.md" else config.get(
+            "experts", {}).get(name, {}).get("skill", expert)
+    else:
+        selector = config["stages"].get(stage, {}).get("skill")
+        if not selector and stage == "general":
+            return None
+        selector = selector or stage
+    if not isinstance(selector, str) or not selector.strip():
+        raise UsageError("Skill selection must be a nonempty name or SKILL.md path")
+    path = Path(selector).expanduser()
+    if path.name == "SKILL.md" or path.is_absolute() or len(path.parts) > 1:
         if not path.is_file():
-            raise UsageError(f"The configured {stage} Skill {path} does not exist")
+            raise UsageError(f"The selected Skill {path} does not exist or is not a file")
+        if path.name != "SKILL.md":
+            raise UsageError(f"The selected Skill {path} must be an existing SKILL.md file")
         return path.resolve()
-    if stage == "general":
-        return None
     root = skills_root()
+    matches = []
     for child in sorted(root.iterdir()):
-        # Deployed folders are named `<stage>`; authoring folders may be `<ordinal>.<stage>`.
-        if child.is_dir() and (child.name == stage or child.name.endswith("." + stage)):
+        if child.is_dir() and re.sub(r"^\d+\.", "", child.name) == selector:
             skill = child / "SKILL.md"
             if skill.is_file():
-                return skill
+                matches.append(skill.resolve())
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise UsageError(f"Multiple Skills named {selector} next to cross-agent in {root}; select an explicit SKILL.md path")
     raise UsageError(
-        f"Cannot find the {stage} Skill next to cross-agent in {root}; "
-        f"set [stages.{stage}] skill in {config_path()}"
+        f"Cannot find the {selector} Skill next to cross-agent in {root}; "
+        "select an existing SKILL.md path"
     )
