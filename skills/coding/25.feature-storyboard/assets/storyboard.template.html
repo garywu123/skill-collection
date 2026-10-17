@@ -4,79 +4,108 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>F10 Story 1 · STORY NAME</title>
-  <link rel="stylesheet" href="_storyboard.css">
-  <script src="_storyboard.js" defer></script>
+  <link rel="stylesheet" href="storyboard.css">
+  <script src="shell.js" defer></script>
+  <script src="storyboard.js" defer></script>
 </head>
 <body>
-  <main class="sb-document" data-storyboard data-interactive data-initial="S1.1">
+  <main class="sb-document" data-storyboard data-interactive data-shell="desktop" data-initial="S1.1">
     <header class="sb-document__header">
       <div>
         <p class="sb-eyebrow">F10 · Story 1 · Feature Storyboard</p>
         <h1>USER GOAL OF THIS STORY</h1>
-        <p>Review question: CAN THE USER REACH THIS GOAL, AND DO THE BRANCHES BEHAVE AS INTENDED? Click the dashed controls.</p>
+        <p>Review question: CAN THE USER REACH THIS GOAL, AND DO THE BRANCHES BEHAVE AS INTENDED? Click the dashed controls, then open Overview to check every path.</p>
       </div>
-      <a class="sb-button" href="#S1.1" data-reset data-interactive-control hidden>Restart story</a>
+      <div class="sb-row">
+        <a class="sb-button" href="#overview" data-overview-toggle data-interactive-control hidden>Overview</a>
+        <a class="sb-button" href="#S1.1" data-reset data-interactive-control hidden>Restart story</a>
+      </div>
     </header>
 
     <section class="sb-flow" aria-label="Story states">
       <article class="sb-frame sb-desktop" id="S1.1" data-state data-active tabindex="-1">
-        <p class="sb-frame__label"><strong>S1.1</strong> · Starting screen</p>
-        <div class="sb-device">
-          <header class="sb-topbar sb-row">
-            <span>APP</span><a class="sb-hotspot" href="#S1.2" data-go="S1.2" data-transition="T1.1">File</a><span>Help</span>
-          </header>
-          <div class="sb-window">
-            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
-            <div class="sb-content sb-stack"><strong>REPRESENTATIVE CONTENT</strong></div>
+        <p class="sb-frame__label"><strong>S1.1</strong> · Record list</p>
+        <div class="sb-device" data-nav="records" data-title="/ Records">
+          <div class="sb-content sb-stack">
+            <div class="sb-row">
+              <strong>RECORDS</strong><span class="sb-muted">3 records</span>
+              <a class="sb-button sb-button--primary sb-hotspot" href="#S1.2" data-go="S1.2" data-transition="T1.1">New record</a>
+            </div>
+            <ul class="sb-list">
+              <li class="sb-list-item">FIXTURE RECORD A · DETAIL</li>
+              <li class="sb-list-item">FIXTURE RECORD B · DETAIL</li>
+              <li class="sb-list-item">FIXTURE RECORD C · DETAIL</li>
+            </ul>
           </div>
         </div>
-        <p class="sb-note">ONE SHORT REVIEWER HINT: open the File menu.</p>
+        <p class="sb-note">Click New record.</p>
       </article>
 
       <article class="sb-frame sb-desktop" id="S1.2" data-state tabindex="-1">
-        <p class="sb-frame__label"><strong>S1.2</strong> · Menu open</p>
-        <div class="sb-device">
-          <header class="sb-topbar sb-row"><span>APP</span><span>File</span><span>Help</span></header>
-          <div class="sb-window">
-            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
-            <div class="sb-content sb-stack"><strong>REPRESENTATIVE CONTENT</strong></div>
+        <p class="sb-frame__label"><strong>S1.2</strong> · New record page</p>
+        <div class="sb-device" data-nav="records" data-title="/ New record">
+          <div class="sb-content sb-stack">
+            <a href="#S1.1" data-go="S1.1" data-transition="T1.2">← Records</a>
+            <strong>New record</strong>
+            <label class="sb-field sb-hotspot" data-go="S1.3" data-transition="T1.4">REQUIRED FIELD<input value="" placeholder="EXAMPLE VALUE"></label>
+            <label class="sb-field">OPTIONAL FIELD<input value="FIXTURE VALUE"></label>
+            <div class="sb-actions">
+              <a class="sb-button" href="#S1.1" data-go="S1.1" data-transition="T1.3">Cancel</a>
+              <a class="sb-button sb-button--primary" href="#S1.4" data-go="S1.4" data-transition="T1.5">Save</a>
+            </div>
           </div>
-          <ul class="sb-menu" role="menu" aria-label="File">
-            <li role="none"><a class="sb-hotspot" href="#S1.3" data-go="S1.3" data-transition="T1.2" role="menuitem"><span>COMMAND</span><span class="sb-muted">Ctrl+K</span></a></li>
-            <li class="sb-menu__separator" role="separator"></li>
-            <li role="none"><span role="menuitem">OTHER COMMAND</span></li>
-          </ul>
         </div>
+        <p class="sb-note">Click the required field to fill it, or click Save while it is empty.</p>
       </article>
 
       <article class="sb-frame sb-desktop" id="S1.3" data-state tabindex="-1">
-        <p class="sb-frame__label"><strong>S1.3</strong> · Confirm</p>
-        <div class="sb-device">
-          <header class="sb-topbar sb-row"><span>APP</span><span>File</span><span>Help</span></header>
-          <div class="sb-window">
-            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
-            <div class="sb-content sb-stack"><strong>REPRESENTATIVE CONTENT</strong></div>
-          </div>
-          <div class="sb-modal">
-            <section class="sb-dialog sb-stack" role="alertdialog" aria-modal="true" aria-labelledby="S1.3-title">
-              <strong id="S1.3-title">CONFIRMATION TITLE THAT WOULD SHIP</strong>
-              <span>CONSEQUENCE COPY THAT WOULD SHIP</span>
-              <div class="sb-actions">
-                <a class="sb-button" href="#S1.1" data-go="S1.1" data-transition="T1.3">Cancel</a>
-                <a class="sb-button sb-button--primary sb-hotspot" href="#S1.4" data-go="S1.4" data-transition="T1.4">Confirm</a>
-              </div>
-            </section>
+        <p class="sb-frame__label"><strong>S1.3</strong> · Form filled</p>
+        <div class="sb-device" data-nav="records" data-title="/ New record">
+          <div class="sb-content sb-stack">
+            <a href="#S1.1" data-go="S1.1" data-transition="T1.6">← Records</a>
+            <strong>New record</strong>
+            <label class="sb-field">REQUIRED FIELD<input value="FIXED VALUE"></label>
+            <label class="sb-field">OPTIONAL FIELD<input value="FIXTURE VALUE"></label>
+            <div class="sb-actions">
+              <a class="sb-button" href="#S1.1" data-go="S1.1" data-transition="T1.7">Cancel</a>
+              <a class="sb-button sb-button--primary sb-hotspot" href="#S1.5" data-go="S1.5" data-transition="T1.8">Save</a>
+            </div>
           </div>
         </div>
+        <p class="sb-note">Click Save.</p>
       </article>
 
       <article class="sb-frame sb-desktop" id="S1.4" data-state tabindex="-1">
-        <p class="sb-frame__label"><strong>S1.4</strong> · Done</p>
-        <div class="sb-device">
-          <header class="sb-topbar sb-row"><span>APP</span><span>File</span><span>Help</span></header>
-          <div class="sb-window">
-            <aside class="sb-sidebar sb-stack"><strong>SIDE PANEL</strong></aside>
-            <div class="sb-content sb-stack"><strong>UPDATED CONTENT</strong></div>
+        <p class="sb-frame__label"><strong>S1.4</strong> · Required field missing</p>
+        <div class="sb-device" data-nav="records" data-title="/ New record">
+          <div class="sb-content sb-stack">
+            <a href="#S1.1" data-go="S1.1" data-transition="T1.9">← Records</a>
+            <strong>New record</strong>
+            <label class="sb-field sb-field--error sb-hotspot" data-go="S1.3" data-transition="T1.10">REQUIRED FIELD<input value="" placeholder="EXAMPLE VALUE"><span class="sb-field__error">ERROR COPY THAT SAYS HOW TO FIX IT</span></label>
+            <label class="sb-field">OPTIONAL FIELD<input value="FIXTURE VALUE"></label>
+            <div class="sb-actions">
+              <a class="sb-button" href="#S1.1" data-go="S1.1" data-transition="T1.11">Cancel</a>
+              <span class="sb-button sb-button--primary">Save</span>
+            </div>
+          </div>
+        </div>
+        <p class="sb-note">The error sits on the field and other input is kept. Click the field to fix it.</p>
+      </article>
+
+      <article class="sb-frame sb-desktop" id="S1.5" data-state tabindex="-1">
+        <p class="sb-frame__label"><strong>S1.5</strong> · Saved</p>
+        <div class="sb-device" data-nav="records" data-title="/ Records">
+          <div class="sb-content sb-stack">
+            <div class="sb-row">
+              <strong>RECORDS</strong><span class="sb-muted">4 records</span>
+              <span class="sb-button sb-button--primary">New record</span>
+            </div>
+            <ul class="sb-list">
+              <li class="sb-list-item sb-selected">FIXED VALUE · FIXTURE VALUE</li>
+              <li class="sb-list-item">FIXTURE RECORD A · DETAIL</li>
+              <li class="sb-list-item">FIXTURE RECORD B · DETAIL</li>
+              <li class="sb-list-item">FIXTURE RECORD C · DETAIL</li>
+            </ul>
           </div>
           <div class="sb-toast" role="status">✓ VISIBLE COMPLETION FEEDBACK</div>
         </div>
@@ -87,23 +116,32 @@
     <section class="sb-inventory" aria-labelledby="inventory-title">
       <h2 id="inventory-title">State and transition inventory</h2>
       <table>
-        <thead><tr><th>ID</th><th>State</th><th>Purpose</th></tr></thead>
+        <thead><tr><th>ID</th><th>State</th><th>Purpose (main task · primary action · entry/exit)</th></tr></thead>
         <tbody>
-          <tr><td><code>S1.1</code></td><td>Starting screen</td><td>Where the story begins.</td></tr>
-          <tr><td><code>S1.2</code></td><td>Menu open</td><td>The command is discoverable.</td></tr>
-          <tr><td><code>S1.3</code></td><td>Confirm</td><td>Consequence is visible before commitment.</td></tr>
-          <tr><td><code>S1.4</code></td><td>Done</td><td>Observable successful result.</td></tr>
+          <tr><td><code>S1.1</code></td><td>Record list</td><td>Scan records · New record top of list · entry from nav; exit to the editor page.</td></tr>
+          <tr><td><code>S1.2</code></td><td>New record page</td><td>Enter one record · Save bottom right · page change because the form needs focus; back via ← Records or Cancel.</td></tr>
+          <tr><td><code>S1.3</code></td><td>Form filled</td><td>Submit a valid record · Save · entry by filling the form; exit to the list.</td></tr>
+          <tr><td><code>S1.4</code></td><td>Required field missing</td><td>Fix the error in place · the flagged field · error on the field, other input kept; exit to the filled form.</td></tr>
+          <tr><td><code>S1.5</code></td><td>Saved</td><td>Confirm success · none · back on the list with the new row selected; end of story.</td></tr>
         </tbody>
       </table>
       <table>
         <thead><tr><th>ID</th><th>From</th><th>Action</th><th>To</th></tr></thead>
         <tbody>
-          <tr><td><code>T1.1</code></td><td><code>S1.1</code></td><td>File</td><td><code>S1.2</code></td></tr>
-          <tr><td><code>T1.2</code></td><td><code>S1.2</code></td><td>COMMAND</td><td><code>S1.3</code></td></tr>
-          <tr><td><code>T1.3</code></td><td><code>S1.3</code></td><td>Cancel</td><td><code>S1.1</code></td></tr>
-          <tr><td><code>T1.4</code></td><td><code>S1.3</code></td><td>Confirm</td><td><code>S1.4</code></td></tr>
+          <tr><td><code>T1.1</code></td><td><code>S1.1</code></td><td>New record</td><td><code>S1.2</code></td></tr>
+          <tr><td><code>T1.2</code></td><td><code>S1.2</code></td><td>← Records</td><td><code>S1.1</code></td></tr>
+          <tr><td><code>T1.3</code></td><td><code>S1.2</code></td><td>Cancel</td><td><code>S1.1</code></td></tr>
+          <tr><td><code>T1.4</code></td><td><code>S1.2</code></td><td>Fill required field</td><td><code>S1.3</code></td></tr>
+          <tr><td><code>T1.5</code></td><td><code>S1.2</code></td><td>Save (required field empty)</td><td><code>S1.4</code></td></tr>
+          <tr><td><code>T1.6</code></td><td><code>S1.3</code></td><td>← Records</td><td><code>S1.1</code></td></tr>
+          <tr><td><code>T1.7</code></td><td><code>S1.3</code></td><td>Cancel</td><td><code>S1.1</code></td></tr>
+          <tr><td><code>T1.8</code></td><td><code>S1.3</code></td><td>Save</td><td><code>S1.5</code></td></tr>
+          <tr><td><code>T1.9</code></td><td><code>S1.4</code></td><td>← Records</td><td><code>S1.1</code></td></tr>
+          <tr><td><code>T1.10</code></td><td><code>S1.4</code></td><td>Fill required field</td><td><code>S1.3</code></td></tr>
+          <tr><td><code>T1.11</code></td><td><code>S1.4</code></td><td>Cancel</td><td><code>S1.1</code></td></tr>
         </tbody>
       </table>
+      <p class="sb-muted">Not drawn: ONE-LINE SCENARIO AND ITS EXPECTED OUTCOME, such as a save failure shown as a banner above the form; empty list showing New record.</p>
     </section>
   </main>
 </body>

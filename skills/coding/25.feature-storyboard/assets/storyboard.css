@@ -414,6 +414,78 @@ input {
   background: var(--sb-soft);
 }
 
+/* Shell-mounted stories: nav items, field errors, and the runtime overview. */
+.sb-nav {
+  width: 72px;
+  text-align: center;
+}
+
+.sb-nav-item {
+  display: grid;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 6px;
+  font-size: 18px;
+}
+
+.sb-nav-item small {
+  font-size: 11px;
+}
+
+.sb-nav-item.sb-selected {
+  outline: 1px solid var(--sb-line);
+  font-weight: 700;
+}
+
+.sb-field--error input,
+.sb-field--error select {
+  border: 2px solid var(--sb-ink);
+}
+
+.sb-field__error {
+  color: var(--sb-ink);
+  font-weight: 700;
+}
+
+.sb-overview {
+  display: none;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--sb-muted);
+  font-size: 13px;
+}
+
+[data-storyboard][data-running][data-overview] .sb-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+  gap: 20px;
+}
+
+[data-storyboard][data-running][data-overview] .sb-frame {
+  display: block;
+  overflow: hidden;
+  max-width: none;
+  margin: 0;
+  grid-column: auto;
+}
+
+[data-storyboard][data-running][data-overview] .sb-device {
+  zoom: 0.5;
+}
+
+[data-storyboard][data-running][data-overview] .sb-desktop .sb-device {
+  width: 920px;
+  max-width: none;
+}
+
+[data-storyboard][data-running][data-overview] .sb-note {
+  display: none;
+}
+
+[data-storyboard][data-running][data-overview] .sb-overview {
+  display: block;
+}
+
 @media (max-width: 720px) {
   .sb-document {
     padding: 18px;
@@ -444,24 +516,5 @@ input {
 
   .sb-inventory {
     overflow-x: auto;
-  }
-}
-
-@media print {
-  body {
-    background: #ffffff;
-  }
-
-  .sb-document {
-    width: 100%;
-    padding: 0;
-  }
-
-  [data-storyboard][data-interactive][data-running] .sb-flow {
-    display: grid;
-  }
-
-  [data-storyboard][data-interactive][data-running] .sb-frame {
-    display: block;
   }
 }

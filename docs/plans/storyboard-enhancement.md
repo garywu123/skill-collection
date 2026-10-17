@@ -1,7 +1,9 @@
 # Feature Storyboard Enhancement Proposal
 
-Status: brainstorm, revised after review round 1 and Orchestrator
-counterpoints, not approved. Target Skill:
+Status: implemented in the target Skill after prototype review; the shared
+assets are renamed without the leading underscore (`storyboard.css`,
+`storyboard.js`, `shell.js`) because Artifact publishing rejects such names.
+The feature-delivery follow-up is not implemented. Target Skill:
 [feature-storyboard](../../skills/coding/25.feature-storyboard/SKILL.md).
 
 ## Problem
