@@ -1,13 +1,21 @@
 {
     "_comment": [
-        "Example structure for deploy-skills.json beside this file.",
+        "Copy this file to deploy-skills.json beside it. deploy-skills.json is machine-local and gitignored.",
+        "targets selects the tools this machine deploys to; a tool missing from targets is not deployed. Each deployment clears every enabled target directory first.",
+        "A target may set path; a leading ~ means the user profile. Defaults: ~/.copilot/skills, ~/.claude/skills, ~/.agents/skills.",
         "Only listed skills are deployed. Source paths are repository-relative.",
         "Each name must match the name field in that source folder's SKILL.md.",
         "retiredSkillNames is an explicit one-time or historical cleanup list; never add platform-owned or other-repository skills.",
         "externalSkillConfigPath is optional and repository-relative; it overrides the default external-skills/external-skills.json location."
     ],
     "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
+    "targets": {
+        "copilot": { "enabled": true },
+        "claude": { "enabled": false },
+        "agents": { "enabled": false }
+    },
     "retiredSkillNames": [
+        "agent-instructions",
         "architecture-baseline",
         "feature-implementation-plan",
         "guided-tdd-pairing",
@@ -27,6 +35,22 @@
             "name": "coding-agent-instructions"
         },
         {
+            "source": "skills/coding/16.code-style",
+            "name": "code-style"
+        },
+        {
+            "source": "skills/coding/17.functional-spec",
+            "name": "functional-spec"
+        },
+        {
+            "source": "skills/coding/18.architecture-design",
+            "name": "architecture-design"
+        },
+        {
+            "source": "skills/coding/19.testing-strategy",
+            "name": "testing-strategy"
+        },
+        {
             "source": "skills/coding/20.feature-map",
             "name": "feature-map"
         },
@@ -43,12 +67,28 @@
             "name": "feature-delivery"
         },
         {
+            "source": "skills/coding/cross-agent",
+            "name": "cross-agent"
+        },
+        {
             "source": "skills/coding/skill-authoring",
             "name": "skill-authoring"
         },
         {
+            "source": "skills/coding/markdown-reflow",
+            "name": "markdown-reflow"
+        },
+        {
             "source": "skills/work/crown-ppt",
             "name": "crown-ppt"
+        },
+        {
+            "source": "skills/work/it-ticket-submission",
+            "name": "it-ticket-submission"
+        },
+        {
+            "source": "skills/work/workplace-knowledge",
+            "name": "workplace-knowledge"
         }
     ]
 }

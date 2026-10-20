@@ -50,13 +50,13 @@ powershell -ExecutionPolicy Bypass -File scripts/external-skills/Sync-ExternalSk
 powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1 -ListOnly
 ```
 
-当前脚本的默认目标是 `~/.claude/skills` 和 `~/.agents/skills`。真实部署会更新配置的外部 Skill 缓存，并清空所选目标目录后重新复制；包括非部署清单中的条目也会被移除。只有确认目标目录由本仓库独占管理、预览里的清理范围可接受后，才执行：
+本机 `deploy-skills.json` 的 `targets` 决定部署到哪些工具（`copilot` 对应 `~/.copilot/skills`，`claude` 对应 `~/.claude/skills`，`agents` 对应 `~/.agents/skills`）；没有 `targets` 时默认部署到 `~/.claude/skills` 和 `~/.agents/skills`。真实部署会更新配置的外部 Skill 缓存，并清空所选目标目录后重新复制；包括非部署清单中的条目也会被移除。只有确认目标目录由本仓库独占管理、预览里的清理范围可接受后，才执行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1
 ```
 
-只部署一端时使用 `-Target claude` 或 `-Target agents`。不确定目录里是否有其他内容时，不要直接运行真实部署。部署安装 Skill 的代码和指令，不会自动生成目标 repo 的 `.cross-agent/config.toml`，也不会替项目初始化 Git；项目配置由下一节的 `initiate` 创建。
+只部署一端时使用 `-Target copilot`、`-Target claude` 或 `-Target agents`。不确定目录里是否有其他内容时，不要直接运行真实部署。部署安装 Skill 的代码和指令，不会自动生成目标 repo 的 `.cross-agent/config.toml`，也不会替项目初始化 Git；项目配置由下一节的 `initiate` 创建。
 
 部署后确认实际使用的 Skill 路径。后文 PowerShell 示例采用 Codex / Agents 的默认安装位置：
 
@@ -66,7 +66,7 @@ Test-Path -LiteralPath $crossAgentCli
 python $crossAgentCli --help
 ```
 
-如果只部署到 Claude，改用 `.claude/skills/cross-agent/scripts/cross_agent.py`；如果配置了自定义部署路径，使用实际路径。Skill 未出现在当前客户端时，新开会话重新发现，或明确附上其 `SKILL.md` 文件。
+如果只部署到 Claude，改用 `.claude/skills/cross-agent/scripts/cross_agent.py`；只部署到 Copilot 时改用 `.copilot/skills/cross-agent/scripts/cross_agent.py`；如果配置了自定义部署路径，使用实际路径。Skill 未出现在当前客户端时，新开会话重新发现，或明确附上其 `SKILL.md` 文件。
 
 ## 3. 初始化项目和配置
 

@@ -35,7 +35,8 @@ skill-collection/
 │   ├── Install-Skills.ps1     # copy this repo's Skills into one target project
 │   └── deploy-skill/
 │       ├── Deploy-Skills.ps1  # sync configured Skills machine-wide
-│       └── deploy-skills.json # explicit local + external Skill mappings
+│       ├── deploy-skills.example.json # versioned template: targets + Skill mappings
+│       └── deploy-skills.json # machine-local copy (gitignored)
 └── skills/
     ├── coding/                # product-brief -> ... -> feature-delivery, plus utilities
     └── work/                  # crown-ppt

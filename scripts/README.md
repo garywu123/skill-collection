@@ -5,7 +5,7 @@
 | 脚本 | 作用域 | 装到哪 |
 |---|---|---|
 | `Install-Skills.ps1` | 单个项目 | `<project>/.claude/skills/` |
-| `Deploy-Skills.ps1` | 整台机器 | `~/.claude/skills/` 等 |
+| `Deploy-Skills.ps1` | 整台机器 | `~/.copilot/skills/`、`~/.claude/skills/` 等 |
 
 装到项目里的 skill 只在那个项目可见；装到机器上的对所有项目可见。两者可以并存，
 但同名 skill 会重复出现，选一种为主。
@@ -16,12 +16,12 @@
 `scripts/deploy-skill/deploy-skills.json` 中明确列出的本仓库 mapping，以及由
 其中 `externalSkillConfigPath` 指定（省略时默认为
 `scripts/external-skills/external-skills.json`）的 public Git Skills，
-并在每个目标目录中维护
-`.skill-collection-deployment.json`。后续部署只会删除该 manifest 记录的、
-已经不在 mapping 中的 Skill；不会扫描或删除其他来源的 Skill。
+并在每个目标目录中写入记录已部署名字的
+`.skill-collection-deployment.json`。每个启用的目标目录由本仓库独占管理：真实部署
+会先清空目录里的所有条目，包括其他来源的 Skill，再复制配置的 Skill。预览会列出
+将被清空的条目。
 
-首次从旧流程迁移时，使用 `retiredSkillNames` 明确列出此前由本仓库管理、现在
-需要清理的名字。这个名单是唯一允许在没有 manifest 时删除目录的途径，因此不要把
+`retiredSkillNames` 用于在预览里标出此前由本仓库管理、现在已退役的名字，不要把
 Copilot、Claude、Codex 或其他仓库提供的 Skill 放进去。
 
 ```json
@@ -37,9 +37,43 @@ Copilot、Claude、Codex 或其他仓库提供的 Skill 放进去。
 }
 ```
 
-`deploy-skills.example.json` 展示本仓库 mapping 结构。新增 Skill 不会自动进入
-个人全局环境，必须明确加入实际 `deploy-skills.json`。`source` 是仓库相对路径，
-`name` 必须与对应 `SKILL.md` frontmatter 一致，也是目标目录名。
+`deploy-skills.example.json` 是提交到 Git 的模板；实际使用的
+`deploy-skills.json` 是本机文件，已被 gitignore。新机器先复制模板：
+
+```powershell
+Copy-Item scripts/deploy-skill/deploy-skills.example.json scripts/deploy-skill/deploy-skills.json
+```
+
+新增 Skill 不会自动进入个人全局环境，必须明确加入本机 `deploy-skills.json`；
+如果希望新机器也默认带上，同时更新模板。`source` 是仓库相对路径，`name` 必须与
+对应 `SKILL.md` frontmatter 一致，也是目标目录名。
+
+## 部署目标
+
+本机 `deploy-skills.json` 的 `targets` 决定部署到哪些工具。没有列出的工具不部署；
+每次部署会先清空所有启用的目标目录：
+
+```json
+"targets": {
+  "copilot": { "enabled": true },
+  "claude": { "enabled": false },
+  "agents": { "enabled": false, "path": "~/.agents/skills" }
+}
+```
+
+| 键 | 工具 | 默认目录 |
+|---|---|---|
+| `copilot` | GitHub Copilot | `~/.copilot/skills` |
+| `claude` | Claude Code | `~/.claude/skills` |
+| `agents` | Codex / Agents | `~/.agents/skills` |
+
+`path` 可选，开头的 `~` 表示用户目录。路径优先级：命令行参数、旧的
+`deploy-paths.json`、`targets.<tool>.path`、默认目录。配置里没有 `targets` 时，
+沿用旧行为，部署到 Claude Code 和 Codex / Agents。`-Target copilot|claude|agents`
+只部署指定的一个工具，忽略 `enabled`。
+
+停用一个目标不会清理它的目录，原有 Skill 会留在那里且不再更新。如果客户端同时读取
+多个目录，可能看到重复或过时的 Skill。
 
 ## Public Git Skills
 
@@ -98,10 +132,8 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1 
 powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Deploy-Skills.ps1
 ```
 
-目标目录仍由 `deploy-paths.json` 控制；未配置时使用
-`~/.copilot/skills`、`~/.claude/skills` 和 `~/.agents/skills`。运行
-`Deploy-Skills.ps1 -ListOnly` 可查看最终 Skill mapping 和目标目录，且
-不会联网或写文件。
+部署目标见上文"部署目标"。运行 `Deploy-Skills.ps1 -ListOnly` 可查看最终 Skill
+mapping 和目标目录，且不会联网或写文件。
 
 ## 项目级安装
 

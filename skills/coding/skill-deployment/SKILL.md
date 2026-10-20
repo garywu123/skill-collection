@@ -1,12 +1,13 @@
 ---
 name: skill-deployment
-description: Repository-local guidance for deploying this Skill Collection's explicitly configured skills to Claude Code and Codex/Agents. Each deployment clears the selected target directory before copying Skills. Use only while working in this Skill Collection when the user asks to deploy, synchronize, preview, or clean its machine-wide skills. Do not deploy this Skill itself, use it from another workspace, or use it for arbitrary skill directories.
+description: Repository-local guidance for deploying this Skill Collection's explicitly configured skills to the enabled tools (GitHub Copilot, Claude Code, Codex/Agents). Each deployment clears the selected target directory before copying Skills. Use only while working in this Skill Collection when the user asks to deploy, synchronize, preview, or clean its machine-wide skills, or to change which tools receive them. Do not deploy this Skill itself, use it from another workspace, or use it for arbitrary skill directories.
 ---
 
 # Skill Deployment
 
 Synchronize the machine-wide Skills explicitly managed by this repository,
-including configured public Git Skills, to Claude Code and Codex / Agents.
+including configured public Git Skills, to the enabled tools: GitHub Copilot,
+Claude Code, and Codex / Agents.
 Each target directory is exclusively managed: every deployment clears all of
 its entries before copying the configured Skills. This is a workspace-only Skill:
 `deploy-skills.json` must never map
@@ -21,8 +22,11 @@ removed.
 ## Scope
 
 Use only from this Skill Collection repository, identified by
-`scripts/deploy-skill/Deploy-Skills.ps1` and `scripts/deploy-skill/deploy-skills.json`.
-For a single project's local Skills, use `scripts/Install-Skills.ps1` instead.
+`scripts/deploy-skill/Deploy-Skills.ps1` and
+`scripts/deploy-skill/deploy-skills.example.json`. The working
+`deploy-skills.json` is machine-local and gitignored; when it is missing, copy
+it from the example. For a single project's local Skills, use
+`scripts/Install-Skills.ps1` instead.
 
 Public Git Skills are explicitly configured in the repository-relative path
 from `externalSkillConfigPath` in `deploy-skills.json`; when omitted, the
@@ -37,13 +41,19 @@ Before relying on slash-command discovery in a platform, run:
 powershell -ExecutionPolicy Bypass -File scripts/deploy-skill/Install-WorkspaceSkill.ps1
 ```
 
-The deploy script uses these target directories unless its local path overrides
-say otherwise:
+The `targets` object in `deploy-skills.json` selects the tools. A tool missing
+from `targets` is not deployed; without a `targets` object the script keeps the
+legacy Claude Code and Codex / Agents pair. A target may set `path`, where a
+leading `~` means the user profile.
 
-| Platform | Default target |
-|---|---|
-| Claude Code | `~/.claude/skills` |
-| Codex / Agents | `~/.agents/skills` |
+| Key | Platform | Default target |
+|---|---|---|
+| `copilot` | GitHub Copilot | `~/.copilot/skills` |
+| `claude` | Claude Code | `~/.claude/skills` |
+| `agents` | Codex / Agents | `~/.agents/skills` |
+
+Disabling a target does not clear its directory; Skills already there stay and
+stop updating.
 
 ## Procedure
 
@@ -72,8 +82,8 @@ say otherwise:
    set, and absence of unexpected stale entries. Report
    retained third-party or platform Skill directories separately.
 
-Use `-Target claude` or `-Target agents` when the user
-requests one platform only. Do not use a blanket deletion command, or delete a
+Use `-Target copilot`, `-Target claude`, or `-Target agents` when the user
+requests one platform only; it overrides the `enabled` flags. Do not use a blanket deletion command, or delete a
 Skill that is not recorded by the manifest or explicit retirement list.
 
 ## Validation

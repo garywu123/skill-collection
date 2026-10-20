@@ -1,7 +1,8 @@
 # Work Skills
 
-This collection contains reusable Skills for presentations and other workplace
-communication and administrative artifacts.
+This collection contains reusable Skills for presentations, other workplace
+communication and administrative artifacts, and Microsoft 365 workplace
+knowledge retrieval.
 
 ## Crown PPT Workflow
 
@@ -94,3 +95,4 @@ When an input is unknown, the Skill should make the smallest reasonable assumpti
 |---|---|
 | [`crown-ppt`](crown-ppt/SKILL.md) | Create reviewable Crown design-reference PNGs from text, pictures, or mixed slide content, or implement approved designs as editable PowerPoint decks from the bundled template on a 960 x 540 point canvas using Microsoft PowerPoint COM. |
 | [`it-ticket-submission`](it-ticket-submission/SKILL.md) | Operate the Crown IT Self-Serve Portal (Cherwell) to submit a software/website access-request ticket, asking the requester for the needed details first. |
+| [`workplace-knowledge`](workplace-knowledge/SKILL.md) | Answer workplace questions across Microsoft 365 (through the `m365-copilot-web` MCP server, the user's signed-in Copilot web page) and Jira and Confluence (a read-only export script; Rovo optional): Copilot synthesizes with Atlassian sources attached, the agent returns a short cited brief, and can index, download, or have Copilot generate and review Office documents. |

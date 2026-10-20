@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-    Deploy all skills in this repository to the Claude Code and Codex / Agents
-    skill directories.
+    Deploy configured skills to the GitHub Copilot, Claude Code, and Codex /
+    Agents skill directories.
 
 .DESCRIPTION
     Reads explicit local mappings from deploy-skills.json and public Git
     mappings from ../external-skills/external-skills.json. Before a real
     deployment it clones or fast-forwards each external repository, then copies
-    local and external Skills to the configured target directories. Each target
+    local and external Skills to the enabled target directories. Each target
     is exclusively managed by this collection: immediately before copying, the
     script removes every existing entry in that target directory. This includes
     skills not previously deployed by this collection.
@@ -16,14 +16,25 @@
     so repository ordering prefixes are not copied
     (`10.product-brief` -> `product-brief`).
 
+    deploy-skills.json is machine-local and gitignored. Copy the versioned
+    deploy-skills.example.json to create it.
+
+    Enabled targets come from the optional `targets` object in
+    deploy-skills.json, for example:
+      "targets": {
+        "copilot": { "enabled": true },
+        "claude":  { "enabled": false },
+        "agents":  { "enabled": false, "path": "D:\\skills\\agents" }
+      }
+    A target missing from `targets` is not deployed. Without a `targets`
+    object, Claude Code and Codex / Agents are deployed, as before. -Target
+    selects exactly one tool and overrides the enabled flags.
+
     Path resolution order (first non-empty value wins):
       1. Command-line parameter
-      2. scripts/deploy-paths.json  (machine-local, gitignored)
-      3. $env:USERPROFILE defaults  (~\.claude\skills, ~\.agents\skills)
-
-    Copy deploy-paths.example.json to deploy-paths.json and edit it to override
-    any path for this machine. Skill source mappings are explicit, versioned
-    configuration beside this script and in ../external-skills/.
+      2. scripts/deploy-skill/deploy-paths.json  (legacy, machine-local, gitignored)
+      3. targets.<tool>.path in deploy-skills.json  (a leading ~ means the user profile)
+      4. $env:USERPROFILE defaults  (~\.copilot\skills, ~\.claude\skills, ~\.agents\skills)
 
 .PARAMETER SkillConfigPath
     Path to the explicit skill deployment mapping. Defaults to
@@ -33,6 +44,9 @@
     Path to public Git Skill mappings. Defaults to
     ../external-skills/external-skills.json.
 
+.PARAMETER CopilotSkillsPath
+    Target directory for GitHub Copilot skills. Overrides config file and default.
+
 .PARAMETER ClaudeSkillsPath
     Target directory for Claude Code skills. Overrides config file and default.
 
@@ -40,19 +54,20 @@
     Target directory for Codex / OpenAI Agents skills. Overrides config file and default.
 
 .PARAMETER Target
-    Restrict deployment to a single tool: claude | agents | all (default).
+    Restrict deployment to a single tool: copilot | claude | agents | all
+    (default: the tools enabled in deploy-skills.json).
 
 .PARAMETER ListOnly
     List active Skill folders and cached external revisions without cloning,
     pulling, or writing to any deployment target.
 
 .EXAMPLE
-    # Use config file / defaults — deploy to all tools
+    # Deploy to the tools enabled in deploy-skills.json
     .\Deploy-Skills.ps1
 
 .EXAMPLE
-    # Deploy to Codex / Agents only
-    .\Deploy-Skills.ps1 -Target agents
+    # Deploy to GitHub Copilot only
+    .\Deploy-Skills.ps1 -Target copilot
 
 .EXAMPLE
     # Override a single path on the command line
@@ -60,11 +75,12 @@
 #>
 
 param(
+    [string]$CopilotSkillsPath = "",
     [string]$ClaudeSkillsPath  = "",
     [string]$AgentsSkillsPath  = "",
     [string]$SkillConfigPath = "",
     [string]$ExternalSkillConfigPath = "",
-    [ValidateSet("all", "claude", "agents")]
+    [ValidateSet("all", "copilot", "claude", "agents")]
     [string]$Target = "all",
     [switch]$ListOnly
 )
@@ -113,13 +129,35 @@ if ($skillConfig.PSObject.Properties['retiredSkillNames']) {
 }
 
 # ---------------------------------------------------------------------------
-# Load machine-local path overrides from deploy-paths.json (gitignored).
-# Command-line parameters take precedence over the config file.
+# Resolve target enablement and paths.
 # ---------------------------------------------------------------------------
+$knownTargets = @('copilot', 'claude', 'agents')
+$targetConfig = @{}
+$hasTargetConfig = $skillConfig.PSObject.Properties['targets'] -and $null -ne $skillConfig.targets
+if ($hasTargetConfig) {
+    foreach ($property in $skillConfig.targets.PSObject.Properties) {
+        if ($property.Name -notin $knownTargets) {
+            throw "Unknown deployment target '$($property.Name)' in $SkillConfigPath. Use: $($knownTargets -join ', ')"
+        }
+        $entry = $property.Value
+        if (-not $entry.PSObject.Properties['enabled'] -or $entry.enabled -isnot [bool]) {
+            throw "Deployment target '$($property.Name)' must set enabled to true or false: $SkillConfigPath"
+        }
+        $path = ''
+        if ($entry.PSObject.Properties['path'] -and -not [string]::IsNullOrWhiteSpace($entry.path)) {
+            $path = [string]$entry.path
+        }
+        $targetConfig[$property.Name] = [pscustomobject]@{ Enabled = $entry.enabled; Path = $path }
+    }
+}
+
+# Load legacy machine-local path overrides from deploy-paths.json (gitignored).
+# Command-line parameters take precedence over the config files.
 $configFile = Join-Path $PSScriptRoot "deploy-paths.json"
 if (Test-Path $configFile) {
     Write-Host "Loading paths from $(Split-Path $configFile -Leaf)" -ForegroundColor DarkGray
     $cfg = Get-Content $configFile -Raw | ConvertFrom-Json
+    if (-not $CopilotSkillsPath -and $cfg.PSObject.Properties["CopilotSkillsPath"]) { $CopilotSkillsPath = $cfg.CopilotSkillsPath }
     if (-not $ClaudeSkillsPath  -and $cfg.PSObject.Properties["ClaudeSkillsPath"])  { $ClaudeSkillsPath  = $cfg.ClaudeSkillsPath  }
     if (-not $AgentsSkillsPath  -and $cfg.PSObject.Properties["AgentsSkillsPath"])  { $AgentsSkillsPath  = $cfg.AgentsSkillsPath  }
 }
@@ -133,16 +171,38 @@ if (-not $userProfile) {
     throw "Unable to resolve the current user's profile directory."
 }
 
-if (-not $ClaudeSkillsPath)  { $ClaudeSkillsPath  = Join-Path $userProfile '.claude\skills'  }
-if (-not $AgentsSkillsPath)  { $AgentsSkillsPath  = Join-Path $userProfile '.agents\skills'  }
+function Resolve-TargetPath {
+    param([string]$Explicit, [string]$Tool, [string]$DefaultRelative)
 
-# ---------------------------------------------------------------------------
-# Apply -Target filter (blank out paths not in scope)
-# ---------------------------------------------------------------------------
-if ($Target -ne "all") {
-    if ($Target -ne "claude")  { $ClaudeSkillsPath  = "" }
-    if ($Target -ne "agents")  { $AgentsSkillsPath  = "" }
+    if ($Explicit) { return $Explicit }
+    if ($targetConfig.ContainsKey($Tool) -and $targetConfig[$Tool].Path) {
+        $configured = $targetConfig[$Tool].Path
+        if ($configured -match '^~([\\/]|$)') {
+            $configured = Join-Path $userProfile $configured.Substring(1).TrimStart('\', '/')
+        }
+        return $configured
+    }
+    return Join-Path $userProfile $DefaultRelative
 }
+
+$CopilotSkillsPath = Resolve-TargetPath -Explicit $CopilotSkillsPath -Tool 'copilot' -DefaultRelative '.copilot\skills'
+$ClaudeSkillsPath  = Resolve-TargetPath -Explicit $ClaudeSkillsPath  -Tool 'claude'  -DefaultRelative '.claude\skills'
+$AgentsSkillsPath  = Resolve-TargetPath -Explicit $AgentsSkillsPath  -Tool 'agents'  -DefaultRelative '.agents\skills'
+
+# -Target selects exactly one tool. Otherwise use the enabled flags, or the
+# legacy Claude Code + Codex / Agents pair when no targets object exists.
+if ($Target -ne "all") {
+    $enabledTargets = @($Target)
+}
+elseif ($hasTargetConfig) {
+    $enabledTargets = @($knownTargets | Where-Object { $targetConfig.ContainsKey($_) -and $targetConfig[$_].Enabled })
+}
+else {
+    $enabledTargets = @('claude', 'agents')
+}
+if ('copilot' -notin $enabledTargets) { $CopilotSkillsPath = "" }
+if ('claude'  -notin $enabledTargets) { $ClaudeSkillsPath  = "" }
+if ('agents'  -notin $enabledTargets) { $AgentsSkillsPath  = "" }
 
 # ---------------------------------------------------------------------------
 # Resolve and validate explicitly configured skill mappings.
@@ -262,6 +322,7 @@ foreach ($skill in $skillFolders) {
 # Build target map (skip empty paths)
 # ---------------------------------------------------------------------------
 $targets = [ordered]@{
+    "GitHub Copilot" = $CopilotSkillsPath
     "Claude Code"    = $ClaudeSkillsPath
     "Codex / Agents" = $AgentsSkillsPath
 }

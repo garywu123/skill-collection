@@ -1,12 +1,13 @@
-# Machine-local skill deployment configs
-scripts/deploy-paths.json
-scripts/deploy-skills.json
+# Machine-local skill deployment configs (copy deploy-skills.example.json)
+scripts/deploy-skill/deploy-paths.json
+scripts/deploy-skill/deploy-skills.json
 
 # Machine-local clones of explicitly configured public Skills.
 scripts/external-skills/cache/
 
 # Generated platform-specific project copies of this repository's maintenance skill.
 .github/skills/
+.claude/skills/
 .agents/skills/
 
 # Generated Python artifacts are never source or historical documentation.
