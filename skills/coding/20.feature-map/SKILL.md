@@ -45,12 +45,15 @@ reuse or renumber an ID, including existing ones.
 Put only MVP features in the main table; mention later ideas in one short
 section when needed.
 
-About 60 lines or eight rows is a readability signal, not a gate: past it,
-first remove repeated upstream content and cut optional scope. Use the scale
-layout below only when the remaining MVP still cannot be read clearly as one
-map, for example because several delivery stages with distinct requirement
-areas and dependencies no longer fit one coherent table. Row or line count
-alone never justifies a larger document hierarchy.
+A Feature Map or child map has a budget of 1,500 words and a Roadmap 2,000.
+Past it, first remove repeated upstream content, history and status narrative,
+and cut optional scope; do not compress into shorthand. Use the scale layout
+below only when the remaining MVP still cannot be read clearly as one map, for
+example because several delivery stages with distinct requirement areas and
+dependencies no longer fit one coherent table. Row or word count alone never
+justifies a larger document hierarchy. When a map genuinely needs more, state
+why in `<!-- budget: <words>; reason: <why> -->` at its top; the reviewer
+judges the reason.
 
 When scale is clear but `docs/functional-spec.md` is absent, report why one map
 would lose useful boundaries, recommend that the user
@@ -176,6 +179,14 @@ report the conflict. Never infer delivery progress from code or repository
 state. If a changed row or design invalidates visible states or planned
 behavior, reset the affected Map row and Plan evidence as described above, then
 report the Storyboard or Plan for revision instead of redesigning it here.
+
+Check the budget of each written map from the repository root when the project
+has the checker (`coding-agent-instructions` installs it); otherwise report its
+absence. Use `-MaxWords 2000` for a Roadmap:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Test-DocBudget.ps1 -Path <map> -MaxWords 1500
+```
 
 ## Completion
 

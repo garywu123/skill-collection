@@ -28,13 +28,27 @@ Create or update `docs/features/<feature-id>-<slug>.md` from
 project already has a canonical location. Create no separate spec, tasks,
 checklist, research, verification report, per-checkpoint file, or Delivery Plan.
 
-Size follows the work, not a line count. Stay concise: link upstream content
-instead of repeating it, delete empty template sections, describe behavior
-rather than speculative class or file inventories, and keep each result to one
-short table cell. When a Plan becomes hard to scan, first remove repetition and
-speculation. Extract a substantial segment's detail into a linked file under
-`docs/features/<feature-id>-<slug>/` only when that improves navigation and
-ownership; status, current position, and acceptance results stay in the Plan.
+Word budgets, counted over the Plan and any linked detail folder together:
+
+| Document or part | Budget |
+|---|---|
+| Feature Plan while `planned`, `in_progress` or `blocked` | 2,500 words |
+| Feature Plan once `verified` | 1,500 words |
+| Validation Plan | 2,000 words |
+| Current position | 100 words |
+| `## Implementation` / `## Validation` / `## Decisions` | 800 / 600 / 400 words |
+
+Stay concise: link upstream content instead of repeating it, delete empty
+template sections, describe behavior rather than speculative class or file
+inventories, and keep each result to one short table cell. Over budget, first
+remove repetition, speculation, history narratives and logs; if the Plan still
+does not fit, it probably holds several outcomes, so request a Map split as in
+Workflow step 2. Do not compress into shorthand. When a Plan genuinely needs
+more, state why in `<!-- budget: <words>; reason: <why> -->` at its top; the
+reviewer judges the reason. Extract a substantial segment's detail into a
+linked file under `docs/features/<feature-id>-<slug>/` only when that improves
+navigation and ownership, not to make room; status, current position, and
+acceptance results stay in the Plan.
 
 The Plan begins with a short current position: status, completed and next
 segment, remaining checks, and material blockers. Keep it true whenever a
@@ -224,6 +238,16 @@ not weaken it. Fix stale references, names, dependencies, commands, and paths in
 this Plan and its Map row when the correction is mechanical. Report Storyboard
 behavior conflicts without editing the Storyboard; ask only when resolution
 needs a product, UI, or technical decision.
+
+Check the budgets from the repository root when the project has the checker
+(`coding-agent-instructions` installs it); otherwise report its absence:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Test-DocBudget.ps1 -Path <plan>,<detail folder if any> -MaxWords 2500 -Total -Section "Current position=100","Implementation=800","Validation=600","Decisions=400"
+```
+
+Use `-MaxWords 1500` for a `verified` Plan and `2000` for a validation Plan.
+Fix each overrun as described in Output, or report why the override holds.
 
 ## Completion
 

@@ -258,7 +258,10 @@ decision owner's document.
    provenance as unknown and never infer it from a commit subject. This is bookkeeping, not a new gate, retest loop, pre-test
    commit, or authority to change Git history or upstream documents.
 6. Set both statuses to `verified` only when every planned scenario passes, no
-   blocker remains, and no selected independent gate is still pending.
+   blocker remains, and no selected independent gate is still pending. Bring
+   the Plan within `feature-plan`'s verified budget at the same time: one
+   result line per check, with command output and round narratives left to
+   commits.
 7. Run the consistency check. Behavior-preserving implementation changes remain
    `in_progress` until affected validation is rerun and supports `verified`.
 

@@ -1,6 +1,6 @@
 ---
 name: coding-agent-instructions
-description: Create, refresh, audit, or assess the instruction impact of changes to a software project's canonical AGENTS.md and any genuinely scope-specific nested AGENTS.md files, and install and version-check the bundled read-only documentation link checker, scripts/Test-DocLinks.ps1. Invoke explicitly, by name, to establish or continuously calibrate repository guidance after project setup, structural or tooling changes, recurring agent failures, or delivery milestones, or to decide whether a change to architecture, testing strategy, commands, project structure, or document routes requires an instruction update. Do not use it for a repository with no code; do not create product direction, feature plans, application code, reports, tool-specific adapters, or code-style rules owned by the code-style files.
+description: Create, refresh, audit, or assess the instruction impact of changes to a software project's canonical AGENTS.md and any genuinely scope-specific nested AGENTS.md files, and install and version-check the bundled read-only documentation link and word-budget checkers, scripts/Test-DocLinks.ps1 and scripts/Test-DocBudget.ps1. Invoke explicitly, by name, to establish or continuously calibrate repository guidance after project setup, structural or tooling changes, recurring agent failures, or delivery milestones, or to decide whether a change to architecture, testing strategy, commands, project structure, or document routes requires an instruction update. Do not use it for a repository with no code; do not create product direction, feature plans, application code, reports, tool-specific adapters, or code-style rules owned by the code-style files.
 disable-model-invocation: false
 ---
 
@@ -60,6 +60,10 @@ This Skill may create, refresh, or audit only:
   [the read-only link checker](scripts/Test-DocLinks.ps1) from this Skill when
   it is missing, creating `scripts/` if needed. Never overwrite an existing
   file.
+- `scripts/Test-DocBudget.ps1` in the project: copy
+  [the read-only word-budget checker](scripts/Test-DocBudget.ps1) under the
+  same rules. The Skills that own each document type run it with their own
+  budgets, so it needs no `AGENTS.md` command.
 
 It does not create tool-specific adapters or a state, history, approval, or
 review file. It may read project and code-quality configuration as evidence but
@@ -153,7 +157,9 @@ refactor when the repository contract did not change.
    project has a same-named file, read both version headers with
    `(?m)^\s*Version:\s*(\d+\.\d+\.\d+)\s*$`, compare them as `[version]`, and
    report an older or newer project copy, or a file without a header; never
-   replace it. `audit` reports the same comparison without writing.
+   replace it. `audit` reports the same comparison without writing. Handle
+   `scripts/Test-DocBudget.ps1` the same way, except that it needs no first
+   run or Commands entry.
 9. For `write`, update the applicable files. For `audit`, report findings and
    proposals without writing. For `assess`, apply only the `updated` results.
    Then run the consistency check.
@@ -168,7 +174,8 @@ Confirm every routed path exists; every command states its working directory or
 scope, trigger, and verified syntax; no code-style rule remains once
 `docs/code-style.md` exists; the project copy of `scripts/Test-DocLinks.ps1`
 exists or its absence is reported, its version comparison is recorded, and the
-Commands entry routes to it; nested files contain only local differences; and no
+Commands entry routes to it; the same copy and version result is recorded for
+`scripts/Test-DocBudget.ps1`; nested files contain only local differences; and no
 instruction copies project meaning, task status, implementation detail, or a
 rule enforced more reliably elsewhere. Remove stale or redundant content during
 `write`. Report conflicts requiring a product, domain, technical, or ownership
@@ -177,7 +184,8 @@ decision. Review line count as a signal, never as a substitute for relevance.
 ## Completion
 
 Report files written or audited, the link-checker copy with its version result,
-first-run result, and Commands entry, evidence used, mechanical updates, semantic
+first-run result, and Commands entry, the budget-checker copy with its version
+result, evidence used, mechanical updates, semantic
 proposals left unapplied, removals, content kept in another owner, unverified
 statements omitted, unresolved conflicts, and remaining risk. For `assess`,
 also report each file's `updated`, `unchanged`, or `unresolved` result with its

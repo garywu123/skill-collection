@@ -48,7 +48,8 @@ ID。浏览器验证、低保真和不实现产品逻辑的边界不变。
 Feature Map 拆独立用户结果；Feature Plan 评估执行规模、依赖、阶段验收、交接与委派。
 一个独立结果只有一份 Plan；执行很长只拆 segment，不拆新 Feature；一份 Plan 含多个
 独立结果时，Plan 停下并请求修订 Map。小功能默认单阶段串行；大功能在同一份 Plan 中
-用紧凑表安排多个执行 segment/session，最后整体回归。Plan 没有固定行数上限，但只写
+用紧凑表安排多个执行 segment/session，最后整体回归。Plan 有字数预算（进行中 ≤ 2,500 词，`verified` 后 ≤ 1,500 词，Map ≤ 1,500 词），超出先删重复、
+历史和日志，仍超出说明 Feature 太大、应拆 Map；确需更长时在文档顶部写明理由，由 Reviewer 判断；只写
 本 Feature 的内容；开头保持当前执行位置（已完成/下一段、剩余检查、blocker），新
 session 不依赖旧对话即可接手。Plan 读取 Testing Strategy，按真实用户、数据、负载和
 失败后果推导风险，先读取已确认决定，只问会改变设计或验收的未决问题，不为失败用例凑数量。
@@ -156,7 +157,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | Skill | 作用 | 默认产物 |
 |---|---|---|
 | [`product-brief`](10.product-brief/SKILL.md) | 探索、记录或对照授权访谈证据审阅产品目的、用户、核心流程、MVP 边界和已确认的产品级约束 | 探索和审阅时仅对话；定稿时写 `docs/product-brief.md` |
-| [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库创建、审计或持续校准 `AGENTS.md`；变化后做 instruction-impact assessment；纯非代码仓库交由所属集合的同类 Skill | 根 `AGENTS.md`；只有真实局部差异时才增加 nested `AGENTS.md`；缺失时复制只读链接检查器 `scripts/Test-DocLinks.ps1`（不覆盖已有文件，按版本头报告差异），首次运行验证后在 `AGENTS.md` 加入它的命令；assessment 结果在报告中 |
+| [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库创建、审计或持续校准 `AGENTS.md`；变化后做 instruction-impact assessment；纯非代码仓库交由所属集合的同类 Skill | 根 `AGENTS.md`；只有真实局部差异时才增加 nested `AGENTS.md`；缺失时复制只读链接检查器 `scripts/Test-DocLinks.ps1` 和字数预算检查器 `scripts/Test-DocBudget.ps1`（不覆盖已有文件，按版本头报告差异），链接检查器首次运行验证后在 `AGENTS.md` 加入它的命令，预算检查器由各文档的 owner Skill 按自己的预算调用；assessment 结果在报告中 |
 | [`code-style`](16.code-style/SKILL.md) | `define` 确认实际语言和项目，未被用户或项目文档另行决定的规则直接采用 owner 默认 profile（`Step n:` 注释、API 文档格式等），写出结构、模块组织、注释意图、文档和关键算法说明的规范；缺失的 `.editorconfig` 和 `.vscode` 文件先给用户看模板内容、确认后才创建，已有配置只读并报告差异；`audit` 和 `apply` 先跑 formatter，在有界范围内按大小分批（必要时用 subagent），`audit` 只报告，`apply` 做保持行为的修改并运行已验证检查 | `docs/code-style.md`；多项目 workspace 中每个项目一份继承根文件的 `<project>/docs/code-style.md`；缺失时创建的 `.editorconfig` 和 `.vscode/*.json`；`AGENTS.md` 中的路由和一条 Working-rules 规则 |
 | [`functional-spec`](17.functional-spec/SKILL.md) | 仅当 MVP 需要多张 Feature Map 时，列出编号的可观察功能和产品级质量需求；可对照 Brief 和授权访谈证据审阅 | `docs/functional-spec.md` |
 | [`architecture-design`](18.architecture-design/SKILL.md) | 探索、编写、审阅唯一的共享架构：组件边界、契约、数据所有权、依赖方向、部署假设和技术质量约束；把 Map 内的技术方向或既有 General Design 迁移过来 | `docs/architecture.md`，或沿用既有 General Design 路径 |
