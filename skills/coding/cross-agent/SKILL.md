@@ -628,7 +628,8 @@ authoritative input, a real validation failure, an internal contradiction, a
 regression from the latest change, a concrete security, permission,
 data-loss, or irreversible-action risk, or `excess`: code, a guard, an option,
 a test, or document text that the reviewed change adds without a supported
-trigger, consumer, or reader. Accepting a major `excess` finding sends its
+trigger, consumer, or reader, such as a run report, tool limitation or
+task-scope disclaimer written into a document. Accepting a major `excess` finding sends its
 deletion to the Producer; trust-boundary protections and required gates are
 never excess. It cites a rule, a `path:line`, or a failing command. Require a supported trigger, unmet promise or concrete risk,
 user consequence, and smallest adequate correction in the existing finding

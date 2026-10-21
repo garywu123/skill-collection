@@ -138,8 +138,9 @@ def reviewer_prompt(
         "- regression: a regression caused by the latest change;",
         "- risk: a concrete security, permission, data-loss, or irreversible-action risk;",
         "- excess: code, a guard, an option, a test, or document text that the reviewed change adds or expands "
-        "with no supported trigger, consumer, or reader; recommend deleting it. Protections at a trust boundary "
-        "and required gates are not excess.",
+        "with no supported trigger, consumer, or reader, such as a run report, tool limitation or task-scope "
+        "disclaimer written into a document; recommend deleting it. Protections at a trust boundary and "
+        "required gates are not excess.",
         "Give each finding evidence: a rule citation, a path:line, or a failing command. "
         "Rate its severity as blocker, major, or minor.",
         "Use claim, evidence, and recommendation to explain the supported trigger, unmet promise or concrete "

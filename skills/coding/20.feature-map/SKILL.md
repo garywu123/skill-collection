@@ -47,7 +47,10 @@ section when needed.
 
 A Feature Map or child map has a budget of 1,500 words and a Roadmap 2,000.
 Past it, first remove repeated upstream content, history and status narrative,
-and cut optional scope; do not compress into shorthand. Use the scale layout
+and cut optional scope. Do not compress into shorthand: write full sentences,
+cite requirement IDs in full, and keep slash lists to two items. Report the
+checks you ran, tool or permission limits, and your task's own constraints in
+your reply, not in the map. Use the scale layout
 below only when the remaining MVP still cannot be read clearly as one map, for
 example because several delivery stages with distinct requirement areas and
 dependencies no longer fit one coherent table. Row or word count alone never

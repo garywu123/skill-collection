@@ -43,7 +43,8 @@ template sections, describe behavior rather than speculative class or file
 inventories, and keep each result to one short table cell. Over budget, first
 remove repetition, speculation, history narratives and logs; if the Plan still
 does not fit, it probably holds several outcomes, so request a Map split as in
-Workflow step 2. Do not compress into shorthand. When a Plan genuinely needs
+Workflow step 2. Do not compress into shorthand: write full sentences, cite
+requirement IDs in full, and keep slash lists to two items. When a Plan genuinely needs
 more, state why in `<!-- budget: <words>; reason: <why> -->` at its top; the
 reviewer judges the reason. Extract a substantial segment's detail into a
 linked file under `docs/features/<feature-id>-<slug>/` only when that improves
@@ -54,7 +55,9 @@ The Plan begins with a short current position: status, completed and next
 segment, remaining checks, and material blockers. Keep it true whenever a
 segment, check, blocker, or source changes. Record key decisions and changes
 with one-line reasons in `## Decisions`; keep transcripts, prompts, and routine
-activity logs out. A fresh executor must be able to resume from the Plan and the
+activity logs out. Report the checks you ran on the document, tool or
+permission limits, and your task's own constraints in your reply, not in the
+Plan; its Validation table records only this Feature's checks and results. A fresh executor must be able to resume from the Plan and the
 repository references it names, without the prior conversation. Replace
 superseded instructions in the active view with a short decision and source
 locator; preserve unique evidence in existing history or retained references,
