@@ -166,6 +166,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划（分段、当前执行位置、风险与测试设计）；或为有界技术问题写 standalone validation 计划 | `docs/features/<feature-id>-<slug>.md`；validation 为 `docs/plans/<topic>.md` |
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，增量 TDD 并记录真实测试结果，每个最终结果（含 validation 证据）绑定实际测试的 revision、相关路径和 dirty 内容标识（后续相关变更才使其失效）；重跑失败检查前保留命令、测试 ID（无则注明不可得）、退出码和简短失败摘要，原因不明的先失败后通过记为未解决风险而非已修复；选定独立关卡时只报告 readiness；或执行 validation 计划并分别记录执行状态与结论；在 Orch 下不 commit，直接调用且明确授权时按 segment commit | 更新代码、Feature Plan 和 Feature Map 状态；validation 只更新其计划 |
 | [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort（可按专家和阶段设置）和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；专家从只读讨论连续进入生产，正式产出默认独立 review（用户可明确跳过），限定审阅次数并裁决 findings，每次评审附确定性测试变更摘要，按功能/主题保留调用历史；明确授权时由 Orch 逐 section 提交本地 commit | 项目根目录 `.cross-agent/config.toml`；各阶段 artifact 与对话进度；`.cross-agent/history/` 的时间与用量 CSV，`history` 可汇总；非阻塞遗留项追加到 `docs/review-backlog.md` |
+| [`simplification-review`](simplification-review/SKILL.md) | 对已有仓库做业务驱动的精简评审：先粗读仓库并按行业知识逐轮追问业务规模、精度、信任边界等约束（不限题数，每题附场景和推荐答案），确认后写入 Spec 或 Brief；再写评审计划（模块与跨模块调用链），之后每次只评审一个批次（先跨模块、后模块），批次开始先问专项问题，产出 findings；不改代码，选中的条目交给 `feature-plan` 或 `feature-delivery` | `docs/reviews/00.review-plan.md` 与每批 `docs/reviews/<NN>.<slug>.md`；字数预算由 `scripts/Measure-ReviewDoc.ps1` 检查 |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 | [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |
@@ -185,6 +186,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | Feature Storyboard | 一个 UI Feature 或早期产品问题的可见状态和转换，未确认行为标为 `candidate` | 已确认需求、虚构 Feature ID、实现设计、测试、状态 |
 | Feature Plan | 该 Feature 的当前执行位置、执行阶段、依赖、验收、交接、委派选择、测试设计、选定的独立关卡、关键决定与变更原因，以及真实结果 | 上游内容的复制、transcript 和例行活动日志 |
 | Validation Plan | 一个有界问题的假设、输入、oracle、步骤、指标、预算与停止条件、证据、判定标准、执行状态和结论 | Feature ID、Map 状态、所支持决定的正文 |
+| Simplification Review | 评审计划（批次、范围、当前位置）和每批的问答、findings 清单与条目（场景、建议、必须保持的行为、状态）；计划 ≤ 1,000 词，每批 ≤ 2,000 词，每条 ≤ 150 词 | 命令、测试计数、评审轮次、历史，产品约束本身（归 Spec 或 Brief） |
 | Review Backlog | `cross-agent` 裁决后未进入本次修订的非阻塞遗留项及其理由 | 未告知用户的当前 blocker、prompt、transcript、token 日志、快照、需求或计划内容 |
 
 `cross-agent` 在 checkpoint 保持 Plan 的当前位置，并在 Plan -> Delivery、Feature

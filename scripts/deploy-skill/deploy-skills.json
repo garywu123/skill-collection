@@ -53,6 +53,10 @@
             "name": "feature-delivery"
         },
         {
+            "source": "skills/coding/simplification-review",
+            "name": "simplification-review"
+        },
+        {
             "source": "skills/coding/cross-agent",
             "name": "cross-agent"
         },
