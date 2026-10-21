@@ -14,7 +14,7 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from crossagent import config, providers, schemas  # noqa: E402
+from crossagent import config, prompts, providers, schemas  # noqa: E402
 from crossagent.errors import UsageError  # noqa: E402
 
 
@@ -189,6 +189,18 @@ class SchemaTests(unittest.TestCase):
     def test_decision_priority_may_be_null(self):
         data = {"decisions": [{"finding_id": "R1-001", "disposition": "accepted", "rationale": None, "priority": None}]}
         self.assertEqual(schemas.validate(data, schemas.DECIDE), [])
+
+    def test_excess_finding_is_valid_and_offered_in_every_review(self):
+        excess = {"id": "X-1", "category": "excess", "severity": "major", "claim": "Unused option added.",
+                  "evidence": ["src/app.py:3"], "recommendation": "Delete it."}
+        data = {"findings": [excess], "earlier_results": [], "notes": []}
+        self.assertEqual(schemas.validate(data, schemas.REVIEW), [])
+        for number in (1, 2):
+            prompt = prompts.reviewer_prompt(
+                stage="delivery", review=number, max_reviews=3, project_root=".", repo_root=".",
+                artifact="docs/plan.md", skill=None, request=None, diff="", earlier=None, checks=[], summary=None)
+            self.assertIn("- excess:", prompt)
+        self.assertIn("regression or excess caused by the latest changes", prompt)
 
 
 if __name__ == "__main__":

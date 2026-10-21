@@ -136,7 +136,10 @@ def reviewer_prompt(
         "- validation-failure: a real validation or check failure;",
         "- contradiction: an internal contradiction;",
         "- regression: a regression caused by the latest change;",
-        "- risk: a concrete security, permission, data-loss, or irreversible-action risk.",
+        "- risk: a concrete security, permission, data-loss, or irreversible-action risk;",
+        "- excess: code, a guard, an option, a test, or document text that the reviewed change adds or expands "
+        "with no supported trigger, consumer, or reader; recommend deleting it. Protections at a trust boundary "
+        "and required gates are not excess.",
         "Give each finding evidence: a rule citation, a path:line, or a failing command. "
         "Rate its severity as blocker, major, or minor.",
         "Use claim, evidence, and recommendation to explain the supported trigger, unmet promise or concrete "
@@ -159,12 +162,13 @@ def reviewer_prompt(
         "wording; mark Orch-only quotations/translations as Orch-attested. In notes name material areas/sources "
         "checked and missing evidence or tool limitations; no findings alone does not establish coverage.",
         "Put alternative designs, style preferences without a rule, speculative future concerns, unrelated "
-        "cleanup, optional refactoring, and improvement ideas in notes.",
+        "cleanup, optional refactoring, and improvement ideas in notes. Unneeded additions in the reviewed "
+        "change are excess findings, not notes.",
     ]
     if review > 1:
         lines.append(
-            "This is not the first review: add a new finding only for a blocker or for a regression caused by "
-            "the latest changes."
+            "This is not the first review: add a new finding only for a blocker, or for a regression or excess "
+            "caused by the latest changes."
         )
     lines += ["Write all output in English.", "Your final message must be only the review result JSON object."]
     return "\n".join(lines)

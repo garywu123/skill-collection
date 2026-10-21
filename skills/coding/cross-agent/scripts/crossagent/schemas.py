@@ -14,6 +14,7 @@ CATEGORIES = [
     "contradiction",
     "regression",
     "risk",
+    "excess",
 ]
 SEVERITIES = ["blocker", "major", "minor"]
 DISPOSITIONS = ["accepted", "note-only", "rejected", "needs-user-decision"]

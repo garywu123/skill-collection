@@ -625,9 +625,12 @@ record the answer as `accepted` with guidance, `rejected`, or
 
 A valid finding names an unmet requested outcome, a conflict with an
 authoritative input, a real validation failure, an internal contradiction, a
-regression from the latest change, or a concrete security, permission,
-data-loss, or irreversible-action risk. It cites a rule, a `path:line`, or a
-failing command. Require a supported trigger, unmet promise or concrete risk,
+regression from the latest change, a concrete security, permission,
+data-loss, or irreversible-action risk, or `excess`: code, a guard, an option,
+a test, or document text that the reviewed change adds without a supported
+trigger, consumer, or reader. Accepting a major `excess` finding sends its
+deletion to the Producer; trust-boundary protections and required gates are
+never excess. It cites a rule, a `path:line`, or a failing command. Require a supported trigger, unmet promise or concrete risk,
 user consequence, and smallest adequate correction in the existing finding
 fields. Judge that evidence rather than automatically accepting a severity
 label; the eligibility rules above still apply. For an added test, identify
