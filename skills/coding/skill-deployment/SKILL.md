@@ -1,6 +1,6 @@
 ---
 name: skill-deployment
-description: Repository-local guidance for deploying this Skill Collection's explicitly configured skills to Claude Code and Codex/Agents. Each deployment clears the selected target directory before copying Skills. Use only while working in this Skill Collection when the user asks to deploy, synchronize, preview, or clean its machine-wide skills. Do not deploy this Skill itself, use it from another workspace, or use it for arbitrary skill directories.
+description: Repository-local guidance for deploying this Skill Collection's explicitly configured skills to Claude Code and Codex/Agents. Each deployment clears the selected target directory, except configured platform-managed entries, before copying Skills. Use only while working in this Skill Collection when the user asks to deploy, synchronize, preview, or clean its machine-wide skills. Do not deploy this Skill itself, use it from another workspace, or use it for arbitrary skill directories.
 ---
 
 # Skill Deployment
@@ -8,7 +8,9 @@ description: Repository-local guidance for deploying this Skill Collection's exp
 Synchronize the machine-wide Skills explicitly managed by this repository,
 including configured public Git Skills, to Claude Code and Codex / Agents.
 Each target directory is exclusively managed: every deployment clears all of
-its entries before copying the configured Skills. This is a workspace-only Skill:
+its entries before copying the configured Skills, except platform-managed
+entries listed in `preservedEntryNames` (such as the Claude desktop app's
+`synced` folder). This is a workspace-only Skill:
 `deploy-skills.json` must never map
 `skills/coding/skill-deployment`, and this folder must not appear in any global
 or reusable project preset. `Install-WorkspaceSkill.ps1` copies this Skill into
@@ -58,7 +60,9 @@ say otherwise:
    `SKILL.md`.
 3. Confirm that each target directory is intended to be exclusively managed by
    this collection. The deployment removes all its entries, including skills
-   that are not recorded in `.skill-collection-deployment.json`.
+   that are not recorded in `.skill-collection-deployment.json`, except names
+   in `preservedEntryNames`. When the preview lists a platform-managed entry as
+   `will be cleared`, add its name there before deploying.
 4. If an intended local Skill is missing from `skills`, add its explicit
    `source` and frontmatter `name`. Add a public Skill only with an HTTPS
    repository, branch, repository-relative `skillPath`, matching frontmatter

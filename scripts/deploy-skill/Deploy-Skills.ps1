@@ -10,7 +10,9 @@
     local and external Skills to the configured target directories. Each target
     is exclusively managed by this collection: immediately before copying, the
     script removes every existing entry in that target directory. This includes
-    skills not previously deployed by this collection.
+    skills not previously deployed by this collection. The only exceptions are
+    platform-managed entries listed in `preservedEntryNames`, such as the
+    Claude desktop app's `synced` folder, which are never removed.
 
     The deployed folder name comes from the SKILL.md frontmatter `name` field,
     so repository ordering prefixes are not copied
@@ -109,6 +111,16 @@ if ($skillConfig.PSObject.Properties['retiredSkillNames']) {
             throw "Every retired skill name must be lowercase kebab-case: $name"
         }
         $retiredSkillNames += $name
+    }
+}
+
+$preservedEntryNames = @()
+if ($skillConfig.PSObject.Properties['preservedEntryNames']) {
+    foreach ($name in @($skillConfig.preservedEntryNames)) {
+        if ([string]::IsNullOrWhiteSpace($name) -or $name -match '[\\/]' -or $name -in @('.', '..')) {
+            throw "Every preserved entry name must be a single directory entry name: $name"
+        }
+        $preservedEntryNames += $name
     }
 }
 
@@ -240,6 +252,11 @@ if ($overlappingRetiredNames.Count -gt 0) {
     throw "A retired skill cannot also be active: $($overlappingRetiredNames -join ', ')"
 }
 
+$overlappingPreservedNames = @($preservedEntryNames | Where-Object { $_ -in ($activeSkillNames + $retiredSkillNames) })
+if ($overlappingPreservedNames.Count -gt 0) {
+    throw "A preserved entry cannot also be an active or retired skill: $($overlappingPreservedNames -join ', ')"
+}
+
 Write-Host ""
 Write-Host "Configured skills:" -ForegroundColor Cyan
 foreach ($skill in $skillFolders) {
@@ -299,7 +316,10 @@ function Remove-DeployedEntry {
 }
 
 function Clear-SkillTarget {
-    param([string]$Path)
+    param(
+        [string]$Path,
+        [string[]]$Preserved = @()
+    )
 
     $fullPath = [System.IO.Path]::GetFullPath($Path)
     $rootPath = [System.IO.Path]::GetPathRoot($fullPath)
@@ -312,7 +332,7 @@ function Clear-SkillTarget {
         return @()
     }
 
-    $entries = @(Get-ChildItem -LiteralPath $Path -Force)
+    $entries = @(Get-ChildItem -LiteralPath $Path -Force | Where-Object { $_.Name -notin $Preserved })
     foreach ($entry in $entries) {
         Remove-DeployedEntry -Path $entry.FullName | Out-Null
     }
@@ -380,7 +400,12 @@ foreach ($entry in $activeTargets) {
     if ($ListOnly) {
         if (Test-Path -LiteralPath $targetRoot -PathType Container) {
             foreach ($existingEntry in @(Get-ChildItem -LiteralPath $targetRoot -Force)) {
-                Write-Host "    - $($existingEntry.Name) (will be cleared)" -ForegroundColor DarkYellow
+                if ($existingEntry.Name -in $preservedEntryNames) {
+                    Write-Host "    = $($existingEntry.Name) (preserved)" -ForegroundColor DarkGray
+                }
+                else {
+                    Write-Host "    - $($existingEntry.Name) (will be cleared)" -ForegroundColor DarkYellow
+                }
             }
         }
         foreach ($skill in $skillFolders) {
@@ -394,7 +419,7 @@ foreach ($entry in $activeTargets) {
         continue
     }
 
-    $clearedEntries = @(Clear-SkillTarget -Path $targetRoot)
+    $clearedEntries = @(Clear-SkillTarget -Path $targetRoot -Preserved $preservedEntryNames)
     foreach ($name in $clearedEntries) {
         Write-Host "    - $name (cleared)" -ForegroundColor DarkYellow
     }

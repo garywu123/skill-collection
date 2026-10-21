@@ -1,5 +1,8 @@
 {
     "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
+    "preservedEntryNames": [
+        "synced"
+    ],
     "retiredSkillNames": [
         "agent-instructions",
         "architecture-baseline",
