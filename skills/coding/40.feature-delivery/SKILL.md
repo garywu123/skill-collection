@@ -23,7 +23,10 @@ every cited `FS-*` requirement and linked Architecture Design and Testing
 Strategy section. Read the
 Roadmap only when dependency order is material. Resolve the owning Map from the
 Plan link rather than assuming `docs/feature-map.md`. For a standalone
-validation Plan, follow Standalone Validation instead.
+validation Plan, follow Standalone Validation instead. For a Change Plan, read
+its decision source and every affected Map row and Feature Plan it names;
+statuses below then mean the Change Plan's own status, and affected Map rows
+keep theirs.
 
 For behavior-preserving simplification, these sources define intended behavior;
 existing code is evidence, not authority.
@@ -183,8 +186,8 @@ needs no Product Brief, Feature Map, or Feature ID. Read it, the sources it
 names, and the Testing Strategy when present. Run only its procedure within its
 budget and stop conditions; keep experiment code where the Plan places it and
 change production code only when the Plan includes it. Record each evidence
-result with its tested tree, and any failed run before its rerun, as in
-Delivery Loop steps 4 and 5, and keep the current position true. Set the
+result bound to its revision as in Delivery Loop steps 4 and 5, and keep the
+current position true. Set the
 Plan's status to `in_progress`, then `completed` when every planned evidence
 item exists, or
 `incomplete` when a stop condition, exhausted budget, or failure ends execution
@@ -218,45 +221,39 @@ decision owner's document.
    configuration, unused flexibility, and unnecessary dependencies. Remove an
    item only when current intended behavior and constraints do not require it;
    do not perform repo-wide cleanup.
-4. Run the plan's focused commands, then the relevant broader regression,
-   build, lint, or type checks required by the repository. Required gates
-   still run at their required boundaries; repeat discretionary broad suites
-   only after a relevant change, failure, or unresolved verification gap.
+4. Test at three cadences. While editing, compile and run only the focused
+   tests for the behavior at hand; after a fix, rerun only the failing tests.
+   At a segment boundary, run the segment's owner tests plus the tests that
+   consume a public type, contract or endpoint the segment changed; run
+   another layer's suite, such as frontend tests after a backend change, only
+   when a shared contract or DTO changed. Run the repository's broad
+   regression, build, lint, or type checks once, on the final tree, before
+   reporting `done`; that run supersedes earlier broad runs, so do not repeat
+   it per segment. Rerun a broad suite only after a later relevant change or
+   an unresolved failure.
    Classify a failure as product, test, environment, or still unknown before
    choosing a repair; an environment failure is not proof of a product defect.
-   Before rerunning a failed check, preserve its command and scope, the failing test ID (or that
-   none is available when discovery or the command itself failed; never invent
-   one), the exit status, a concise failure excerpt, and relevant conditions,
-   bound to the tested tree as in step 5. Keep raw output private; put a short
-   locator in the Plan result or residual risk. When a later run passes and the
-   cause is unidentified, record the first failure and the later outcome
-   separately and name an unresolved risk with the smallest proposed
-   reproduction or diagnostic step and its limits; a passing retry never makes
-   the failure resolved. When cause and repair are evidenced, record the
-   resolution and the affected checks rerun on the changed tree. A
-   deterministic planned failure still prevents acceptance. Decide the effect
-   on status from the Plan's criteria, remaining checks, selected gates, and
-   the requester's risk scope, with an explicit, justified disposition; what
-   they leave unknown or unmet stays so. This preserves evidence; it adds no
-   gate, retry count, Tester, or user question per benign transient.
+   When a command fails before executing any test, such as a sandbox, restore
+   or test-host startup failure, do not retry variants or diagnose it: report
+   it once as an environment limitation and hand execution to whoever can run
+   it (the Orchestrator's checks within cross-agent, otherwise the user). When
+   a later run passes and the cause is unidentified, name one unresolved risk
+   with the smallest proposed reproduction step; a passing retry never makes
+   the failure resolved. A deterministic planned failure still prevents
+   acceptance. Decide the effect on status from the Plan's criteria, remaining
+   checks, selected gates, and the requester's risk scope.
 5. Record each real result in the Feature Plan and keep the Feature Map status
-   synchronized. Use one short table-cell outcome and never paste raw logs or
-   claim a result that did not run. Mark a row passed only when the test asserts
-   the stated expected result; otherwise correct the test or expected result.
-   Bind each final result to the tree it tested: the revision when the command
-   ran (`git log -1 --format=%h`), the relevant source/test paths, and whether
-   they had uncommitted changes. When they did, add a short locator that
-   distinguishes that content, such as a digest of the `git hash-object` IDs
-   of every relevant non-ignored file then present, tracked or untracked. Keep
-   it in the cell or a linked private receipt; never commit raw logs or private
-   data. A later change to those paths invalidates the affected result;
-   committing the unchanged tested content or editing unrelated paths does not,
-   and the result keeps its tested revision rather than a newer HEAD. After
-   history is rewritten or paths move, keep cited identifiers and add an
-   old -> new mapping in the owning Plan or Map only when correspondence is
-   verified, for example by equal tree or blob content; otherwise record
-   provenance as unknown and never infer it from a commit subject. This is bookkeeping, not a new gate, retest loop, pre-test
-   commit, or authority to change Git history or upstream documents.
+   synchronized. Use one short table-cell outcome, such as
+   `passed 112/112 @ 1a2b3c4`, and never paste raw logs or claim a result that
+   did not run. Mark a row passed only when the test asserts the stated
+   expected result; otherwise correct the test or expected result. Bind a
+   result to the commit it tested; when the tested content was uncommitted,
+   write `@ <revision> + uncommitted` and replace it with the commit once the
+   segment is committed. Never write file hashes, manifests, receipt files, log
+   paths, attempt counts or resolved-failure history into the Plan; only an
+   unresolved failure belongs there, in `## Blockers` or the result cell. A
+   later change to the tested paths invalidates the affected result; editing
+   unrelated paths does not.
 6. Set both statuses to `verified` only when every planned scenario passes, no
    blocker remains, and no selected independent gate is still pending. Bring
    the Plan within `feature-plan`'s verified budget at the same time: one

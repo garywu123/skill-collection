@@ -130,3 +130,7 @@ extra_dirs = []
 # the Reviewer's test-change summary can show counts for that command only.
 # Without it, or with a stale/ambiguous report, counts stay unknown.
 # test_reports = { "python -m pytest --junitxml=reports/unit.xml" = "reports/unit.xml" }
+# Optional: map a delivery_checks command to repository-relative fnmatch globs
+# ('*' also matches '/'). After a Producer round the check reruns only when a
+# changed path matches or its last result failed; unmapped checks always run.
+# check_paths = { "npm test" = ["frontend/*", "src/Api/Contracts/*"] }

@@ -11,6 +11,7 @@ ends early in `done` when an adjudicated review leaves nothing accepted.
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
 import os
@@ -366,6 +367,19 @@ def answer(project_root: Path, run_id: str, text: str) -> dict:
     return _event(state, "Answer recorded.")
 
 
+def note(project_root: Path, run_id: str, text: str) -> dict:
+    """Hand the next Producer call Orchestrator-run evidence or environment guidance for the current tree."""
+    state = store.load(project_root, run_id)
+    if state["phase"] != "produce":
+        raise UsageError(f"Run {run_id} has no pending Producer step (phase {state['phase']})")
+    text = text.strip()
+    if not text:
+        raise UsageError("The note is empty")
+    state["orch_note"] = {"at": store.now(), "text": text, "tree": gitops.snapshot(_root(state), _index(state))}
+    store.save(state)
+    return _event(state, "Note recorded for the next Producer call.")
+
+
 def status(project_root: Path, run_id: str | None) -> dict:
     if run_id:
         return _event(store.load(project_root, run_id), "Current status.")
@@ -445,6 +459,7 @@ def _producer_step(state: dict, progress=None) -> dict:
     label = f"P{state['reviews_done']}"
     work = _work_list(state)
     data = _invoke(state, "producer", lambda summary: _producer_prompt(state, summary), schemas.PRODUCER, progress)
+    state["orch_note"] = None
     if data["status"] == "checkpoint":
         checkpoints = state.setdefault("producer_checkpoints", [])
         if (state["stage"] not in ("feature-delivery", "general") or not data["summary"].strip()
@@ -481,9 +496,9 @@ def _producer_step(state: dict, progress=None) -> dict:
         finding["outcome"] = outcome["result"] if outcome else "not-fixed"
         finding["outcome_rationale"] = outcome["rationale"] if outcome else "The Producer reported no outcome."
     state["producer_steps"] += 1
-    if state["stage"] in ("feature-delivery", "general"):
-        state["checks"] = _run_checks(state, label)
     tree = gitops.snapshot(root, _index(state))
+    if state["stage"] in ("feature-delivery", "general"):
+        state["checks"] = _run_checks(state, label, tree)
     changed = gitops.changed_files(root, _review_base(state), tree)
     if state.get("review_policy", {}).get("skip"):
         state["phase"] = "done"
@@ -585,7 +600,7 @@ def _finish(state: dict) -> dict:
     tree = gitops.snapshot(root, _index(state))
     changed = gitops.changed_files(root, state["trees"]["finalizing"], tree)
     if state["stage"] in ("feature-delivery", "general"):
-        state["checks"] = _run_checks(state, "finalization")
+        state["checks"] = _run_checks(state, "finalization", tree)
     failing = [check["command"] for check in state["checks"] if check["after"] == "finalization" and check["exit_code"] != 0]
     left_open = [finding["id"] for finding in state["findings"] if finding.get("left_open")]
     for finding in _work_list(state):
@@ -797,6 +812,10 @@ def _producer_prompt(state: dict, summary: str | None) -> str:
     checkpoints = state.get("producer_checkpoints") or []
     if checkpoints:
         prompt += "\n\nLatest execution checkpoint (inspect current files before continuing):\n" + checkpoints[-1]["summary"]
+    note_state = state.get("orch_note")
+    if note_state:
+        prompt += ("\n\nOrchestrator note (evidence it ran outside your sandbox, or environment guidance, for tree "
+                   f"{note_state['tree']}; it applies while those files are unchanged):\n" + note_state["text"])
     if state.get("producer_recovery"):
         prompt += "\n\nPrevious Producer call failed: " + state["producer_recovery"] + "\nInspect existing edits and real check results before continuing unfinished work; do not restart completed work."
     return prompt
@@ -863,10 +882,27 @@ def _run_summary(state: dict) -> str:
     return "\n".join(lines)
 
 
-def _run_checks(state: dict, label: str) -> list[dict]:
+def _run_checks(state: dict, label: str, tree: str) -> list[dict]:
+    """Run the delivery checks against tree; a check with check_paths reruns only when its paths changed.
+
+    A skipped check keeps its earlier passing result, so a failure is always rerun.
+    """
     results = []
     reports = state["project"].get("test_reports", {})  # Older saved runs have none.
+    scoped = state["project"].get("check_paths", {})
+    checked = state["trees"].get("checked") or state["trees"]["baseline"]
+    changed = gitops.changed_files(_root(state), checked, tree) if scoped else []
+    earlier = {check["command"]: check for check in state["checks"]}
     for command in state["project"]["delivery_checks"]:
+        previous = earlier.get(command)
+        passed_before = previous is None or previous["exit_code"] == 0
+        if command in scoped and passed_before and not any(
+                fnmatch.fnmatch(path, pattern) for path in changed for pattern in scoped[command]):
+            results.append({"after": label, "command": command, "exit_code": 0,
+                            "excerpt": "Skipped: no changed path matches its check_paths."
+                            + (f" Last ran after {previous['after']}." if previous else ""),
+                            "skipped": True})
+            continue
         report = reports.get(command)
         report_before = testchanges.report_mtime(state["project_root"], report) if report else None
         try:
@@ -888,6 +924,7 @@ def _run_checks(state: dict, label: str) -> list[dict]:
         if report:
             result["report"] = testchanges.read_report(state["project_root"], report, report_before, code)
         results.append(result)
+    state["trees"]["checked"] = tree
     return results
 
 

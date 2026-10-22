@@ -74,6 +74,9 @@ def _parser() -> argparse.ArgumentParser:
     answer = commands.add_parser("answer", help="pass the user's answer or blocker recovery decision to the Producer")
     answer.add_argument("--run", required=True)
     answer.add_argument("--text", required=True)
+    note = commands.add_parser("note", help="hand the next Producer call Orchestrator-run evidence or environment guidance")
+    note.add_argument("--run", required=True)
+    note.add_argument("--text", required=True)
     commands.add_parser("status", help="show one run, or list open runs and settings").add_argument("--run")
     commands.add_parser("history", help="export retained worker calls to .cross-agent/history.csv")
     close = commands.add_parser("close", help="write the backlog, delete the run, clean up sessions")
@@ -145,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
             result = engine.decide(root, args.run, args.input)
         elif args.command == "answer":
             result = engine.answer(root, args.run, args.text)
+        elif args.command == "note":
+            result = engine.note(root, args.run, args.text)
         elif args.command == "status":
             result = engine.status(root, args.run)
         elif args.command == "history":

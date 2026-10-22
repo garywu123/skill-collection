@@ -40,7 +40,8 @@
 
 ## Regression And Independent Testing
 
-- **Regression triggers:** <changes that require broader checks>
+- **Cadence:** while editing, the focused tests and only failing reruns; at a segment boundary, owner tests plus consumers of a changed public contract; once on the final tree, <broad regression command>. <Which path or contract changes pull in another layer's suite.>
+- **Regression triggers:** <changes that require broader checks at the final run>
 - **Independent testing warranted when:** <concrete verification gaps>
 
 ## Open Decisions

@@ -41,6 +41,8 @@ Include only what applies:
   mocks;
 - test discovery, skip and disable rules, and environment or isolation needs;
 - resource measurement methods;
+- test cadence: what runs while editing, at a segment boundary, and once on
+  the final tree, and which changed paths or contracts pull in another layer;
 - regression triggers; and
 - conditions under which independent testing or review of a change is
   warranted.

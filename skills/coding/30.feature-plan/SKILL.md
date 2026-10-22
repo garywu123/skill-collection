@@ -1,6 +1,6 @@
 ---
 name: feature-plan
-description: Create, revise, or reopen one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests, or one standalone validation Plan for a bounded technical question. Use when the user asks to plan, review, reopen, or simplify implementation or verification for one Feature Map item, or to plan a bounded experiment, spike, or feasibility check without a Feature. Do not implement production code, run the experiment, or create separate checklists and task files.
+description: Create, revise, or reopen one concise Feature Plan for new implementation or behavior-preserving simplification, including happy- and failure-path tests, one Change Plan for a decided rule or simplification that crosses several delivered Features, or one standalone validation Plan for a bounded technical question. Use when the user asks to plan, review, reopen, or simplify implementation or verification for one Feature Map item or one cross-Feature change, or to plan a bounded experiment, spike, or feasibility check without a Feature. Do not implement production code, run the experiment, or create separate checklists and task files.
 disable-model-invocation: false
 ---
 
@@ -18,11 +18,15 @@ simplification.
   library or algorithm comparison, that a decision depends on. Use it when the
   request asks for an experiment, spike, or feasibility check rather than a
   Feature. See Standalone Validation.
+- `change`: one decided rule or simplification whose code change crosses
+  several delivered Map rows, such as an input limit enforced at every entry
+  or a shared refactor. See Change Plans.
 
 ## Output
 
 Create or update `docs/features/<feature-id>-<slug>.md` from
-[the Feature template](assets/feature-plan.template.md), or for `validation`
+[the Feature template](assets/feature-plan.template.md), for `change`
+`docs/plans/<topic>.md` from the same template, or for `validation`
 `docs/plans/<topic>.md` from
 [the validation template](assets/validation-plan.template.md), unless the
 project already has a canonical location. Create no separate spec, tasks,
@@ -195,8 +199,33 @@ instructions, checks, and expected brief result with evidence. Delivery
 reassesses these boundaries and owns the actual launches and concurrency limit.
 
 Reserve a final integration segment for the whole Feature's acceptance and
-regression checks. Multiple worker calls or sessions do not create new Feature
+regression checks; earlier segments list only focused and consumer checks, so
+the broad regression runs once. Multiple worker calls or sessions do not create new Feature
 IDs, reset the original baseline, or replenish the run's review budget.
+
+## Change Plans
+
+When one decision changes behavior that several delivered Features own, write
+one Plan for the whole change instead of reopening each Feature Plan, so it is
+designed, delivered, reviewed and regression-tested once. Use the Feature
+template at `docs/plans/<topic>.md`, unless the project has a canonical place,
+with these differences:
+
+- Sources name the decision's owner, such as a specification or design
+  section or a review finding, and every affected Map row.
+- `## Implementation` holds one table of the change points: entry point or
+  symbol, owning Map row, the change, and its owner tests. Enforce a rule once
+  where input enters; downstream code trusts admitted values, so do not add a
+  second check at a later layer without a named trust boundary.
+- Happy and failure paths test the rule once in its owner tests, at the limit
+  and just beyond it; other entries need one row each proving they route to
+  that rule, not a copy of its boundary cases.
+- Its status is the Plan's own; affected Map rows and Feature Plans keep
+  theirs, and each affected Feature Plan gains only one `## Decisions` line
+  linking this Plan.
+
+Use the `feature` budgets. When the change needs a Map row of its own, such as
+new observable behavior, stop and request it as in Workflow step 2.
 
 ## Standalone Validation
 

@@ -59,6 +59,15 @@ def producer_prompt(
         "return needs-user-decision with the question and its consequence before making dependent edits; "
         "do not invent guarantees or repeat answered questions.",
         "- Reuse adequate tests; strengthen or add them for a distinct coverage gap, preserving required checks.",
+        "- While editing, compile and run only the focused tests for the changed behavior, and after a fix rerun "
+        "only the failing tests. Run a broad suite once, at whole-stage validation; the CLI also runs the "
+        "configured delivery checks outside your sandbox after you return done.",
+        "- If a build or test command fails before executing any test, such as a sandbox, restore or testhost "
+        "startup failure, do not retry variants or diagnose it: note it once in the summary as an environment "
+        "limitation and leave execution to the CLI checks. An Orchestrator note below supplies results it ran "
+        "or command guidance for the current tree: rely on those results and follow that guidance instead.",
+        "- Record a check result as one line bound to its revision; never write file hashes, manifests, receipt "
+        "files, log paths or failed-attempt history into a document.",
         "- Keep the summary to current decisions and sources, changed behavior, completed/next work, "
         "open failures or gates, and tested-evidence locators; do not replay earlier rounds or raw logs.",
         "- Do not commit, and do not start another lifecycle stage.",

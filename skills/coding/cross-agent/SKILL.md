@@ -405,7 +405,10 @@ prepare a handoff; require the Producer to leave the Plan current instead.
    Missing commands must be reported, not silently counted as successful tests.
    An optional `test_reports` table in the project section maps a configured
    check command to the JUnit XML report it writes; only an explicit
-   configuration-change task adds it.
+   configuration-change task adds it. An optional `check_paths` table maps a
+   configured check to repository-relative path globs: after each Producer
+   round that check reruns only when a changed path matches or its last result
+   failed, and a skipped check is reported as skipped, never as a new pass.
 
 ## Run Loop
 
@@ -475,6 +478,13 @@ This explicit retry does not append another automatic retry. It preserves the
 baseline, sessions, edits, findings, answer, and review budget. Schema/output
 validation and write guards are not execution failures and cannot be retried.
 Configuration/discovery failures require fixing their cause before proceeding.
+
+When a Producer cannot execute a check in its sandbox and hands commands to
+you, run them once outside it, then pass the real results and any working
+command guidance with `cross-agent note --run <id> --text "<results>"` before
+the next `next`. The note reaches only the next Producer call, bound to the
+current tree; it is the only channel while the run waits in `produce`, since a
+commit message or chat text never reaches a continuation Producer.
 
 An execution Producer may return `checkpoint` after a planned segment. The CLI
 saves its acceptance/handoff summary and snapshot, stays in `produce`, and the

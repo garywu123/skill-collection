@@ -261,6 +261,15 @@ def _check_project(settings: dict, path: Path, project: str) -> None:
                 raise UsageError(f"'test_reports' in [projects.\"{project}\"] of {path} must map configured "
                                  "delivery_checks commands to JUnit XML (.xml) report paths")
             continue
+        if key == "check_paths":
+            # Optional: delivery check command -> repository-relative globs; the check reruns only on a match.
+            if not isinstance(value, dict) or not all(
+                    command in settings.get("delivery_checks", []) and isinstance(patterns, list) and patterns
+                    and all(isinstance(pattern, str) and pattern.strip() for pattern in patterns)
+                    for command, patterns in value.items()):
+                raise UsageError(f"'check_paths' in [projects.\"{project}\"] of {path} must map configured "
+                                 "delivery_checks commands to nonempty lists of path globs")
+            continue
         if key not in PROJECT_KEYS:
             raise UsageError(f"Unknown key '{key}' in [projects.\"{project}\"] of {path}")
         if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
@@ -353,6 +362,8 @@ def project_settings(config: dict, project_root: Path) -> dict:
     }
     if "test_reports" in settings:
         project["test_reports"] = dict(settings["test_reports"])
+    if "check_paths" in settings:
+        project["check_paths"] = {command: list(patterns) for command, patterns in settings["check_paths"].items()}
     return project
 
 

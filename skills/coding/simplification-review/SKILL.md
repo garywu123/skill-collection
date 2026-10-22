@@ -9,7 +9,9 @@ disable-model-invocation: true
 Find complexity that does not serve the business, explain it to the user in
 plain language, and record decisions as findings. Never edit product code or
 tests. The user decides; selected items are executed later by `feature-plan`
-or `feature-delivery`.
+or `feature-delivery`. Selected items of one batch that change the same rule or
+cross several Features go into one `feature-plan` Change Plan, not one Plan per
+Feature.
 
 Use the strongest available model and reasoning effort. Run every interview in
 the interactive session with the user. A non-interactive worker may draft a
