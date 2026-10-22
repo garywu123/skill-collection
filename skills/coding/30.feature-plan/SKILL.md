@@ -36,8 +36,7 @@ Word budgets, counted over the Plan and any linked detail folder together:
 
 | Document or part | Budget |
 |---|---|
-| Feature Plan while `planned`, `in_progress` or `blocked` | 2,500 words |
-| Feature Plan once `verified` | 1,500 words |
+| Feature or Change Plan | 2,500 words |
 | Validation Plan | 2,000 words |
 | Current position | 100 words |
 | `## Implementation` / `## Validation` / `## Decisions` | 800 / 600 / 400 words |
@@ -54,6 +53,13 @@ reviewer judges the reason. Extract a substantial segment's detail into a
 linked file under `docs/features/<feature-id>-<slug>/` only when that improves
 navigation and ownership, not to make room; status, current position, and
 acceptance results stay in the Plan.
+
+A Plan is a working document, not a record. It exists while its work is
+`planned`, `in_progress` or `blocked`. When the work is `verified`,
+`feature-delivery` promotes its durable decisions into the Architecture Design
+and deletes the Plan; git history keeps it. Write it for its executor and
+reviewer, and keep segment results current by replacing the previous result in
+the same row or line instead of adding one per run.
 
 The Plan begins with a short current position: status, completed and next
 segment, remaining checks, and material blockers. Keep it true whenever a
@@ -92,11 +98,14 @@ a category checklist.
 
 A new Plan starts as `planned`. Reopen the existing Plan when the user asks to
 correct, extend, or revalidate the same Feature outcome; do not create a second
-Plan or a versioned Feature ID. Keep its status synchronized with the Feature
-Map and preserve results only when the tested behavior, source requirements,
-design contracts, and evidence remain valid. Reset affected results to
-`not run`; if this invalidates `verified`, set both documents to `planned` until
-delivery or revalidation begins. Pure wording or link corrections do not change
+Plan or a versioned Feature ID. For a `verified` Feature whose Plan was retired,
+write a new Plan under the same Feature ID from the current design and code,
+consulting the old Plan in git history only when it answers a real question.
+Keep its status synchronized with the Feature Map and preserve results only
+when the tested behavior, source requirements, design contracts, and evidence
+remain valid. Reset affected results to `not run`; if this invalidates
+`verified`, set both documents to `planned` until delivery or revalidation
+begins. Pure wording or link corrections do not change
 status. A separate independently useful outcome belongs in a new Map row before
 it is planned.
 
@@ -221,8 +230,10 @@ with these differences:
   and just beyond it; other entries need one row each proving they route to
   that rule, not a copy of its boundary cases.
 - Its status is the Plan's own; affected Map rows and Feature Plans keep
-  theirs, and each affected Feature Plan gains only one `## Decisions` line
-  linking this Plan.
+  theirs. An affected Feature Plan that still exists gains only one
+  `## Decisions` line linking this Plan; a retired one needs nothing.
+- The decision or review document that requested the change links this Plan
+  while it exists and the verifying revision after it is retired.
 
 Use the `feature` budgets. When the change needs a Map row of its own, such as
 new observable behavior, stop and request it as in Workflow step 2.
@@ -278,7 +289,7 @@ Check the budgets from the repository root when the project has the checker
 powershell -ExecutionPolicy Bypass -File scripts/Test-DocBudget.ps1 -Path <plan>,<detail folder if any> -MaxWords 2500 -Total -Section "Current position=100","Implementation=800","Validation=600","Decisions=400"
 ```
 
-Use `-MaxWords 1500` for a `verified` Plan and `2000` for a validation Plan.
+Use `-MaxWords 2000` for a validation Plan.
 Fix each overrun as described in Output, or report why the override holds.
 
 ## Completion

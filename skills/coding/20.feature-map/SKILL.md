@@ -108,7 +108,9 @@ Treat lifecycle changes by outcome:
   identify every affected row and Plan. When recorded evidence no longer
   proves the changed design or behavior, reset affected Plan results to
   `not run`. Move a
-  `verified` Plan and Map row to `planned`; otherwise preserve `planned`,
+  `verified` Map row to `planned`, and its Plan too when one still exists (a
+  verified Feature's Plan is normally retired, so report it for `feature-plan`
+  to write anew); otherwise preserve `planned`,
   `in_progress`, or `blocked` only while it remains truthful, and keep both
   statuses synchronized. Report the Plan for `feature-plan` to revise, but do
   not rewrite its outcome, steps, or tests in this Skill.

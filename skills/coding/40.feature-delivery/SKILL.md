@@ -34,7 +34,7 @@ existing code is evidence, not authority.
 Stop and report the missing item when the feature has no plan, its sources
 conflict, or an unresolved decision changes observable behavior. Delivery never
 edits the Functional Specification, Architecture Design, Testing Strategy, or
-Roadmap, and never rewrites an authoritative input or expected result to make a
+Roadmap, except the decision promotion in Delivery Loop step 6, and never rewrites an authoritative input or expected result to make a
 failing test pass. When implementation shows one of them is wrong, or an
 authorized change arrives mid-delivery, stop work on the affected behavior and
 report the conflict or change. The user, or an Orchestrator authorized for the
@@ -173,9 +173,10 @@ an independent review or testing gate, finishing implementation and self-tests
 is readiness for that gate, not final acceptance. Record your own results, leave
 the gate row `not run`, keep both statuses `in_progress`, and report readiness.
 Set `verified` only after every selected gate has passed against the final
-relevant revision; that write belongs to the Producer in a later call or to a
-narrow status-only finalization step the requester authorizes, never to a
-read-only Reviewer, and it permits no further repair. Orchestrator acceptance of
+relevant revision; that write, with the Plan retirement in Delivery Loop step
+6, belongs to the Producer in a later call or to a narrow finalization step the
+requester authorizes, never to a read-only Reviewer, and it permits no further
+repair. Orchestrator acceptance of
 an unfinished review, such as cross-agent `completed-by-orchestrator`, is not an
 independent pass. Without a selected gate, the completion path below applies.
 
@@ -254,11 +255,25 @@ decision owner's document.
    unresolved failure belongs there, in `## Blockers` or the result cell. A
    later change to the tested paths invalidates the affected result; editing
    unrelated paths does not.
-6. Set both statuses to `verified` only when every planned scenario passes, no
-   blocker remains, and no selected independent gate is still pending. Bring
-   the Plan within `feature-plan`'s verified budget at the same time: one
-   result line per check, with command output and round narratives left to
-   commits.
+6. When every planned scenario passes and no blocker remains, promote the
+   Plan's durable decisions before reporting `done`, so a selected review sees
+   them. A durable decision is a rule a later change must respect, such as a
+   contract, default, limit, compatibility rule, or ownership choice; step
+   order, test layout, and evidence are not. Write each into its owning
+   Architecture Design section as the current rule, merged with what that
+   section already says, in one or two sentences with its requirement or
+   source link and no date or history, following `architecture-design`'s
+   budget. A decision that changes an existing contract rather than adding to
+   it is not a promotion: stop and report it for `architecture-design`. Move
+   an open gate, such as a deferred measurement, to the Map row or Testing
+   Strategy that owns it.
+   Set the Map row `verified` only when every planned scenario passes, no
+   blocker remains, and no selected independent gate is still pending. Then
+   retire the Plan: delete it and its detail folder, point the Map row and any
+   link that named the Plan at the verifying revision, and leave the Plan's
+   content to git history. Within a selected gate, this retirement is the
+   Orchestrator's finalization edit after the gate passes. For a Change Plan,
+   its own row in the plan index or review document takes that link.
 7. Run the consistency check. Behavior-preserving implementation changes remain
    `in_progress` until affected validation is rerun and supports `verified`.
 
@@ -267,9 +282,10 @@ decision owner's document.
 Before finishing, re-read this feature's map row, plan, cited requirements,
 linked Architecture Design and Testing Strategy sections, and any linked
 Storyboard; for validation, the Plan and the sources it names. Confirm the
-current position matches the recorded statuses, results, and blockers. Record
-each result once, in
-the plan, and keep the map row to status only; a cited requirement is delivered
+current position matches the recorded statuses, results, and blockers. Confirm
+each promoted decision reads as a current rule in its design section and that
+no promotion restates a value another section owns. Record each result once,
+in the plan while it exists, and keep the map row to status and its link; a cited requirement is delivered
 only when at least one Map row cites it and every citing Map row is `verified`,
 so do not mark requirements anywhere else. Keep visual flow in the Storyboard
 and reference stable `S*` and `T*` IDs

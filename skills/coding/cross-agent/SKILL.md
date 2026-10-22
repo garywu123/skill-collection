@@ -334,11 +334,14 @@ Plan, the Map when a Feature has one, and every file in the run's reviewed
 diff. `close` may append nonblocking items to `docs/review-backlog.md`; that CLI
 bookkeeping is not acceptance-relevant, so do not hash or read it. After the
 run ends `independently-passed` and is closed, and those hashes still match,
-make one status-only edit: the gate row's result and the Plan's current
-position, plus for a Feature `verified` in the Plan and Map row when every
-other planned result already passed. A mismatch means the reviewed revision
-changed; report it instead of finalizing. This edit is not a repair; anything
-more needs a new run. After `completed-by-orchestrator`, leave the gate `not
+make one finalization edit. When every other planned result already passed
+and the reviewed diff carries the Producer's decision promotion, set the
+Feature's Map row `verified` and retire the Plan as `feature-delivery`
+describes: delete it and point its links at the reviewed revision. Otherwise,
+and for a standalone validation Plan, record only the gate row's result and the
+Plan's current position. A mismatch means the reviewed revision changed;
+report it instead of finalizing. This edit is not a repair; anything more needs
+a new run. After `completed-by-orchestrator`, leave the gate `not
 run`, keep a Feature `in_progress`, and report the missing independent pass.
 
 ## Orchestrator Context Handoff

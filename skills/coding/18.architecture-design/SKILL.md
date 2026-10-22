@@ -31,12 +31,29 @@ Design such as `docs/design/<scope>-general-design.md` is that document; keep
 its path rather than duplicating it. Otherwise create `docs/architecture.md`
 from [the template](assets/architecture.template.md).
 
-Keep one shared design. Split by independently buildable stack, for example
-`docs/architecture/<scope>.md` linked from the main design, only when each part
-needs substantial distinct guidance; give every cross-part contract exactly one
-owner. A language or subsystem boundary alone does not justify a separate
-document, service, or microservice. About 200 lines per document is a review
-signal for repetition and speculation, not a validity gate.
+Keep the design easy to navigate: one main design that holds the module map,
+dependency direction and cross-domain contracts, plus one document per domain
+only when a domain needs substantial distinct guidance. A domain is a cohesive
+area with its own contracts and data, such as a backend host, a UI, a map
+model, or a motion/runtime engine; a language, technology, or file type alone,
+such as YAML or a DTO set, is not a domain. The main design links every domain
+document, and each cross-domain contract, value, and setting has exactly one
+owner; every other document links to it instead of restating it.
+
+Budget: about 2,500 words per document. When a document exceeds it, first
+simplify: delete history, dated decision narratives, superseded options,
+restated values, speculation, and detail the code already shows. Split the
+remaining content by domain only when it still does not fit, and update the
+main design's links in the same change. A language or subsystem boundary alone
+does not justify a separate document, service, or microservice.
+
+Write the current state only. A decision states the rule and, when it is not
+obvious, its reason in one sentence and its requirement or source link; dates,
+run IDs, review rounds, and how the decision was reached stay in git history.
+
+`feature-delivery` promotes each durable decision of a finished Plan into the
+owning section here. Accept it as a current rule, merge it with what the
+section already says rather than appending, and apply the budget above.
 
 Cover only what applies:
 
@@ -106,12 +123,16 @@ When architecture currently lives in a Feature Map (`Technical Direction`,
   not invented thresholds.
 - The design is no larger than current needs and preserves sound existing
   choices.
+- Each document is within its budget, describes the current state only, and is
+  reachable from the main design; any split follows a domain, not a technology.
 
 ## Consistency Check
 
 For `write` only, re-read the Brief, the Specification, the Roadmap, every
 Feature Map, the Testing Strategy when present, and each Feature Plan or
-Storyboard that links a changed section. Fix stale names, paths, and links in
+Storyboard that links a changed section. Check each changed document's budget
+with `scripts/Test-DocBudget.ps1 -Path <document> -MaxWords 2500` when the
+project has the checker, and simplify or split as in Output. Fix stale names, paths, and links in
 the design and in migrated Map sections. Keep architecture only here. Report,
 without editing, each Map row and Plan whose recorded evidence a semantic
 change invalidates, for `feature-map` and `feature-plan` to reconcile; report
