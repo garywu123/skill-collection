@@ -13,9 +13,26 @@ chats, or exported page text yourself to stand in for Copilot.
 
 ## Run in a sub-agent
 
-If a sub-agent tool is available and you are not already a sub-agent, run
-this procedure in one sub-agent with the user's question, any stated source
-order, and this Skill's name, and ask it for only the brief.
+Unless you are already a sub-agent, run this procedure in one sub-agent with
+the user's question, any stated source order, and this Skill's name, and ask
+it for only the brief. Retrieval payloads are far larger than the answer, and
+keeping them out of the main conversation is the point. If no sub-agent tool
+is available, say so and keep to the context budget.
+
+## Language
+
+Write every system-facing string in English: the Copilot prompt, Confluence
+search terms, and JQL. Write only the final brief in the user's language.
+English answers are shorter, faster, and cheaper to carry than translated ones.
+
+## Context budget
+
+- Never read an export file, an attachment, or an offloaded tool result whole.
+  Read its summary, or project only the fields you need.
+- Retrieve at list level first: keys, titles, status, owner, dates. Fetch full
+  text only for the few items the answer actually names.
+- Make one Copilot call per question. Ask a second only for a user follow-up.
+- Load a reference file on the step that needs it, not in advance.
 
 ## Route
 
@@ -31,12 +48,17 @@ question; split a question that mixes types.
 | Exact Jira fields or Confluence page text only | Atlassian direct, no Copilot |
 | A Word, PowerPoint, or Excel document | Copilot, per [documents](references/documents.md) |
 
+A board, backlog, or any list of more than about five issues goes through the
+export script, never through a direct Atlassian search. Full issue payloads
+are the main cause of oversized context.
+
 ## Procedure
 
 1. Load [Microsoft 365](references/m365.md) before the first Copilot call
    and [Atlassian](references/atlassian.md) before the first Atlassian call.
 2. Find Atlassian sources with the export script's `--search` for Confluence
-   and an exact JQL for Jira; Rovo `search` is optional.
+   and an exact JQL for Jira; Rovo `search` is optional. Skip discovery when
+   the user already gave a page id, issue key, board, or link.
 3. Export them with the script into one file. Read only its JSON summary.
 4. Ask Copilot with the synthesis prompt, attaching the file, and carry
    identifiers into the prompt: issue keys, page titles, projects, people,
@@ -53,6 +75,12 @@ Condense Copilot's answer into a brief; never copy it whole.
 - Cite original Confluence and Jira links from the export summary, not the
   uploaded copy. Prefer live pages over exports or copies, and date copies.
 - Report conflicts with both sources and dates instead of merging them.
+- Downgrade any claim Copilot makes about the inside of a diagram, image, or
+  scanned file. Copilot can locate such a file and quote text around it, but it
+  cannot read shape labels or arrows, and it will still assert them confidently.
+  Look for the same fact in mail, chat, or a page; report it as confirmed only
+  with that corroboration, and otherwise mark it unverified and offer to index
+  or download the file.
 - End with sources (title, system, date, link), the Copilot conversation
   link for the full answer, and what was not searched and why.
 
