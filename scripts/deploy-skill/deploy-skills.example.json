@@ -85,10 +85,6 @@
         {
             "source": "skills/work/it-ticket-submission",
             "name": "it-ticket-submission"
-        },
-        {
-            "source": "skills/work/workplace-knowledge",
-            "name": "workplace-knowledge"
         }
     ]
 }
