@@ -83,6 +83,18 @@ otherwise:
   connects to one. A test module states what it checks, whether it needs an
   external service, and what simulated inputs cannot validate. Keep function
   details beside their implementation instead of repeating them in the header.
+- Script headers use a summary followed by colon headings such as `Inputs:`,
+  `Output:`, `Modes:` and `Failure:`. Omit unused sections. Put each input name
+  and its indented explanation on separate lines. These are project script
+  headings, not function `Args:` sections or a mandated Google module format.
+- Keep command-line defaults in argparse rather than copying them into headers.
+  When a header is also shown by `--help`, preserve its paragraphs and sections.
+- Expand argument declarations that combine an option name, type or default,
+  and help text. Multiline calls put each argument on its own line with a
+  trailing comma. Do not impose a new print width over existing tooling.
+- Explain time boundaries with a clock example before relying on terminology:
+  for 00:00 to 06:00, count 00:00 but leave 06:00 for the next period. Explain
+  which timestamp the filter uses; event time and record-writing time can differ.
 - Function docstrings use Google style; add `Args`, `Returns` and `Raises`
   when the contract needs explanation.
 - 4-space indentation.
