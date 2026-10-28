@@ -10,9 +10,15 @@
     ],
     "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
     "targets": {
-        "copilot": { "enabled": true },
-        "claude": { "enabled": false },
-        "agents": { "enabled": false }
+        "copilot": {
+            "enabled": true
+        },
+        "claude": {
+            "enabled": false
+        },
+        "agents": {
+            "enabled": false
+        }
     },
     "retiredSkillNames": [
         "agent-instructions",

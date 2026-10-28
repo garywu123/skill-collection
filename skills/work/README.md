@@ -76,22 +76,22 @@ Before implementation approval, check:
 
 The Skill can make layout and typography decisions, but it cannot infer every presentation constraint. State these when they matter:
 
-| Missing input | Why it matters |
-|---|---|
-| Audience and room size | Determines density, hierarchy, and practical minimum font sizes |
-| Final versus placeholder content | Prevents approving a layout that only works with shorter sample copy |
-| Slide count and speaking time | Controls narrative pacing and how much evidence belongs on each slide |
-| `standard` versus `crown` profile | Keeps design references and the final PPTX typographically consistent |
-| Image, icon, and font rights | Avoids unusable or non-redistributable deliverables |
-| Recipient Office/font environment | Prevents font substitution and layout changes after handoff |
-| Accessibility or language requirements | Affects contrast, reading order, glyph support, and text alternatives |
-| Notes, sources, and citations | Determines whether supporting material belongs on-slide or in speaker notes |
+| Missing input                          | Why it matters                                                              |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| Audience and room size                 | Determines density, hierarchy, and practical minimum font sizes             |
+| Final versus placeholder content       | Prevents approving a layout that only works with shorter sample copy        |
+| Slide count and speaking time          | Controls narrative pacing and how much evidence belongs on each slide       |
+| `standard` versus `crown` profile      | Keeps design references and the final PPTX typographically consistent       |
+| Image, icon, and font rights           | Avoids unusable or non-redistributable deliverables                         |
+| Recipient Office/font environment      | Prevents font substitution and layout changes after handoff                 |
+| Accessibility or language requirements | Affects contrast, reading order, glyph support, and text alternatives       |
+| Notes, sources, and citations          | Determines whether supporting material belongs on-slide or in speaker notes |
 
 When an input is unknown, the Skill should make the smallest reasonable assumption, record it in the review output, and flag it before implementation rather than silently redesigning the presentation.
 
 ## Available Skills
 
-| Skill | Capability |
-|---|---|
-| [`crown-ppt`](crown-ppt/SKILL.md) | Create reviewable Crown design-reference PNGs from text, pictures, or mixed slide content, or implement approved designs as editable PowerPoint decks from the bundled template on a 960 x 540 point canvas using Microsoft PowerPoint COM. |
-| [`it-ticket-submission`](it-ticket-submission/SKILL.md) | Operate the Crown IT Self-Serve Portal (Cherwell) to submit a software/website access-request ticket, asking the requester for the needed details first. |
+| Skill                                                   | Capability                                                                                                                                                                                                                                  |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`crown-ppt`](crown-ppt/SKILL.md)                       | Create reviewable Crown design-reference PNGs from text, pictures, or mixed slide content, or implement approved designs as editable PowerPoint decks from the bundled template on a 960 x 540 point canvas using Microsoft PowerPoint COM. |
+| [`it-ticket-submission`](it-ticket-submission/SKILL.md) | Operate the Crown IT Self-Serve Portal (Cherwell) to submit a software/website access-request ticket, asking the requester for the needed details first.                                                                                    |
