@@ -1,0 +1,3 @@
+[submodule "tools/mermaid-visual-editor"]
+	path = tools/mermaid-visual-editor
+	url = git@github.com:garywu123/mermaid-visual-editor.git
