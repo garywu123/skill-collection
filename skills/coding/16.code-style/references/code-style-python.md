@@ -78,8 +78,13 @@ policy.
 Use these unless the user, a project document, or existing configuration says
 otherwise:
 
-- Each module starts with a module docstring.
-- Function docstrings use Google style with `Args`, `Returns`, and `Raises`.
+- Each module starts with a docstring stating its purpose, inputs, outputs and
+  material side effects or limits. Name the external system when a script
+  connects to one. A test module states what it checks, whether it needs an
+  external service, and what simulated inputs cannot validate. Keep function
+  details beside their implementation instead of repeating them in the header.
+- Function docstrings use Google style; add `Args`, `Returns` and `Raises`
+  when the contract needs explanation.
 - 4-space indentation.
 - `Step n:` comments as in the [default profile](default-profile.md).
 

@@ -14,24 +14,36 @@ configuration; report each difference instead.
 
 ## Owner Default
 
-Use these unless the user or a project document says otherwise:
+Use these unless the user or a project document says otherwise. These SQL
+forms specialize the [default profile](default-profile.md):
 
-- Each script starts with a header comment block: script, purpose, input, and
-  output.
-- A `Step n:` comment precedes each main step, as in the
-  [default profile](default-profile.md).
-- A complex step adds a concrete example below its `Step n:` line.
+- File header: use a star-bordered banner block for script, purpose, input and
+  output. Reserve this decoration for the file header; its exact width is not
+  prescribed.
+- Main steps: use an ordinary `/* ... */` block beginning with `Step n:`.
+  State the business action and output. Put key rules and, for complex steps,
+  a small fictional input/output example in that block, with example content
+  indented four spaces. Use actual field names and state row meaning when it
+  changes.
+- Within a step: use `--` line comments beside expressions or subqueries for
+  local reasons and exceptions. Do not repeat the header or Step explanation.
 
 ```sql
+/***************************************
+Script:  order_observations.sql
+Purpose: Counts observations for each Order.
+Input:   #scoped_history, already bounded by customer and UTC period.
+Output:  One row per customer and Order, with observation_count.
+***************************************/
+
 /*
-Script:  export_window.sql
-Purpose: Reads one export window of vehicle events.
-Input:   @start, @end (end is exclusive)
-Output:  One row per event, with Seq per key.
+Step 1: Summarize how much history supports each Order.
+    Example: Five observations for customer A, Order 7 -> one row with count 5.
 */
--- Step 1: Keep rows inside the window.
--- Step 2: Number rows per key in time order.
---     Example: ROW_NUMBER adds a Seq column: key on rows 12 and 40 -> Seq 1 and 2.
+SELECT customer_id, order_id, COUNT_BIG(*) AS observation_count
+FROM #scoped_history
+-- Different customers can reuse the same Order ID.
+GROUP BY customer_id, order_id;
 ```
 
 ## Rules To Decide And Write
