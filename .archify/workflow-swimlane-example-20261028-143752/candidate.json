@@ -1,30 +1,98 @@
 {
-  "schema_version": 2,
-  "diagram_type": "workflow",
-  "meta": {
-    "title": "支持流程泳道示例",
-    "locale": "zh-CN",
-    "quality_profile": "showcase",
-    "legend": { "mode": "hidden" },
-    "output": ".archify/workflow-swimlane-example-20261028-143752/swimlane.html"
-  },
-  "lanes": [
-    { "id": "customer", "label": "客户" },
-    { "id": "support", "label": "支持团队" },
-    { "id": "engineering", "label": "工程团队" }
-  ],
-  "mainPath": ["report", "triage", "resolve", "update", "confirm"],
-  "nodes": [
-    { "id": "report", "lane": "customer", "col": 0, "type": "external", "label": "提交问题", "icon": "none" },
-    { "id": "triage", "lane": "support", "col": 1, "type": "backend", "label": "分析问题", "icon": "none" },
-    { "id": "resolve", "lane": "engineering", "col": 2, "type": "backend", "label": "处理问题", "icon": "none" },
-    { "id": "update", "lane": "support", "col": 3, "type": "backend", "label": "提供更新", "icon": "none" },
-    { "id": "confirm", "lane": "customer", "col": 4, "type": "external", "label": "确认结果", "icon": "none" }
-  ],
-  "edges": [
-    { "id": "report-triage", "from": "report", "to": "triage" },
-    { "id": "triage-resolve", "from": "triage", "to": "resolve" },
-    { "id": "resolve-update", "from": "resolve", "to": "update" },
-    { "id": "update-confirm", "from": "update", "to": "confirm" }
-  ]
+    "schema_version": 2,
+    "diagram_type": "workflow",
+    "meta": {
+        "title": "支持流程泳道示例",
+        "locale": "zh-CN",
+        "quality_profile": "showcase",
+        "legend": {
+            "mode": "hidden"
+        },
+        "output": ".archify/workflow-swimlane-example-20261028-143752/swimlane.html"
+    },
+    "lanes": [
+        {
+            "id": "customer",
+            "label": "客户"
+        },
+        {
+            "id": "support",
+            "label": "支持团队"
+        },
+        {
+            "id": "engineering",
+            "label": "工程团队"
+        }
+    ],
+    "mainPath": [
+        "report",
+        "triage",
+        "resolve",
+        "update",
+        "confirm"
+    ],
+    "nodes": [
+        {
+            "id": "report",
+            "lane": "customer",
+            "col": 0,
+            "type": "external",
+            "label": "提交问题",
+            "icon": "none"
+        },
+        {
+            "id": "triage",
+            "lane": "support",
+            "col": 1,
+            "type": "backend",
+            "label": "分析问题",
+            "icon": "none"
+        },
+        {
+            "id": "resolve",
+            "lane": "engineering",
+            "col": 2,
+            "type": "backend",
+            "label": "处理问题",
+            "icon": "none"
+        },
+        {
+            "id": "update",
+            "lane": "support",
+            "col": 3,
+            "type": "backend",
+            "label": "提供更新",
+            "icon": "none"
+        },
+        {
+            "id": "confirm",
+            "lane": "customer",
+            "col": 4,
+            "type": "external",
+            "label": "确认结果",
+            "icon": "none"
+        }
+    ],
+    "edges": [
+        {
+            "id": "report-triage",
+            "from": "report",
+            "to": "triage"
+        },
+        {
+            "id": "triage-resolve",
+            "from": "triage",
+            "to": "resolve"
+        },
+        {
+            "id": "resolve-update",
+            "from": "resolve",
+            "to": "update"
+        },
+        {
+            "id": "update-confirm",
+            "from": "update",
+            "to": "confirm"
+        }
+    ]
 }
