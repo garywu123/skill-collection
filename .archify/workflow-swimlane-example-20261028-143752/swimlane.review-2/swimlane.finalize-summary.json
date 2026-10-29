@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "workflow",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\candidate.json",
+    "sha256": "21fe6a53a2b794ab37c31b60e5246ec56d59b3e30599a18c0241b01d8b86dfee",
+    "bytes": 1426
+  },
+  "artifact": {
+    "path": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\swimlane.html",
+    "sha256": "71c33c8ecb98df0e7df58ce9cfaa8b2b31fb926961aae95e667883fe4ccf2c87",
+    "bytes": 806575
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "fail"
+  },
+  "failedStage": "browser-check",
+  "diagnostics": [
+    {
+      "code": "viewer/browser-check-runtime",
+      "severity": "error",
+      "message": "browser-check could not complete its Chrome inspection.",
+      "subject": {
+        "artifact": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\swimlane.html"
+      },
+      "evidence": {
+        "reason": "Chrome DevTools write pipe failed: stream closed\nChrome process: still running.\nWindows browser startup may have relaunched before connecting to the DevTools pipe. Retry from a non-elevated PowerShell opened normally, outside an elevated or compatibility-mode parent. Archify does not disable browser de-elevation or the sandbox to preserve pipe handles.\nChrome transport: Node v20.20.2, libuv 1.46.0, win32; pid=3652, exitCode=null, signalCode=null.\nChrome read pipe: readable=true, ended=false, destroyed=false, receivedBytes=0, messages=0, bufferedBytes=0.\nChrome write pipe: writable=false, ended=true, destroyed=true, completedWrites=1, writtenBytes=50, bufferedBytes=0."
+      },
+      "supportedFixes": [
+        "resolve the reported Chrome inspection error, then rerun browser-check"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\swimlane.review-2\\swimlane.finalize.json",
+    "summaryReceipt": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\swimlane.review-2\\swimlane.finalize-summary.json",
+    "browserCheckReceipt": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\swimlane.review-2\\swimlane.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-28T18:38:11.986Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2128,
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  }
+}

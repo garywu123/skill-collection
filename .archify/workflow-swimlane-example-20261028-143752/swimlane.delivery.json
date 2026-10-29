@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "db3d3168-31c7-4bb2-9f69-99c737b68bb4",
+  "status": "current",
+  "command": "deliver",
+  "type": "workflow",
+  "input": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\candidate.json",
+  "output": "C:\\Users\\GWu\\source\\library-projects\\skill-collection\\.archify\\workflow-swimlane-example-20261028-143752\\swimlane.html",
+  "specification": {
+    "sha256": "21fe6a53a2b794ab37c31b60e5246ec56d59b3e30599a18c0241b01d8b86dfee",
+    "bytes": 1426
+  },
+  "artifact": {
+    "sha256": "71c33c8ecb98df0e7df58ce9cfaa8b2b31fb926961aae95e667883fe4ccf2c87",
+    "bytes": 806575
+  }
+}
