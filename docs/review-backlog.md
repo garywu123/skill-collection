@@ -213,3 +213,120 @@ current: `open`, `promoted`, `resolved`, or `dismissed`.
 - Evidence: `docs/plans/storyboard-enhancement.md:63-65 makes empty, loading, error, success feedback, and destructive-action confirmation required states without an applicability condition.`, `skills/coding/25.feature-storyboard/SKILL.md:157-159 requires only states needed to answer the visual question and distinguishes confirmed from candidate behavior.`, `skills/coding/25.feature-storyboard/SKILL.md:31-34 requires unconfirmed behavior to be marked candidate and reported to its owner.`, `skills/coding/25.feature-storyboard/SKILL.md:62-63 limits story size; AGENTS.md:45-46 requires proportionate scope.`
 - Proposed change: Require an applicability check rather than every listed state. Draw only relevant, source-backed outcomes; mark proposed behavior as candidate. For example, omit loading from an immediate interaction and destructive confirmation from a story without a destructive action. Preserve declared deterministic outcomes without adding validation logic or real asynchronous behavior.
 - Rationale: Valid; folded into the R1-001 revision guidance as an applicability check.
+
+## RB-0017: The overview clips desktop screens on narrow viewports, hiding controls that reviewers need to in...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `medium`
+- Source: run `20261016-231204-general-db65`, finding `R1-002`
+- Artifact: `skills/coding/25.feature-storyboard/SKILL.md` (general)
+- Base: `8f430e3` with uncommitted changes
+- Claim: The overview clips desktop screens on narrow viewports, hiding controls that reviewers need to inspect.
+- Evidence: `skills/coding/25.feature-storyboard/assets/storyboard.css:466 sets overflow: hidden on overview frames.`, `skills/coding/25.feature-storyboard/assets/storyboard.css:472 scales devices to 0.5, while line 477 fixes desktop devices at 920px wide, yielding a 460px rendered screen.`, `The overview grid permits columns narrower than 460px; at a 390px viewport, document and frame padding leave substantially less space. The right side of each screen is therefore clipped.`, `SKILL.md:110 promises an overview showing every state; Workflow step 4 uses it to inspect dead ends and missing branches.`
+- Proposed change: Allow horizontal scrolling for undersized overview frames or size the preview to the available width. Verify the existing template's overview at a narrow phone viewport, checking that right-edge actions remain inspectable.
+- Rationale: Valid for the mobile review path but minor; fix in a later polish pass by letting overview frames scroll horizontally or scale to available width.
+
+## RB-0018: The proposal gives conflicting instructions for small Features containing both logic and visual w...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `medium`
+- Source: run `20261016-232147-general-4708`, finding `R1-001`
+- Artifact: `docs/plans/feature-delivery-ui.md` (general)
+- Base: `8f430e3` with uncommitted changes
+- Claim: The proposal gives conflicting instructions for small Features containing both logic and visual work.
+- Evidence: `docs/plans/feature-delivery-ui.md:49-50 allows small Features to keep both kinds of work in one segment.`, `docs/plans/feature-delivery-ui.md:56-57 requires a separate visual segment whenever the Feature has both.`, `The supplied agreed position requires UI work in its own segment.`
+- Proposed change: Remove the small-Feature exception so the explanation and exact proposed rule consistently follow the agreed split.
+- Rationale: Valid inconsistency; resolve when the proposal is implemented by deciding whether small Features keep one combined segment.
+
+## RB-0019: Open Question 2 reopens whether the browser self-check is mandatory, despite the agreed position...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261016-232147-general-4708`, finding `R1-002`
+- Artifact: `docs/plans/feature-delivery-ui.md` (general)
+- Base: `8f430e3` with uncommitted changes
+- Claim: Open Question 2 reopens whether the browser self-check is mandatory, despite the agreed position and proposed delivery rule requiring it.
+- Evidence: `docs/plans/feature-delivery-ui.md:20-22 requires rendering and self-check before review.`, `docs/plans/feature-delivery-ui.md:78-82 requires the check and recording its result, with an explicit rendering-unavailable path.`, `docs/plans/feature-delivery-ui.md:110-111 asks whether the check should occur only when the Plan selects it.`
+- Proposed change: Keep the required self-check settled; narrow the question to where its evidence belongs in the Plan.
+- Rationale: The browser self-check is agreed as required; narrow the open question to where its evidence is recorded when implementing.
+
+## RB-0020: Plan item 1/2 reduces the Brief to purpose/users/main tasks/current boundary/future direction in...
+
+- Type: `rejected`
+- Status: `open`
+- Priority: `none`
+- Source: run `20261024-011924-general-1e47`, finding `R1-003`
+- Artifact: `skills/coding/document-simplification/SKILL.md` (general)
+- Base: `9554324` with uncommitted changes
+- Claim: Plan item 1/2 reduces the Brief to purpose/users/main tasks/current boundary/future direction in 'roughly 4 sections, optional open issues'. That drops Product Constraints. The Brief owns confirmed product-level constraints whenever no Spec exists, and that stays the common case for small projects even after the Spec becomes optional. Without the section, those constraints have no owner.
+- Evidence: `skills/coding/10.product-brief/SKILL.md:78,81-86 (Brief owns constraints when no Spec exists)`, `skills/coding/10.product-brief/assets/product-brief.template.md:23-25`, `skills/coding/README.md:37-39,180`
+- Proposed change: Keep Product Constraints as a conditional section that is deleted when empty. The template already does this, so no new wording is needed.
+- Rationale: The four-section outline did not authorize removing Product Constraints. Conditional ownership is retained explicitly in accepted R1-001 guidance; no constraint-removal defect is being introduced.
+
+## RB-0021: The new 'Interview from concrete tasks' paragraph was inserted inside the Intent list, between th...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261024-011924-general-1e47`, finding `R2-001`
+- Artifact: `skills/coding/document-simplification/SKILL.md` (general)
+- Base: `9554324` with uncommitted changes
+- Claim: The new 'Interview from concrete tasks' paragraph was inserted inside the Intent list, between the `write` and `review` bullets, with no blank line before the `review` bullet. This splits the list of three intents into two lists with a stray paragraph between them. A reader or agent scanning Intent now sees `review` cut off from the other two intents and attached to the interview paragraph. It also breaks the repository Markdown rule that paragraphs and lists are separated by blank lines.
+- Evidence: `skills/coding/10.product-brief/SKILL.md:17-34 (list `explore`/`write` at 17-24, paragraph at 26-31, `- review` at 32 directly after the paragraph's last line)`, `AGENTS.md Markdown Style: 'Separate paragraphs, lists, tables, and fenced code with blank lines'`
+- Proposed change: Move the interview paragraph after the Intent list, for example directly after line 34 or into Workflow step 2. Keep `explore`/`write`/`review` as one list. The wording does not need to change.
+- Rationale: Valid nonblocking Markdown layout issue. The intent wording is unchanged; keep it out of another Producer revision. The host will tidy the list placement as a small direct formatting edit after this reviewed run closes, with no new behavior.
+
+## RB-0022: The Architecture calls the Confluence conversion 'deterministic scripts plus MCP tools inside an...
+
+- Type: `rejected`
+- Status: `open`
+- Priority: `none`
+- Source: run `20261028-234946-general-82fc`, finding `R1-005`
+- Artifact: `docs/diagram-conversion/architecture.md` (general)
+- Base: `ada627a` with uncommitted changes
+- Claim: The Architecture calls the Confluence conversion 'deterministic scripts plus MCP tools inside an assistant session'. But MCP tool results go back to the assistant model, not to a local script, and tool arguments are written by the model. Unless the host can hand raw MCP payloads to files, both page bodies and Whiteboard structures pass through the model twice: once to feed the script, once to pass the script's output to create/update. A long page or large Whiteboard JSON can then be silently changed, cut short or summarised. That undermines the 'deterministic' claim and the FS-CNF-003 rule that text and Whiteboards must not be lost. Assistant hosts also cap the size of MCP output (for example, Claude Code has a configurable MCP output token limit; from my knowledge, not checked in this session). OD3 doesn't test this transport path.
+- Evidence: `docs/diagram-conversion/architecture.md:29 (assistant session calls deterministic scripts and MCP tools), :49 (deterministic conversion claim), :56 (attachments already fall back to curl/URL outside the tool payload), :84 (OD3 omits payload transport/size)`, `docs/diagram-conversion/functional-spec.md:39 (text and Whiteboard must not be lost)`
+- Proposed change: Add one bounded question to OD3: on the company tenant and the chosen assistant host, can a full real page plus its Whiteboard be read and written without the model retyping the payload (for example, raw output saved to a file, or a size that fits under the host limit)? Also check whether MCP read/write already accepts or returns Markdown. If the model must relay the payload, record that the conversion is not deterministic end to end, and have the script check the published result against its own output before reporting success. Don't switch silently to REST. The fallback choice belongs to the product/architecture owners.
+- Rationale: The host checked primary sources: MCP structuredContent is server-produced JSON, unrelated to model generation; current Claude Code documentation says oversized successful text results can be persisted to files. Thus mandatory model retyping/silent summary is not established. Keep concrete tenant/host payload transport as an OD3 validation question, not a proved architecture defect. Sources: modelcontextprotocol.io/specification/2025-06-18/server/tools and code.claude.com/docs/en/mcp.
+
+## RB-0023: Images are explicitly important and Obsidian format is the standard. Yet the Spec leaves 'embed'...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `medium`
+- Source: run `20261028-234946-general-82fc`, finding `R1-006`
+- Artifact: `docs/diagram-conversion/architecture.md` (general)
+- Base: `ada627a` with uncommitted changes
+- Claim: Images are explicitly important and Obsidian format is the standard. Yet the Spec leaves 'embed' undecided, alongside optional extensions such as callouts. Meanwhile the Architecture binds images by 'local relative path'. In Obsidian-style notes, images are commonly written as `![[image.png]]` and resolved by vault name, not by relative path. An implementation following the Architecture would miss those images on publish and write them back to the wrong place. The FS-CNF-003 round-trip check would only catch this late, on real notes.
+- Evidence: `docs/diagram-conversion/product-brief.md:26 (images important; Obsidian format as standard)`, `docs/diagram-conversion/functional-spec.md:39 (images must survive), :57 (embed syntax undecided)`, `docs/diagram-conversion/architecture.md:48 (relative image path → attachment ID), :49 ('本地图片')`
+- Proposed change: Before Phase 2, look at a few real Work Hub notes to see which image syntax the author uses. Spec owner: take image embeds out of the open Obsidian-syntax question and put them in FS-CNF-001/003, leaving callouts and wikilinks open. Architecture owner: describe image identity as 'resolved file path' instead of 'relative path'. If wikilink embeds are in use, state that the Work Hub folder is resolved as an Obsidian vault.
+- Rationale: Inspect actual notes before Phase 2 to settle Obsidian image syntax and vault resolution. No expanded syntax scope or assumption that Work Hub is a vault was approved for this revision.
+
+## RB-0024: A Mermaid diagram stored as a separate file is a valid input, and every diagram must become a Whi...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `medium`
+- Source: run `20261028-234946-general-82fc`, finding `R1-007`
+- Artifact: `docs/diagram-conversion/architecture.md` (general)
+- Base: `ada627a` with uncommitted changes
+- Claim: A Mermaid diagram stored as a separate file is a valid input, and every diagram must become a Whiteboard 'at its original position in the document'. But nothing defines how a note refers to a separate diagram file, which file's association entry owns that Whiteboard ID, or what happens when two notes refer to the same file and are published to two pages, where one Whiteboard ID slot would be overwritten. An implementer has to guess both the embed syntax and the binding owner.
+- Evidence: `docs/diagram-conversion/product-brief.md:38 (embedded or separate file)`, `docs/diagram-conversion/functional-spec.md:18 (both valid inputs), :38 (Whiteboard at original position)`, `docs/diagram-conversion/architecture.md:48 (Whiteboard ID stored in 'the source file's' association data)`
+- Proposed change: Question for Orch/author: how do notes refer to separate diagram files today, and is one diagram ever reused on several pages? If separate files are referenced from notes, state the syntax in FS-CNF-002. In the Architecture, key the Whiteboard binding by (note, diagram) rather than by the diagram file alone. If separate files are only edited on their own and never published inside a note, say so instead.
+- Rationale: Standalone diagram embedding and multi-page reuse remain Phase-2 discovery questions. Do not invent an embed syntax or shared-publication requirement now.
+
+## RB-0025: When association data is missing or doesn't match, the Architecture falls back to auto layout wit...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261028-234946-general-82fc`, finding `R1-008`
+- Artifact: `docs/diagram-conversion/architecture.md` (general)
+- Base: `ada627a` with uncommitted changes
+- Claim: When association data is missing or doesn't match, the Architecture falls back to auto layout without telling anyone. Ordinary triggers will break the match: moving or renaming a note (for example, archiving out of Active), or the AI rewriting the fence and dropping the `%%` ID line. The author then sees an auto layout, may save over it, and the old geometry is left orphaned. The requirement that manual layout 'must be kept' is lost with no signal.
+- Evidence: `docs/diagram-conversion/product-brief.md:40`, `docs/diagram-conversion/architecture.md:41 (`%%` ID inside the block), :42 (sidecar next to source file; silent fallback), :75 (invalid data → fall back only)`
+- Proposed change: Keep the non-blocking fallback, but show a one-line notice when a diagram has a `%%` ID and no matching geometry (or when an entry for that ID exists but no longer fits), and don't prune unmatched entries on save. No extra machinery is needed.
+- Rationale: Missing/mismatched layout feedback is useful for the future UI plan; preserve the note without adding recovery infrastructure to the confirmed-rules revision.

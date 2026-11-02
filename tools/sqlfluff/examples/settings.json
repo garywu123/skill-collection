@@ -1,0 +1,8 @@
+{
+  "sqlfluff.executablePath": "${workspaceFolder}/.venv/Scripts/sqlfluff.exe",
+  "sqlfluff.config": "${workspaceFolder}/.sqlfluff",
+  "[sql]": {
+    "editor.defaultFormatter": "sqlfluff.vscode-sqlfluff",
+    "editor.formatOnSave": false
+  }
+}

@@ -23,6 +23,8 @@ they link back to the collection `README.md` rather than duplicating it.
 For multi-stage Producer / Reviewer work, see the Chinese
 [Cross-agent setup and worked example](skills/coding/_doc/cross-agent-guide.md).
 
+Reusable development tools are listed under [`tools/`](tools/README.md), including the [SQLFluff formatting package](tools/sqlfluff/README.md).
+
 <details>
 <summary>Full repository structure</summary>
 

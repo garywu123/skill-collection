@@ -60,6 +60,10 @@
             "name": "simplification-review"
         },
         {
+            "source": "skills/coding/document-simplification",
+            "name": "document-simplification"
+        },
+        {
             "source": "skills/coding/cross-agent",
             "name": "cross-agent"
         },

@@ -3,8 +3,8 @@
 一套面向个人、小团队和 AI 主导开发的精简流程。默认维护三类核心文档：产品方向、
 MVP Feature Map，以及每个 Feature 的计划与真实测试结果。需要共享技术方向时由
 Architecture Design 单独维护架构，需要可复用测试规则时增加 Testing Strategy；有 UI
-的 Feature，或拆 Feature 之前的早期产品问题，可以按需增加一份低保真 Storyboard；MVP
-大到一张 Feature Map 放不下时，再增加 Functional Specification 和 Roadmap。Feature 规划和交付也支持保持行为不变的
+的 Feature，或拆 Feature 之前的早期产品问题，可以按需增加一份低保真 Storyboard；用户
+要求时可以增加 Functional Specification，MVP 大到一张 Feature Map 放不下时再增加 Spec 和 Roadmap。Feature 规划和交付也支持保持行为不变的
 精简；所有编码工作流都先复用现有能力，只增加当前结果所需的最少代码，并保留必要验证。
 
 ## 开发流程
@@ -13,7 +13,7 @@ Architecture Design 单独维护架构，需要可复用测试规则时增加 Te
 Product Brief
   -> Coding Agent Instructions (AGENTS.md)
   -> Code Style (docs/code-style.md)
-  -> [scale only: Functional Spec]
+  -> [optional: Functional Spec]
   -> Architecture Design (docs/architecture.md)
   -> [optional Testing Strategy (docs/testing.md)]
   -> [scale only: Roadmap +] Feature Map
@@ -37,8 +37,16 @@ Product Brief 和 Functional Spec 可以对照用户授权的访谈证据编写�
 证明用户意图；只有用户要求或已授权的 discovery 流程才保存笔记。小项目没有 Spec 时，
 用户确认的产品级约束（内存、延迟、容量等）写在 Brief 的 Product Constraints；有 Spec
 时归 Spec。Architecture 只把它们转成技术决定或预算分配，Testing Strategy 只定义测量
-方法；没人设定的预算是待决问题，不编数字。Spec 仍是可选的，只在一张 Map 无法保持
-可读时才建，需求数量或文档长度本身不是理由。
+方法；没人设定的预算是待决问题，不编数字。Spec 仍是可选的：用户要求时任何规模都可以建，
+否则只在一张 Map 无法保持可读时才建，需求数量或文档长度本身不是理由。
+
+Brief 访谈从一个真实任务问起（谁、带什么输入、做什么、要什么结果），只问会改变方向的
+问题；改动产品含义前先用几句话向用户复述并等确认。Spec 的契约仍是编号需求，可用简短的
+具体故事、流程图和输入输出示例解释，但它们不新增需求也没有自己的 ID；格式由用户或项目
+选 Markdown 或 HTML，既有路径和 ID 不悄悄迁移，也不维护另一种格式的副本。字数目标按
+英文词：Brief 400–700（超过 800 先删），Spec 1,500–2,500（超过 3,000 先删）；它们是写作
+目标而不是关卡，字数从不触发拆分，其他语言不换算。`Test-DocBudget.ps1` 只数 Markdown，
+不能代表 HTML 的读者文字。
 
 拆 Feature 之前，`feature-storyboard` 可以从 Brief、Spec 章节或明确的产品问题出发，
 写 `docs/storyboards/<topic-slug>.html`，不虚构 Feature ID；未确认的行为标为
@@ -159,7 +167,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`product-brief`](10.product-brief/SKILL.md) | 探索、记录或对照授权访谈证据审阅产品目的、用户、核心流程、MVP 边界和已确认的产品级约束 | 探索和审阅时仅对话；定稿时写 `docs/product-brief.md` |
 | [`coding-agent-instructions`](15.coding-agent-instructions/SKILL.md) | 为含代码的仓库创建、审计或持续校准 `AGENTS.md`；变化后做 instruction-impact assessment；纯非代码仓库交由所属集合的同类 Skill | 根 `AGENTS.md`；只有真实局部差异时才增加 nested `AGENTS.md`；缺失时复制只读链接检查器 `scripts/Test-DocLinks.ps1` 和字数预算检查器 `scripts/Test-DocBudget.ps1`（不覆盖已有文件，按版本头报告差异），链接检查器首次运行验证后在 `AGENTS.md` 加入它的命令，预算检查器由各文档的 owner Skill 按自己的预算调用；assessment 结果在报告中 |
 | [`code-style`](16.code-style/SKILL.md) | `define` 确认实际语言和项目，未被用户或项目文档另行决定的规则直接采用 owner 默认 profile（SQL 三层注释、Python 分段标头、参数换行和具体时间示例、各语言 API 文档格式等），写出结构、模块组织、注释意图、文档和关键算法说明的规范；缺失的 `.editorconfig` 和 `.vscode` 文件先给用户看模板内容、确认后才创建，已有配置只读并报告差异；`audit` 和 `apply` 先跑 formatter，在有界范围内按大小分批（必要时用 subagent），`audit` 只报告，`apply` 做保持行为的修改并运行已验证检查 | `docs/code-style.md`；多项目 workspace 中每个项目一份继承根文件的 `<project>/docs/code-style.md`；缺失时创建的 `.editorconfig` 和 `.vscode/*.json`；`AGENTS.md` 中的路由和一条 Working-rules 规则 |
-| [`functional-spec`](17.functional-spec/SKILL.md) | 仅当 MVP 需要多张 Feature Map 时，列出编号的可观察功能和产品级质量需求；可对照 Brief 和授权访谈证据审阅 | `docs/functional-spec.md` |
+| [`functional-spec`](17.functional-spec/SKILL.md) | 可选：用户要求时（任何规模）或 MVP 需要多张 Feature Map 时，列出编号的可观察功能和产品级质量需求，用简短故事、流程图和示例解释；可对照 Brief 和授权访谈证据审阅 | `docs/functional-spec.md`，项目选 HTML 时为 `docs/functional-spec.html`；既有 canonical 路径不变 |
 | [`architecture-design`](18.architecture-design/SKILL.md) | 探索、编写、审阅共享架构：组件边界、契约、数据所有权、依赖方向、部署假设和技术质量约束；主 design 作索引和跨领域契约，按领域（不按技术）拆分子文档，每份约 2,500 词，超出时先精简再拆分，只写当前状态，每个契约和数值只有一个 owner；接收 delivery 上移的决定；把 Map 内的技术方向或既有 General Design 迁移过来 | `docs/architecture.md`，或沿用既有 General Design 路径 |
 | [`testing-strategy`](19.testing-strategy/SKILL.md) | 编写或审阅可复用的项目测试规则：测试层级、业务不变量、算法 oracle、fixture 规模、资源测量方法、回归和独立测试条件；未定预算记为待决 | `docs/testing.md` |
 | [`feature-map`](20.feature-map/SKILL.md) | 探讨或写入合适规模的 MVP 交付结构：小项目一张 Map，大项目拆为 Roadmap 和子 Map；只管结果、依赖和状态，链接 Architecture Design | `docs/feature-map.md`，或 `docs/feature-maps/` |
@@ -168,6 +176,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，增量 TDD：编辑时只跑 focused 测试和失败重跑，segment 边界跑 owner 和改动契约的 consumer，最终 tree 只跑一次全量；结果一行绑定 commit（`passed n/n @ sha`），不写 hash、manifest、log 路径或已解决的失败历史；测试在执行前就因环境失败时不重试、不诊断，报告一次后交给能执行的一方；全部场景通过后把 Plan 中的持久决定上移到所属 design 小节（当前规则、一两句、无历史），verified 时删除 Plan 并把链接指向验证 revision；选定独立关卡时只报告 readiness；或执行 validation 计划并分别记录执行状态与结论；在 Orch 下不 commit，直接调用且明确授权时按 segment commit | 更新代码、Feature Plan 和 Feature Map 状态；validation 只更新其计划 |
 | [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort（可按专家和阶段设置）和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；专家从只读讨论连续进入生产，正式产出默认独立 review（用户可明确跳过），限定审阅次数并裁决 findings，每次评审附确定性测试变更摘要，按功能/主题保留调用历史；明确授权时由 Orch 逐 section 提交本地 commit | 项目根目录 `.cross-agent/config.toml`；各阶段 artifact 与对话进度；`.cross-agent/history/` 的时间与用量 CSV，`history` 可汇总；非阻塞遗留项追加到 `docs/review-backlog.md` |
 | [`simplification-review`](simplification-review/SKILL.md) | 对已有仓库做业务驱动的精简评审：先粗读仓库并按行业知识逐轮追问业务规模、精度、信任边界等约束（不限题数，每题附场景和推荐答案），确认后写入 Spec 或 Brief；再写评审计划（模块与跨模块调用链），之后每次只评审一个批次（先跨模块、后模块），批次开始先问专项问题，产出 findings；不改代码，选中的条目交给 `feature-plan` 或 `feature-delivery` | `docs/reviews/00.review-plan.md` 与每批 `docs/reviews/<NN>.<slug>.md`；字数预算由 `scripts/Measure-ReviewDoc.ps1` 检查 |
+| [`document-simplification`](document-simplification/SKILL.md) | 显式调用，精简一两份已有文档：先以目标读者身份通读、找出读不通的地方；结构要变时先给用户看大纲，只改表达时直接重写；保留读者需要的事实，已定规则写进其 owner 文档，非阻塞的后续改进按项目已有 backlog 的规则处理，阻塞当前内容的问题写进 owner 的未决问题并问用户；HTML 另查渲染后的可读性和导航；references 给出常见形状和反例（数据分析、文件夹 README、通用反模式），不是模板；新反例只向用户提议，不自动写入 | 按需重写指定的 `.md` 或 `.html` 文件；报告每份的读者、结构、前后字数和移走内容的去向 |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
 | [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |
@@ -179,7 +188,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | Product Brief | 产品目的、用户、核心流程、MVP 边界；没有 Spec 时保存已确认的产品级约束 | 需求编号、架构、流程、访谈记录 |
 | Coding Agent Instructions | 路由、优先级、已验证命令、边界、工作与报告规则；基于权威证据持续校准 | 产品内容、技术方向、代码风格规则、一次性任务状态、工具专用适配层、assessment 记录 |
 | `docs/code-style.md` | 仓库共享的代码风格规则，每种语言一节，外加模块组织、结构、注释、文档等跨语言规范，并列出每个项目文件；工具已强制的规则只路由不复述；多项目 workspace 中每个项目的 `<project>/docs/code-style.md` 以继承根文件开头，只保存本项目的局部规则，没有时写 `Local Rules: None.` | 产品或流程内容、架构依赖方向与系统边界、工具配置本身、重复的共享规则 |
-| Functional Spec | 编号的可观察功能和产品级质量需求、排除项、未决决策 | 状态、追溯表、架构、交付顺序 |
+| Functional Spec | 编号的可观察功能和产品级质量需求、解释它们的简短故事和流程图、排除项、未决决策 | 状态、追溯表、架构、交付顺序、实现或测试清单 |
 | Architecture Design | 共享的系统上下文、组件职责、契约、数据所有权、依赖方向、技术选型、部署假设、质量约束（主体、条件、属性或预算、来源、验证引用）和不变量；既有 General Design 即为此文档；仅在需要大量独立指导时按栈拆分 | 需求原文、Feature 列表、顺序、状态、测试用例、代码级风格规则 |
 | Testing Strategy | 可复用的测试层级、业务不变量与来源、算法 oracle、fixture 与 mock 限制、发现与 skip 规则、资源测量方法、回归和独立测试条件 | 逐 Feature 用例、测试结果、产品需求或资源预算本身 |
 | Roadmap | 子 Map 的顺序、分配的 FS ID、依赖和路径；文件存在后才使用链接 | 需求原文、设计、交付状态 |

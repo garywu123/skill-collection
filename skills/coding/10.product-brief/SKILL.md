@@ -19,10 +19,20 @@ Infer the intent from the request once the Skill has been invoked.
   understanding. Do not create or update a file.
 - `write`: Create, finalize, or update the brief when the user clearly requests
   it. Ask first only when a missing answer would materially change product
-  direction; otherwise state a small assumption and write.
+  direction; otherwise state a small assumption and write. Before writing a
+  change to purpose, users, core flows, or boundary, read the changed meaning
+  back to the user in a few sentences and wait for confirmation.
+
 - `review`: Check an existing or draft brief against the user's authorized
   discovery evidence and the rules below. Report findings with locations and
   the evidence for each; do not edit any file or run the write procedure.
+
+Interview from concrete tasks: ask the user to walk through one real task -
+who starts it, with what input, what they do, and what result they need -
+rather than asking for abstract goals. Ask only the questions whose answers
+would change direction; infer routine detail and state it as an assumption.
+The brief is a short synthesis of the answers, not the question-and-answer
+record.
 
 Treat a request to save or checkpoint the current exploration as `write`, but
 persist only established facts. Put unresolved decisions that could change
@@ -68,13 +78,19 @@ For `write` intent, create or update `docs/product-brief.md` from
 [the template](assets/product-brief.template.md), unless the project already
 has one clear canonical brief.
 
-Keep the brief short; about 40 lines is a readability signal for repetition or
-detail that belongs elsewhere, not a gate. Include only:
+Keep one short brief for the product. Aim for 400 to 700 English words; past
+800, cut repetition and detail that belongs elsewhere, such as behaviour for a
+Functional Specification. These are authoring targets, not gates, and word
+count never splits the brief. For another language, state the unit you
+measured; no equivalent target is set. When the project has
+`scripts/Test-DocBudget.ps1`, it counts a Markdown brief (`-MaxWords 800`).
+Include only:
 
 - the product purpose;
 - target users and their main need;
-- the main end-to-end flows;
-- what is inside and outside the MVP;
+- the main end-to-end flows, each told as a concrete task: who starts with
+  what, what they do, and what result they get;
+- what is inside the MVP, confirmed future direction, and what is out;
 - confirmed product-level constraints; and
 - open questions that could change product direction.
 

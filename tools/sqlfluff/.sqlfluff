@@ -1,0 +1,16 @@
+[sqlfluff]
+dialect = tsql
+templater = raw
+large_file_skip_byte_limit = 0
+max_line_length = 100
+rules = LT01,Case_L002,Case_L003,LT05,LT07,LT08,LT09,Case_C001
+
+[sqlfluff:indentation]
+tab_space_size = 4
+implicit_indents = allow
+
+[sqlfluff:layout:type:alias_expression]
+spacing_before = align
+align_within = select_clause
+align_scope = bracketed
+

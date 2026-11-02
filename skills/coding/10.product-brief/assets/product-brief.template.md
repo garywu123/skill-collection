@@ -10,15 +10,16 @@
 
 ## Core Flows
 
-1. <User starts with...>
-2. <The product...>
-3. <The user receives...>
+1. **<Task name>**: <who> starts with <input>, <does what>, and gets
+   <result>.
 
 ## MVP Boundary
 
 **In:** <the smallest useful product>
 
-**Out:** <nearby work deliberately postponed>
+**Later:** <confirmed future direction. Delete when none.>
+
+**Out:** <nearby work deliberately excluded>
 
 ## Product Constraints
 

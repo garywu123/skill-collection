@@ -58,15 +58,16 @@ justifies a larger document hierarchy. When a map genuinely needs more, state
 why in `<!-- budget: <words>; reason: <why> -->` at its top; the reviewer
 judges the reason.
 
-When scale is clear but `docs/functional-spec.md` is absent, report why one map
-would lose useful boundaries, recommend that the user
-explicitly invoke `functional-spec`, and stop without creating the
+When scale is clear but the project has no Functional Specification, report
+why one map would lose useful boundaries, recommend that the user explicitly
+invoke `functional-spec`, and stop without creating the
 specification, Roadmap, or child maps. Do not ask the user to choose a
 document shape when the evidence is clear. Ask only when cutting MVP scope
 versus adopting the scale layout would change the intended product boundary.
 
-When a `docs/functional-spec.md` exists, add a `Requirements` column listing
-the `FS-*` IDs each row delivers. Assign every active requirement to an
+When the project has a Functional Specification, at whatever canonical path
+and format (Markdown or HTML) it uses, add a `Requirements` column listing the
+`FS-*` IDs each row delivers. Assign every active requirement to an
 existing Map row or a future Roadmap row. A requirement may appear on several
 Map rows; it is delivered only when at least one Map row cites it and every
 citing Map row is `verified`. Do not copy requirement wording into either

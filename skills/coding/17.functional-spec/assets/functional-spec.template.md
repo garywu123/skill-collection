@@ -22,6 +22,10 @@ rows count toward delivery.
 
 ## FS-<AAA> <First functional area>
 
+<Optional short story: who starts with what input, what they do, and what
+result they see. It explains the requirements below and adds none. Delete when
+the requirements are clear alone.>
+
 - **FS-<AAA>-001 <Short name>.** <One observable behaviour.>
 - **FS-<AAA>-002 <Short name>.** <One observable behaviour.>
 
