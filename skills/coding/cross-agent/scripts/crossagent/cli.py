@@ -62,6 +62,9 @@ def _parser() -> argparse.ArgumentParser:
     next_command.add_argument("--stream", action="store_true", help="emit sanitized progress JSONL before the final result")
     commands.add_parser("retry-producer", help="retry a failed Producer execution, preserving its session").add_argument("--run", required=True)
     commands.add_parser("retry-review", help="retry a failed Reviewer execution, preserving Producer context").add_argument("--run", required=True)
+    adopt = commands.add_parser("adopt-external", help="keep a work-tree change made outside the run during review")
+    adopt.add_argument("--run", required=True)
+    adopt.add_argument("--reason", required=True)
     park = commands.add_parser("park", help="hold a failed Delivery run for replanning without deleting history")
     park.add_argument("--run", required=True)
     park.add_argument("--reason", required=True)
@@ -145,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
             result = engine.retry_producer(root, args.run)
         elif args.command == "retry-review":
             result = engine.retry_review(root, args.run)
+        elif args.command == "adopt-external":
+            result = engine.adopt_external(root, args.run, args.reason)
         elif args.command == "park":
             result = engine.park(root, args.run, args.reason)
         elif args.command == "resume-delivery":

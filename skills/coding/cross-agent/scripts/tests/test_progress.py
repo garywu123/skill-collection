@@ -38,7 +38,9 @@ class ProgressTests(unittest.TestCase):
             )
             result = providers._run([sys.executable, "-c", script], call(root, receive))
             self.assertEqual(result.returncode, 0)
-            self.assertEqual(events[0]["telemetry"]["model"], "observed-model")
+            self.assertEqual(events[0]["event"], "worker-process")
+            self.assertIsInstance(events[0]["pid"], int)
+            self.assertEqual(events[1]["telemetry"]["model"], "observed-model")
 
     def test_silent_worker_times_out(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -119,6 +119,7 @@ def reviewer_prompt(
     attempt: int | None = None,
     segment: dict | None = None,
     diff_label: str = "Changes since the previous review",
+    external: list[dict] | None = None,
 ) -> str:
     attempt = review if attempt is None else attempt
     lines = [
@@ -159,6 +160,9 @@ def reviewer_prompt(
         ]
     else:
         lines += ["", f"{diff_label}: none. Review the artifact as it stands."]
+    if external:
+        lines += ["", "The Orchestrator adopted these changes made outside the Producer into the reviewed diff. "
+                  "Judge them like the rest of the diff, but do not attribute them to the Producer:", _json(external)]
     if earlier:
         lines += [
             "",

@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 from pathlib import Path
 
+from . import proctree
 from .errors import UsageError
 from .progress import Observer, codex_usage, token_counts
 
@@ -100,7 +101,10 @@ def _run(command: list[str], call: Call, env: dict | None = None):
     observer = Observer(call)
     process = subprocess.Popen(command, cwd=call.cwd, env=env, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                               encoding="utf-8", errors="replace", bufsize=1)
+                               encoding="utf-8", errors="replace", bufsize=1, **proctree.popen_options())
+    tree = proctree.Owned(process)
+    # The engine saves the PID so a later next can detect a worker orphaned by a killed CLI.
+    observer.emit("worker-process", pid=process.pid, process_started=tree.started)
     lines = queue.Queue()
     output = []
 
@@ -171,11 +175,7 @@ def _run(command: list[str], call: Call, env: dict | None = None):
                 heartbeat = time.monotonic() + 30
         process.wait(timeout=max(0.01, deadline - time.monotonic()))
     finally:
-        if process.poll() is None:
-            if os.name == "nt":
-                subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True)
-            process.kill()
-            process.wait()
+        tree.close()
         process.stdout.close()
     return subprocess.CompletedProcess(command, process.returncode, "".join(output), "")
 
@@ -195,8 +195,17 @@ def _require_role(call: Call) -> None:
         raise UsageError(f"The {call.role} must explicitly configure model and effort; incomplete saved roles cannot fall back to CLI defaults")
 
 
+# Tools that can never change a file; a Reviewer limited to them cannot write.
+WRITE_FREE_TOOLS = frozenset({"Read", "Grep", "Glob"})
+CLAUDE_REVIEWER_TOOLS = ("Read", "Grep", "Glob")
+CODEX_REVIEWER_SANDBOX = "read-only"
+
+
 class Claude:
     name = "claude"
+
+    def reviewer_cannot_write(self) -> bool:
+        return set(CLAUDE_REVIEWER_TOOLS) <= WRITE_FREE_TOOLS
 
     def check(self, executable: str | None = None) -> None:
         _executable("claude", executable)
@@ -223,7 +232,7 @@ class Claude:
         for directory in [*call.read_dirs, *call.write_dirs]:
             command += ["--add-dir", directory]
         if call.role == "reviewer":
-            command += ["--tools", "Read,Grep,Glob"]
+            command += ["--tools", ",".join(CLAUDE_REVIEWER_TOOLS)]
         else:
             command += ["--permission-mode", "acceptEdits"]
             if call.allowed_commands:
@@ -344,12 +353,15 @@ def _codex_token_totals(session_id: str | None) -> dict | None:
 class Codex:
     name = "codex"
 
+    def reviewer_cannot_write(self) -> bool:
+        return CODEX_REVIEWER_SANDBOX == "read-only"
+
     def check(self, executable: str | None = None) -> None:
         _executable("codex", executable)
 
     def command(self, call: Call, schema_file: Path, output_file: Path) -> list[str]:
         _require_role(call)
-        mode = "read-only" if call.role == "reviewer" else "workspace-write"
+        mode = CODEX_REVIEWER_SANDBOX if call.role == "reviewer" else "workspace-write"
         command = [_executable("codex", call.executable), "exec"]
         if call.session_id:
             # `exec resume` has no --sandbox flag, so the mode is always set through -c.
@@ -439,6 +451,7 @@ class Fake:
     `CROSS_AGENT_FAKE_SCRIPT` names a JSON file `{"producer": [...], "reviewer": [...]}`.
     Each step may hold `output`, `write` ({path: content}), `delete` ([path]), `context_tokens`,
     `fail`, or `fail_on_resume` (fail only when resuming, without consuming the step).
+    A top-level `"reviewer_cannot_write": true` makes a Reviewer `write` simulate an external edit.
     Positions and a call log live next to the script.
     """
 
@@ -447,6 +460,10 @@ class Fake:
     def check(self, executable: str | None = None) -> None:
         if not os.environ.get("CROSS_AGENT_FAKE_SCRIPT"):
             raise UsageError("The fake provider needs CROSS_AGENT_FAKE_SCRIPT")
+
+    def reviewer_cannot_write(self) -> bool:
+        script = json.loads(Path(os.environ["CROSS_AGENT_FAKE_SCRIPT"]).read_text(encoding="utf-8"))
+        return bool(script.get("reviewer_cannot_write"))
 
     def command(self, call: Call, *_args) -> list[str]:
         return ["fake", call.role]

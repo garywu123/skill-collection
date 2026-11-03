@@ -437,7 +437,10 @@ without creating a run; use it when the user wants a preview. Then call `next`,
 and call it again after every `decide` or `answer`, until the run is done. Each
 `next --stream` prints sanitized observations while the worker runs, then its
 final result; do not launch a second `next` while it is running. `status --run`
-can inspect the latest saved observations. Act on the final result's phase:
+can inspect the latest saved observations. Each worker's process tree dies with
+its `next`. If an earlier `next` was killed and its recorded worker still runs,
+`next` refuses and `status --run` reports `orphan_worker`; report it and stop
+that process tree before calling `next` again. Act on the final result's phase:
 
 | Phase | Action |
 |---|---|
@@ -536,7 +539,16 @@ fix the external cause first, then use `cross-agent retry-review --run <id>`
 and `next --stream`. This retains the run, Producer session, findings, and review
 budget, while starting a fresh Reviewer in the review phase that failed. It refuses validation failures such as
 Reviewer writes, and does not bypass the review limit. Do not edit run state or
-launch workers manually to recover. When the user explicitly resolves a
+launch workers manually to recover.
+
+A work tree that changes while a write-denied Reviewer runs, such as an editor
+rewriting `.vscode/settings.json`, fails as `error.kind = "work-tree-changed"`
+with `changed_files`; that review is discarded and spends no budget. Report the
+files. Either revert the change, or, when it belongs to the run, keep it with
+`cross-agent adopt-external --run <id> --reason "<why it is kept>"`, which
+records the reason and includes it in the reviewed diff. Then use
+`retry-review`; it refuses while the tree differs from both the reviewed and
+the adopted snapshot. A Reviewer that could write still fails closed. When the user explicitly resolves a
 Producer-reported blocker and asks to continue, pass that decision with
 `cross-agent answer --run <id> --text "<user decision>"`, then `next --stream`.
 This preserves both worker sessions, findings, snapshots, and the review budget;

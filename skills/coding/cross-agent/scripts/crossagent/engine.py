@@ -25,7 +25,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, backlog, gitops, history, prompts, providers, schemas, store, testchanges
+from . import __version__, backlog, gitops, history, proctree, prompts, providers, schemas, store, testchanges
 from . import config as cfg
 from .errors import GitError, UsageError
 
@@ -35,6 +35,10 @@ CHECK_EXCERPT_LINES = 40
 EXCERPT_CHARS = 4000
 MAX_PRODUCER_CHECKPOINTS = 8
 MAX_AUTO_PRODUCER_RETRIES = 1
+# A write-denied Reviewer's run whose work tree changed during review: someone else edited it.
+EXTERNAL_CHANGE = "work-tree-changed"
+EXTERNAL_CHANGE_ACTION = ("Report the external change. Revert it, or keep it with adopt-external --reason, "
+                          "then use retry-review; the review result was discarded and the review budget is unspent.")
 
 NEXT_ACTION = {
     "produce": "Call next to run the Producer.",
@@ -56,12 +60,13 @@ NEXT_ACTION = {
 class StepFailed(Exception):
     """A worker, schema, or snapshot failure that ends the run as failed."""
 
-    def __init__(self, message: str, raw: str = "", *, role=None, execution=False, retryable=False):
+    def __init__(self, message: str, raw: str = "", *, role=None, execution=False, retryable=False, details=None):
         super().__init__(message)
         self.raw = raw
         self.role = role
         self.execution = execution
         self.retryable = retryable
+        self.details = details
 
 
 # ---------------------------------------------------------------- commands
@@ -173,6 +178,10 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
 
 def next_step(project_root: Path, run_id: str, progress=None) -> dict:
     state = store.load(project_root, run_id)
+    orphan = _orphan_worker(state)
+    if orphan:
+        raise UsageError(f"The {orphan['role']} worker (PID {orphan['pid']}) started by an interrupted next is still "
+                         "running and may be editing the work tree; stop that process tree, then call next again")
     phase = state["phase"]
     try:
         if state["phase"] == "failed" and _can_auto_recover(state):
@@ -191,7 +200,7 @@ def next_step(project_root: Path, run_id: str, progress=None) -> dict:
             return _finish(state)
     except StepFailed as exc:
         return _fail(state, str(exc), exc.raw, role=exc.role, execution=exc.execution, retryable=exc.retryable,
-                     return_phase=phase)
+                     return_phase=phase, details=exc.details)
     except GitError as exc:
         return _fail(state, str(exc), return_phase=phase)
     except UsageError as exc:
@@ -255,10 +264,18 @@ def retry_producer(project_root: Path, run_id: str) -> dict:
 
 
 def retry_review(project_root: Path, run_id: str) -> dict:
-    """Retry only a Reviewer execution failure without losing Producer context."""
+    """Retry a Reviewer execution failure, or a review discarded by an external work-tree change."""
     state = store.load(project_root, run_id)
-    if state["phase"] != "failed" or not _execution_error(state, "reviewer"):
-        raise UsageError("Only a failed Reviewer execution can be retried; validation failures stay closed")
+    external = state["phase"] == "failed" and _external_change(state)
+    if state["phase"] != "failed" or not (external or _execution_error(state, "reviewer")):
+        raise UsageError("Only a failed Reviewer execution or an external work-tree change can be retried; "
+                         "validation failures stay closed")
+    if external:
+        error = state["error"]
+        current = gitops.snapshot(_root(state), _index(state))
+        if current not in (error["reviewed_tree"], error.get("adopted_tree")):
+            raise UsageError("The work tree still differs from the reviewed snapshot; revert the external change "
+                             "or keep it with adopt-external --reason, then retry-review")
     if state["reviews_done"] >= state["settings"]["max_reviews"]:
         raise UsageError("The review budget is exhausted")
     provider_name = state["roles"]["reviewer"]["provider"]
@@ -271,6 +288,26 @@ def retry_review(project_root: Path, run_id: str) -> dict:
     state["error"] = None
     store.save(state)
     return _event(state, "Reviewer execution retry armed; Producer session and review budget preserved.")
+
+
+def adopt_external(project_root: Path, run_id: str, reason: str) -> dict:
+    """Keep an external work-tree change as part of the run's reviewed diff, with the Orchestrator's reason."""
+    state = store.load(project_root, run_id)
+    if state["phase"] != "failed" or not _external_change(state) or not reason.strip():
+        raise UsageError("Only a review failed by an external work-tree change can adopt it, with a concrete reason")
+    root = _root(state)
+    error = state["error"]
+    current = gitops.snapshot(root, _index(state))
+    if current == error["reviewed_tree"]:
+        raise UsageError("The work tree matches the reviewed snapshot; nothing to adopt, use retry-review")
+    adoption = {"at": store.now(), "reason": reason.strip(), "review": state["reviews_done"] + 1,
+                "files": gitops.changed_files(root, error["reviewed_tree"], current),
+                "from_tree": error["reviewed_tree"], "tree": current}
+    state.setdefault("external_adoptions", []).append(adoption)
+    error["adopted_tree"] = current
+    store.save(state)
+    return _event(state, "External change adopted into the run's reviewed diff; call retry-review.",
+                  adoption=adoption)
 
 
 def park(project_root: Path, run_id: str, reason: str) -> dict:
@@ -433,7 +470,8 @@ def note(project_root: Path, run_id: str, text: str) -> dict:
 def status(project_root: Path, run_id: str | None) -> dict:
     if run_id:
         state = store.load(project_root, run_id)
-        return _event(state, "Current status.", adjudications=[_provenance(finding) for finding in state["findings"]])
+        return _event(state, "Current status.", adjudications=[_provenance(finding) for finding in state["findings"]],
+                      orphan_worker=_orphan_worker(state))
     config = cfg.load_config(project_root)
     effective_roles = {}
     for stage in cfg.STAGES:
@@ -719,6 +757,12 @@ def _run_reviewer(state: dict, number: int, base: str, to_check: list[dict], pro
     after = gitops.snapshot(root, _index(state))
     if after != before:
         files = gitops.changed_files(root, before, after)
+        if providers.get(state["roles"]["reviewer"]["provider"]).reviewer_cannot_write():
+            # The guard stays; only its attribution changes. The result is discarded and the budget unspent.
+            raise StepFailed(f"The work tree changed during review {number} while the write-denied Reviewer ran, so "
+                             f"the review was discarded: {', '.join(files[:10])}", role="reviewer",
+                             details={"kind": EXTERNAL_CHANGE, "changed_files": files,
+                                      "reviewed_tree": before, "changed_tree": after})
         raise StepFailed(f"The Reviewer changed files, which fails the run: {', '.join(files[:10])}")
     if failure:
         raise failure
@@ -885,6 +929,8 @@ def _attempt(state: dict, role: str, provider, build_prompt, schema: dict, fresh
     def observe(event):
         if "telemetry" in event:
             worker["telemetry"] = event["telemetry"]
+        if event["event"] == "worker-process":
+            worker["process"] = {"pid": event["pid"], "started": event.get("process_started"), "at": store.now()}
         if event.get("session_id"):
             worker["session_id"] = event["session_id"]
             if event["session_id"] not in worker["sessions"]:
@@ -910,6 +956,7 @@ def _attempt(state: dict, role: str, provider, build_prompt, schema: dict, fresh
         result = provider.run(call)
     except (OSError, UsageError) as exc:
         result = providers.CallResult(error=f"could not execute worker: {exc}", session_id=worker["session_id"])
+    worker.pop("process", None)  # The provider waited for and killed the worker's tree.
     if result.session_id:
         worker["session_id"] = result.session_id
         if result.session_id not in worker["sessions"]:
@@ -1059,6 +1106,7 @@ def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None, t
         attempt=attempt,
         segment=segment,
         diff_label=diff_label,
+        external=[{key: item[key] for key in ("files", "reason")} for item in state.get("external_adoptions", [])],
     )
 
 
@@ -1170,15 +1218,28 @@ def _dry_run(state: dict) -> dict:
 
 
 def _fail(state: dict, message: str, raw: str = "", *, role=None, execution=False, retryable=False,
-          return_phase=None) -> dict:
+          return_phase=None, details=None) -> dict:
     if return_phase not in (None, "failed"):
         state["return_phase"] = return_phase
     state["phase"] = "failed"
     state["final_status"] = "failed"
     state["error"] = {"message": message, "raw_excerpt": (raw or "")[-EXCERPT_CHARS:],
-                      "role": role, "execution": execution, "retryable": retryable}
+                      "role": role, "execution": execution, "retryable": retryable, **(details or {})}
     store.save(state)
     return _event(state, message)
+
+
+def _external_change(state: dict) -> bool:
+    return (state.get("error") or {}).get("kind") == EXTERNAL_CHANGE
+
+
+def _orphan_worker(state: dict) -> dict | None:
+    """A worker still running from a next process that was killed before it could stop the worker."""
+    for role, worker in state["workers"].items():
+        process = worker.get("process")
+        if process and proctree.alive(process["pid"], process.get("started")):
+            return {"role": role, **process}
+    return None
 
 
 def _check_decision(decision: dict, finding: dict) -> None:
@@ -1255,6 +1316,7 @@ def _report(state: dict) -> dict:
         "adjudication": state["settings"]["adjudication"],
         "segments": state.get("segments", []),
         "segment_skips": state.get("segment_skips", []),
+        "external_adoptions": state.get("external_adoptions", []),
     }
 
 
@@ -1264,7 +1326,9 @@ def _event(state: dict, message: str, **extra) -> dict:
         "run_id": state["run_id"],
         "phase": phase,
         "message": message,
-        "next_action": "Call next once to recover the previous Producer execution." if _can_auto_recover(state) else NEXT_ACTION[phase],
+        "next_action": ("Call next once to recover the previous Producer execution." if _can_auto_recover(state)
+                        else EXTERNAL_CHANGE_ACTION if phase == "failed" and _external_change(state)
+                        else NEXT_ACTION[phase]),
         "stage": state["stage"],
         "artifact": state["artifact"],
         "item": state.get("item", state["artifact"]),
