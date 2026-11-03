@@ -20,6 +20,9 @@ def producer_prompt(
     work: list[dict],
     answer: str | None,
     summary: str | None,
+    checkpoint_session: str = "fresh",
+    segment_review: bool = False,
+    repair: dict | None = None,
 ) -> str:
     lines = [
         f'You are the Producer in a cross-agent review run for stage "{stage}".',
@@ -36,6 +39,12 @@ def producer_prompt(
         lines.append("Work in auto mode: write the tests and the implementation yourself.")
     if initial:
         lines += ["", "Request:", request or ""]
+    elif repair:
+        lines += ["", f"Original request: {request or 'none'}",
+                  "Current step: repair the accepted segment-review findings below for this segment only. "
+                  "Return status segment-repaired with an outcome for every listed finding. Run only the focused "
+                  "checks for the repaired behavior; whole-stage checks run after done. Do not start the next "
+                  "segment.", "Segment under repair:", _json(repair)]
     else:
         lines += ["", f"Original request: {request or 'none'}", "Current step: continue unfinished authorized work and address the accepted findings below."]
     if summary:
@@ -73,8 +82,14 @@ def producer_prompt(
         "- Do not commit, and do not start another lifecycle stage.",
         "- For an execution stage, return checkpoint only after a planned segment and its focused checks, "
         "when more authorized work remains. Summarize acceptance evidence, stable contracts, and the next "
-        "unfinished segment; use empty questions/outcomes and null blocker. A checkpoint starts a new session "
-        "without resetting review or revision budgets. Do not return done before whole-stage validation.",
+        "unfinished segment; use empty questions/outcomes and null blocker. " + (
+            "The same session continues after a checkpoint" if checkpoint_session == "resume"
+            else "A checkpoint starts a new session") + " without resetting review or revision budgets. "
+        "Do not return done before whole-stage validation.",
+        "- " + ("For a checkpoint, list the finished segment's planned outcomes in segment_outcomes and the "
+                "unfinished authorized work in remaining_work; an independent segment review judges only those "
+                "outcomes before the next segment. For any other status return both lists empty."
+                if segment_review else "Return empty segment_outcomes and remaining_work lists."),
         "- Write all output in English.",
         "- Your final message must be only the Producer result JSON object.",
     ]
@@ -96,7 +111,11 @@ def reviewer_prompt(
     checks: list[dict],
     summary: str | None,
     test_changes: str | None = None,
+    attempt: int | None = None,
+    segment: dict | None = None,
+    diff_label: str = "Changes since the previous review",
 ) -> str:
+    attempt = review if attempt is None else attempt
     lines = [
         f'You are the read-only Reviewer in a cross-agent review run for stage "{stage}", '
         f"review {review} of at most {max_reviews}.",
@@ -113,18 +132,27 @@ def reviewer_prompt(
     else:
         lines.append("Judge the artifact and the changes against AGENTS.md and the request.")
     lines += ["", f"Request: {request or 'none; judge the artifact against its Skill and sources.'}"]
+    if segment:
+        lines += [
+            "",
+            "This is a segment review, not the whole-stage review. Judge only whether the diff below meets the "
+            "finished segment's planned outcomes, and report regressions or risks it introduces. Do not report "
+            "unfinished later work listed as remaining; the whole-stage review judges completeness after the "
+            "Producer finishes. Delivery checks have not run yet; judge the Producer's focused-check evidence.",
+            _json(segment),
+        ]
     if summary:
         lines += ["", "Run summary so far:", summary]
     if diff:
         lines += [
             "",
-            f"Changes since the previous review (git diff; paths are relative to the repository root {repo_root}):",
+            f"{diff_label} (git diff; paths are relative to the repository root {repo_root}):",
             "```diff",
             diff.rstrip(),
             "```",
         ]
     else:
-        lines += ["", "Changes since the previous review: none. Review the artifact as it stands."]
+        lines += ["", f"{diff_label}: none. Review the artifact as it stands."]
     if earlier:
         lines += [
             "",
@@ -152,6 +180,9 @@ def reviewer_prompt(
         "required gates are not excess.",
         "Give each finding evidence: a rule citation, a path:line, or a failing command. "
         "Rate its severity as blocker, major, or minor.",
+        "Set needs_user_decision to true only when the fix changes product behavior, requested scope, technical "
+        "direction or an authoritative document, or when the authority to decide is missing; otherwise false. "
+        "A clear compliance or security fix within the requested scope is an ordinary finding.",
         "Use claim, evidence, and recommendation to explain the supported trigger, unmet promise or concrete "
         "risk, user consequence, and smallest adequate correction. Concrete code-supported security or "
         "data-loss risks need no invented product requirement. Distinguish product, test, and environment "
@@ -175,9 +206,9 @@ def reviewer_prompt(
         "cleanup, optional refactoring, and improvement ideas in notes. Unneeded additions in the reviewed "
         "change are excess findings, not notes.",
     ]
-    if review > 1:
+    if attempt > 1:
         lines.append(
-            "This is not the first review: add a new finding only for a blocker, or for a regression or excess "
+            f"This is not the first {'review of this segment' if segment else 'review'}: add a new finding only for a blocker, or for a regression or excess "
             "caused by the latest changes."
         )
     lines += ["Write all output in English.", "Your final message must be only the review result JSON object."]

@@ -45,6 +45,8 @@ REVIEW = _object(
                     "claim": _STRING,
                     "evidence": _STRINGS,
                     "recommendation": _STRING,
+                    # True only when the fix needs a decision Orch or the user owns.
+                    "needs_user_decision": {"type": "boolean"},
                 }
             ),
         },
@@ -63,7 +65,8 @@ REVIEW = _object(
 
 PRODUCER = _object(
     {
-        "status": {"type": "string", "enum": ["done", "checkpoint", "needs-user-decision", "blocked"]},
+        "status": {"type": "string", "enum": ["done", "checkpoint", "segment-repaired", "needs-user-decision",
+                                             "blocked"]},
         "summary": _STRING,
         "questions": _STRINGS,
         "blocker": {"type": ["string", "null"]},
@@ -77,6 +80,9 @@ PRODUCER = _object(
                 }
             ),
         },
+        # Planned outcomes of the finished segment and the work after it; nonempty only for a reviewed checkpoint.
+        "segment_outcomes": _STRINGS,
+        "remaining_work": _STRINGS,
     }
 )
 

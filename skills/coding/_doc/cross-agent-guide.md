@@ -155,7 +155,7 @@ extra_dirs = []
 |---|---|
 | `max_reviews` | 每个 run 的独立评审次数上限，不是整个任务的次数。用完后可能交由 Orch 作有限收尾，不能另开 run 刷新预算。 |
 | `timeout_minutes` | 单次 worker 调用或一条验证命令的超时，不是整个任务时限。 |
-| `rotate_at_tokens` | 上次调用测得的 context 超过阈值时，下次调用换新会话。`0` 关闭该轮换；不是模型的窗口大小，也不在调用中途触发。默认值未必适合你使用的模型。 |
+| `rotate_at_tokens` | 上次调用测得的 context 超过阈值时，下次调用换新会话。可写一个整数（两个角色共用），或 `{ producer = 250000, reviewer = 400000 }` 分角色设置。`0` 关闭该轮换；不是模型的窗口大小，也不在调用中途触发。默认值未必适合你使用的模型。 |
 | `backlog_rejected` | 关闭 run 时是否把被拒绝的 findings 也写进 backlog。 |
 | `max_diff_kb` | 一次评审允许读取的变更体积上限。 |
 | `allowed_commands` | 当前 Claude Producer 适配器用它生成命令允许规则；不等于所有 provider 的通用沙箱，也不能覆盖平台的拒绝规则。 |
@@ -449,7 +449,7 @@ CLI 当前只有 `feature-map`、`feature-plan`、`feature-delivery`、`general`
 - **找不到阶段 Skill**：默认从 `cross-agent` 的同级目录寻找。完整部署后应有对应目录；特殊布局可在配置中设置 `[stages.feature-plan]` 的 `skill` 为正确 `SKILL.md` 路径。配置的路径不存在时，`start` 在创建 run 前失败。
 - **配置了命令但仍被拒绝**：允许规则不能覆盖 provider 的安全边界。缩小命令、改用普通测试文件或请求明确授权；不要关闭保护来强行通过。
 - **context / effort / subagent 数字缺失**：provider 不一定提供。context 是最近一次父会话用量测量，不是持续精确的剩余容量；只有观察到窗口上限才能计算占比。
-- **什么时候换人或压缩**：阶段/独立工作项之间、计划 checkpoint 后新开会话；其他调用优先 resume，只有 context 超阈值或 session 明确失效才替换。timeout 保留最后可用的 parent context 测量，旧 session 留在历史中。provider 自身压缩与 CLI 换会话分别报告。
+- **什么时候换人或压缩**：阶段/独立工作项之间、`checkpoint_session = "fresh"` 时的计划 checkpoint 后新开会话；其他调用优先 resume，只有 context 超阈值或 session 明确失效才替换。timeout 保留最后可用的 parent context 测量，旧 session 留在历史中。provider 自身压缩与 CLI 换会话分别报告。
 - **换了 Orch 对话后怎样继续**：回到同一个项目根目录，显式调用 Skill，让 Orch 先运行 `status`。已有 run 的状态可读取；原对话的多阶段授权和审批门槛需要你重新提供，不能只凭文件推断。
 - **可以直接修改 `.cross-agent/` 吗**：运行状态在 `.cross-agent/runs/`，只能通过 `status`、`next`、`decide`、`answer`、`close` 管理。`.cross-agent/config.toml` 是配置，明确的配置修改任务可以编辑它；阶段 worker 不修改配置，配置变更不影响已打开 run 的设置。
 
@@ -471,8 +471,10 @@ sub-agent 活动；有心跳不代表验收通过。
 
 完成一个计划 segment 且后续工作仍在授权范围内时，Producer 返回 `status: checkpoint`。
 `summary` 必须包含完成段、真实验收/检查证据、稳定契约、下一段未完成工作和限制；
-`questions`、`outcomes` 为空，`blocker` 为 null。下一次 `next` 创建新 Producer session
-继续，不提前送审。每 run 最多八个 checkpoint；原始 baseline、Feature ID、findings、
+`questions`、`outcomes` 为空，`blocker` 为 null。下一次 `next` 按 `checkpoint_session`
+继续同一个 Producer session（`resume`）或新开（`fresh`，旧配置的行为）；开启
+`segment_review` 时 Delivery checkpoint 还要填 `segment_outcomes` 和 `remaining_work`，
+先做该 segment 的评审与修复（见 SKILL.md），否则不提前送审。每 run 最多八个 checkpoint；原始 baseline、Feature ID、findings、
 待传递回答与总 review 预算保持原样，全部完成后才执行整体验证并交给 Reviewer。
 
 明确授权 commit 时（例如请求写“每完成一个 section 就提交本地 commit”），Orch 在 worker

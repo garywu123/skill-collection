@@ -7,8 +7,10 @@
 # required. Missing values are errors; there are no Python or CLI defaults.
 # A run keeps the role settings it started with.
 
-# Reviews per run. Each review that leaves an accepted finding allows one
-# Producer revision.
+# Reviews per run, segment reviews included. Each review that leaves an
+# accepted finding allows one Producer revision. Raise it (e.g. 12) when
+# enabling segment_review: it must cover max_segment_reviews plus
+# final_review_reserve.
 max_reviews = 5
 
 # Hard minutes per worker call or check command; activity never extends it.
@@ -16,9 +18,28 @@ max_reviews = 5
 timeout_minutes = 30
 
 # Start a fresh worker session when the previous call's context exceeded this
-# many tokens. 0 turns rotation off; Claude Code and Codex also compress
-# context on their own.
-rotate_at_tokens = 250000
+# many tokens, per role. A single integer applies to both roles. 0 turns
+# rotation off; Claude Code and Codex also compress context on their own.
+rotate_at_tokens = { producer = 250000, reviewer = 400000 }
+
+# After a Delivery execution checkpoint the Producer continues in the same
+# session ("resume") or starts a new one ("fresh", the behavior of configs
+# without this key). Rotation still follows rotate_at_tokens.
+checkpoint_session = "resume"
+
+# Review each Delivery checkpoint segment against its planned outcomes before
+# the next segment; the final review still reads the whole run. Each segment
+# gets at most max_segment_reviews automatic reviews, and a segment review is
+# skipped when it would leave fewer than final_review_reserve reviews.
+segment_review = false
+max_segment_reviews = 3
+final_review_reserve = 2
+
+# Who adjudicates review findings: "orch" (Orch decides every finding) or
+# "auto" (rules accept blocker/major, keep minor as notes, and escalate to Orch
+# only Reviewer needs_user_decision findings and exhausted segment budgets).
+# Prefer recording the user's delegation per run with start --adjudication auto.
+adjudication = "orch"
 
 # Write rejected findings to docs/review-backlog.md when a run closes.
 backlog_rejected = true

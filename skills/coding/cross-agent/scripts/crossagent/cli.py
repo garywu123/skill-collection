@@ -38,6 +38,8 @@ def _parser() -> argparse.ArgumentParser:
     start.add_argument("--producer", help="complete <provider>:<model>:<effort> override")
     start.add_argument("--reviewer", help="complete <provider>:<model>:<effort> override")
     start.add_argument("--item", help="stable Feature ID or topic shared across stages; defaults to artifact")
+    start.add_argument("--adjudication", choices=("orch", "auto"),
+                       help="record the user's adjudication delegation; overrides the config value")
     start.add_argument("--dry-run", action="store_true", help="print the first prompt and command only")
 
     expert = commands.add_parser("expert", help="run the direct Claude expert in this foreground terminal")
@@ -71,6 +73,8 @@ def _parser() -> argparse.ArgumentParser:
     decide = commands.add_parser("decide", help="record adjudications from a JSON file")
     decide.add_argument("--run", required=True)
     decide.add_argument("--input", required=True, help="JSON file outside the work tree")
+    decide.add_argument("--max-reviews", type=int, help="user-approved increase of the run review budget")
+    decide.add_argument("--waive-reserve", action="store_true", help="user-approved waiver of the final-review reserve")
     answer = commands.add_parser("answer", help="pass the user's answer or blocker recovery decision to the Producer")
     answer.add_argument("--run", required=True)
     answer.add_argument("--text", required=True)
@@ -121,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
                 skill=args.skill,
                 skip_review=args.skip_review,
                 reason=args.reason,
+                adjudication=args.adjudication,
             )
         elif args.command in ("expert", "promote", "waive-review", "forget-history"):
             from . import exploration
@@ -145,7 +150,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "resume-delivery":
             result = engine.resume_delivery(root, args.run, args.plan_run, args.request, args.max_diff_kb)
         elif args.command == "decide":
-            result = engine.decide(root, args.run, args.input)
+            result = engine.decide(root, args.run, args.input, max_reviews=args.max_reviews,
+                                   waive_reserve=args.waive_reserve)
         elif args.command == "answer":
             result = engine.answer(root, args.run, args.text)
         elif args.command == "note":

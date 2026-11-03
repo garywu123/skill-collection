@@ -386,8 +386,11 @@ prepare a handoff; require the Producer to leave the Plan current instead.
    artifact, which may sit below the Git repository root. Run
    `cross-agent status`; it needs Python 3.11 or later. If it cannot run,
    report why and stop. Its output lists open runs and the effective settings,
-   such as `max_reviews` and whether rejected findings reach the backlog
-   (`backlog_rejected`).
+   such as `max_reviews`, whether rejected findings reach the backlog
+   (`backlog_rejected`), `checkpoint_session`, `segment_review` and
+   `adjudication`. A config without the newer keys keeps the earlier behavior:
+   fresh sessions after checkpoints, no segment review, Orch adjudication, and a
+   scalar `rotate_at_tokens` for both roles. A saved run keeps its settings.
 2. If `status` lists an open run for the same stage and artifact, continue it
    with `next`. If it lists an open run on this artifact for a different stage
    or request, report it and ask whether to continue or close it. The CLI
@@ -420,7 +423,8 @@ cross-agent start --stage <stage> --artifact <path> --first <produce|review>
                   [--item "<Feature ID or topic>"] [--request "<text>"]
                   [--skill <logical-name-or-path>]
                   [--producer <spec>] [--reviewer <spec>]
-                  [--skip-review --reason "<explicit user opt-out>"] [--dry-run]
+                  [--skip-review --reason "<explicit user opt-out>"]
+                  [--adjudication <orch|auto>] [--dry-run]
 cross-agent next  --run <id> --stream
 ```
 
@@ -434,7 +438,7 @@ can inspect the latest saved observations. Act on the final result's phase:
 | Phase | Action |
 |---|---|
 | `explore` | Use `expert` for supported direct discussion; wait for explicit write authorization before `promote`. |
-| `produce` or `review` | Call `next` again; a worker step is due. |
+| `produce`, `review`, `segment-review` or `segment-repair` | Call `next` again; a worker step is due. |
 | `awaiting-decision` | Adjudicate every open finding, then run `cross-agent decide --run <id> --input <file>`. |
 | `awaiting-answer` | Relay the Producer's questions, then pass the user's reply with `cross-agent answer --run <id> --text "<answer>"`. |
 | `finalizing` | Follow Finalization. |
@@ -468,8 +472,8 @@ the Producer's questions when you relay them.
 Producer timeout and explicit transient connection/rate-limit errors receive at
 most one automatic recovery per run. `next` resumes a compatible failed run or
 the active call retries once; both share that counter. Prefer the previous
-Producer session. Replace it only for the saved context threshold, an execution
-checkpoint, or a recognized missing/unloadable session; retain old sessions for
+Producer session. Replace it only for the Producer's saved context threshold, a
+fresh-session checkpoint, or a recognized missing/unloadable session; retain old sessions for
 history and later cleanup. A replacement receives the run summary and latest
 checkpoint and must inspect existing edits. Each worker call still has the
 configured hard timeout (default 30 minutes); output never extends it. Do not
@@ -477,7 +481,8 @@ keep calling `next` to obtain unlimited retries.
 
 After the external cause of a failed Producer execution is fixed and recovery
 is authorized, use `cross-agent retry-producer --run <id>`, then `next --stream`.
-This explicit retry does not append another automatic retry. It preserves the
+This explicit retry does not append another automatic retry; it returns to the
+Producer phase that failed (`produce` or `segment-repair`). It preserves the
 baseline, sessions, edits, findings, answer, and review budget. Schema/output
 validation and write guards are not execution failures and cannot be retried.
 Configuration/discovery failures require fixing their cause before proceeding.
@@ -490,19 +495,42 @@ current tree; it is the only channel while the run waits in `produce`, since a
 commit message or chat text never reaches a continuation Producer.
 
 An execution Producer may return `checkpoint` after a planned segment. The CLI
-saves its acceptance/handoff summary and snapshot, stays in `produce`, and the
-next call starts a fresh Producer session. Report the checkpoint and continue
-the already-authorized Plan. There are at most eight checkpoints per run; they
-do not consume or reset a revision/review budget. The original baseline remains
-the final review boundary. Only `done` runs whole-stage checks and hands off for
-independent review. Never treat a checkpoint as verified completion. When
-commits are authorized, commit the checkpoint as described in Section Commits
-before calling `next`.
+saves its acceptance/handoff summary and snapshot. With `checkpoint_session =
+"resume"` the next call continues the same Producer session, which rotates only
+at the Producer's `rotate_at_tokens` threshold or when the session is missing;
+with `"fresh"` it starts a new session. Report the checkpoint and continue the
+already-authorized Plan. There are at most eight checkpoints per run; they do
+not reset a revision/review budget. The original baseline remains the final
+review boundary. Only `done` runs whole-stage checks and hands off for the final
+review. Never treat a checkpoint as verified completion. When commits are
+authorized, commit the checkpoint as described in Section Commits before
+calling `next`.
+
+With `segment_review = true`, a `feature-delivery` checkpoint before the first
+final review must also list the segment's planned `segment_outcomes` and the
+`remaining_work`, and the run enters `segment-review`. The run's single Reviewer
+session judges only those outcomes against the diff since the last accepted
+segment, not the remaining work. Adjudicate its findings as usual. Accepted
+findings go to `segment-repair`: the Producer returns `segment-repaired` with an
+outcome per finding after focused checks only, and the segment is reviewed
+again. A clean segment review advances the segment base and returns to
+`produce`. Segment reviews count toward `max_reviews` and keep global `R<n>`
+IDs; the rule that only blockers and regressions count after a first review
+restarts for each segment and for the final review. A segment gets
+`max_segment_reviews` reviews; reaching that cap with accepted findings open
+returns to `awaiting-decision`, where `accepted` buys exactly one more repair
+and re-review. `decide` refuses that acceptance when it would leave fewer than
+`final_review_reserve` reviews; only on the user's explicit approval pass
+`decide --max-reviews <larger>` or `--waive-reserve`. A segment review that
+would use the reserve is skipped: report the event's `segment_review_skipped`;
+its open findings reach the final review. The final review always diffs from the
+original baseline, then follows the normal cycle. A passed segment review is not
+a whole-stage pass.
 
 When the user explicitly authorizes recovery after a Reviewer execution failure,
 fix the external cause first, then use `cross-agent retry-review --run <id>`
 and `next --stream`. This retains the run, Producer session, findings, and review
-budget, while starting a fresh Reviewer. It refuses validation failures such as
+budget, while starting a fresh Reviewer in the review phase that failed. It refuses validation failures such as
 Reviewer writes, and does not bypass the review limit. Do not edit run state or
 launch workers manually to recover. When the user explicitly resolves a
 Producer-reported blocker and asks to continue, pass that decision with
@@ -680,6 +708,37 @@ it or ask the user. It never earns an extra revision.
 
 Put defects you notice yourself in the completion report. You adjudicate the
 review; you are not a second Reviewer.
+
+### Automatic Adjudication
+
+`adjudication = "orch"`, the default, leaves every finding to you. `"auto"`
+delegates routine adjudication to fixed CLI rules inside the run's request,
+artifact ownership and recorded decisions. Use it only when the user delegated
+adjudication, and record that per run with `start --adjudication auto`; the run
+shows `adjudication_source`. For each new finding the CLI applies, in order:
+
+1. A Reviewer `needs_user_decision = true` finding escalates to you, before
+   demotion. The Reviewer sets it when the fix changes product behavior,
+   requested scope, technical direction or an authoritative document, or the
+   authority to decide is missing.
+2. The usual demotion: no evidence, or not a blocker/regression after the
+   scope's first review.
+3. Any other `blocker` or `major` finding is `accepted`.
+4. A `minor` finding is `note-only` with priority `low`.
+5. A finding the Producer reported `not-fixed` and the Reviewer keeps open
+   escalates; one reported `fixed` and kept open is accepted again.
+
+Independence boundary: the Producer never adjudicates, and its status, summary
+or outcome rationale cannot accept, close or escalate a finding. Escalation
+depends only on the Reviewer's `needs_user_decision` flag and the segment review
+budget, plus rule 5's Reviewer judgment on a `not-fixed` outcome. Any escalation
+pauses the whole round at `awaiting-decision`; nothing reaches the Producer until
+you decide the escalated findings with `decide`, so the run cannot end
+`independently-passed` before your decision. Handle escalations exactly as in
+the rules above. Pending findings show their `escalation` reason, `status --run`
+lists each finding's adjudicator (`auto` or `orch`) and rule, and the backlog
+prefixes automatic rationales with `[auto:<rule>]`. Report automatic decisions
+that look wrong in the completion report.
 
 ## Finalization
 

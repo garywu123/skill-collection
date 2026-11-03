@@ -176,7 +176,8 @@ class ClaudeCommandTests(unittest.TestCase):
 
 class SchemaTests(unittest.TestCase):
     def test_a_valid_producer_result_passes(self):
-        data = {"status": "done", "summary": "", "questions": [], "blocker": None, "outcomes": []}
+        data = {"status": "done", "summary": "", "questions": [], "blocker": None, "outcomes": [],
+                "segment_outcomes": [], "remaining_work": []}
         self.assertEqual(schemas.validate(data, schemas.PRODUCER), [])
 
     def test_missing_extra_and_invalid_values_are_reported(self):
@@ -192,7 +193,7 @@ class SchemaTests(unittest.TestCase):
 
     def test_excess_finding_is_valid_and_offered_in_every_review(self):
         excess = {"id": "X-1", "category": "excess", "severity": "major", "claim": "Unused option added.",
-                  "evidence": ["src/app.py:3"], "recommendation": "Delete it."}
+                  "evidence": ["src/app.py:3"], "recommendation": "Delete it.", "needs_user_decision": False}
         data = {"findings": [excess], "earlier_results": [], "notes": []}
         self.assertEqual(schemas.validate(data, schemas.REVIEW), [])
         for number in (1, 2):

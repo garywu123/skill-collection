@@ -82,12 +82,16 @@ Producer 与只读 Reviewer。用户一次授权多个阶段时，Orch 在前一
 `next --stream` 显示阶段 Skill 正文注入成功（路径/hash/加载方式）、worker 就绪后的阶段
 开始、活动、可获得的模型/context/sub-agent 信息和心跳；未知数据明确标注。CLI 对
 Producer 的 timeout/明确瞬态连接错误每 run 自动恢复一次，优先 resume 原 session；
-失效 session 或超过 context 阈值才替换，并保留历史。默认单次调用仍为 30 分钟硬上限。
+失效 session 或超过该角色的 context 阈值才替换，并保留历史。默认单次调用仍为 30 分钟硬上限。
 失败的执行可在修复原因后用 `retry-producer` 明确重试；`retry-review` 保留 Producer 与
 审阅预算，blocker 通过 `answer` 传递用户决定，schema 和只读校验失败不可绕过。
-执行阶段的 `checkpoint` 保存真实验收证据与未完成工作，下一次 `next` 新开 Producer
-session；仍为同一个 run，原始 baseline、findings 和 review 预算保留，不提前送审。
-每 run 最多八个 checkpoint；全部完成后才整体检查并交给 Reviewer。
+执行阶段的 `checkpoint` 保存真实验收证据与未完成工作，`checkpoint_session = "resume"`
+时下一次 `next` 继续同一个 Producer session，`"fresh"`（旧配置的行为）时新开；仍为同一个
+run，原始 baseline、findings 和 review 预算保留。每 run 最多八个 checkpoint；全部完成后才
+整体检查并交给 Reviewer 从 baseline 做最终评审。可选的 `segment_review` 让 Delivery 的每个
+checkpoint 先按该 segment 的计划结果评审、修复、复审，次数计入总预算并为最终评审保留余量；
+可选的 `adjudication = "auto"` 按固定规则裁决，只在 Reviewer 标记 `needs_user_decision`、
+segment 评审次数用完或 `not-fixed` 仍未解决时交给 Orch，Producer 从不裁决。
 只有用户请求或项目规则明确授权 commit 时，Orch 才在每个完成的有界 section（一次设计、
 规划、审阅或交付 run，或 Plan segment 的 checkpoint）结束、worker 停止后提交本地 commit：
 只按路径提交该 section 的变更，不碰用户其他暂存、未跟踪文件和私有配置；message 写真实

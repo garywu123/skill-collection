@@ -4,6 +4,10 @@ A run moves through these phases:
 
     produce -> review -> awaiting-decision -> produce -> ... -> finalizing -> done
 
+With segment review, a Delivery checkpoint first passes its own loop:
+
+    produce -> segment-review -> [awaiting-decision ->] segment-repair -> segment-review -> produce
+
 `awaiting-answer` interrupts a Producer step until the user answers, and a run
 ends early in `done` when an adjudicated review leaves nothing accepted.
 `failed` and `blocked` keep the run open for bounded recovery or explicit abandonment.
@@ -37,6 +41,8 @@ NEXT_ACTION = {
     "explore": "Use expert for direct discussion; promote only after explicit write authorization.",
     "interacting": "The user controls the expert terminal. Wait for it to return.",
     "review": "Call next to run the Reviewer.",
+    "segment-review": "Call next to review the finished execution segment.",
+    "segment-repair": "Call next to let the Producer repair the accepted segment findings.",
     "awaiting-decision": "Adjudicate every pending finding, then call decide.",
     "awaiting-answer": "Relay the questions to the user, then call answer.",
     "finalizing": "Fix accepted local problems in one batch, record unfixed ones with decide, then call next.",
@@ -62,7 +68,7 @@ class StepFailed(Exception):
 
 
 def start(project_root: Path, *, stage, artifact, first, request, producer, reviewer, dry_run, item=None,
-          skill=None, skip_review=False, reason=None) -> dict:
+          skill=None, skip_review=False, reason=None, adjudication=None) -> dict:
     project_root = project_root.resolve()
     gitops.require_work_tree(project_root)
     config = cfg.load_config(project_root)
@@ -77,6 +83,11 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         raise UsageError("Exploration needs --request with the discussion goal and known background")
     if skip_review and (not reason or not reason.strip() or first != "produce"):
         raise UsageError("--skip-review requires --first produce and --reason citing the user's opt-out")
+    if adjudication is not None and adjudication not in cfg.ADJUDICATION_MODES:
+        raise UsageError(f"--adjudication must be one of {', '.join(cfg.ADJUDICATION_MODES)}")
+    settings = cfg.run_settings(config)
+    if adjudication is not None:
+        settings["adjudication"] = adjudication
     artifact_path = (project_root / artifact).resolve() if artifact else None
     if first == "review" and not artifact_path.is_file():
         raise UsageError(f"Artifact {artifact} does not exist; start with --first produce to create it")
@@ -111,7 +122,9 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         "item": (item or "").strip() or artifact_rel or str(skill),
         "first": first,
         "request": request,
-        "settings": {key: config[key] for key in cfg.RUN_SETTINGS},
+        "settings": settings,
+        # Automatic adjudication is a delegation recorded with its source.
+        "adjudication_source": "start" if adjudication is not None else "config",
         "project": cfg.project_settings(config, project_root),
         "roles": {role: spec.as_dict() for role, spec in roles.items()},
         # Runs saved before stage roles lack this; their saved roles stay authoritative.
@@ -122,6 +135,7 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         "phase": first,
         "review_policy": {"skip": bool(skip_review), "reason": reason},
         "reviews_done": 0,
+        "segment_reviews_done": 0,
         "producer_steps": 0,
         "findings": [],
         "notes": [],
@@ -130,6 +144,9 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
         "answer": None,
         "answers": [],
         "producer_summaries": [],
+        "segment": None,
+        "segments": [],
+        "segment_skips": [],
         "checks": [],
         "trees": {"baseline": None, "last_review": None, "finalizing": None},
         "finalization": None,
@@ -156,26 +173,31 @@ def start(project_root: Path, *, stage, artifact, first, request, producer, revi
 
 def next_step(project_root: Path, run_id: str, progress=None) -> dict:
     state = store.load(project_root, run_id)
+    phase = state["phase"]
     try:
         if state["phase"] == "failed" and _can_auto_recover(state):
             _arm_producer_retry(state, automatic=True)
             if progress:
                 progress({"event": "producer-recovery", "run_id": run_id, "stage": state["stage"],
                           "role": "producer", "automatic": True, "attempt": state["producer_auto_retries"]})
-        if state["phase"] == "produce":
+        phase = state["phase"]
+        if phase in ("produce", "segment-repair"):
             return _producer_step(state, progress)
-        if state["phase"] == "review":
+        if phase == "review":
             return _review_step(state, progress)
-        if state["phase"] == "finalizing":
+        if phase == "segment-review":
+            return _segment_review_step(state, progress)
+        if phase == "finalizing":
             return _finish(state)
     except StepFailed as exc:
-        return _fail(state, str(exc), exc.raw, role=exc.role, execution=exc.execution, retryable=exc.retryable)
+        return _fail(state, str(exc), exc.raw, role=exc.role, execution=exc.execution, retryable=exc.retryable,
+                     return_phase=phase)
     except GitError as exc:
-        return _fail(state, str(exc))
+        return _fail(state, str(exc), return_phase=phase)
     except UsageError as exc:
         # State is saved before its CSV. Even a locked CSV must stop this run
         # rather than let a later next silently launch the same completed work.
-        return _fail(state, str(exc))
+        return _fail(state, str(exc), return_phase=phase)
     return _event(state, "No step to run; this is the pending event.")
 
 
@@ -213,7 +235,9 @@ def _arm_producer_retry(state: dict, *, automatic=False) -> None:
     else:
         # An explicit retry is one call; do not append another automatic retry.
         state["producer_auto_retries"] = MAX_AUTO_PRODUCER_RETRIES
-    state["phase"] = "produce"
+    # Recovery returns to the Producer phase that failed; runs saved before return_phase used produce.
+    target = state.get("return_phase") if state["phase"] == "failed" else state["phase"]
+    state["phase"] = target if target in ("produce", "segment-repair") else "produce"
     state["final_status"] = None
     state["error"] = None
     store.save(state)
@@ -242,7 +266,7 @@ def retry_review(project_root: Path, run_id: str) -> dict:
     # Keep the failed session in cleanup history; only the Reviewer starts fresh.
     state["workers"]["reviewer"]["session_id"] = None
     state["workers"]["reviewer"]["context_tokens"] = None
-    state["phase"] = "review"
+    state["phase"] = "segment-review" if state.get("return_phase") == "segment-review" else "review"
     state["final_status"] = None
     state["error"] = None
     store.save(state)
@@ -289,16 +313,24 @@ def resume_delivery(project_root: Path, run_id: str, plan_run_id: str, request: 
         state["settings"]["max_diff_kb"] = max_diff_kb
     state["request"] = request.strip()
     state["workers"]["producer"]["fresh_reason"] = "reviewed-replan"
+    # A replanned Delivery leaves any open segment findings to the final review.
+    state["segment"] = None
     state["phase"], state["final_status"], state["error"] = "produce", None, None
     store.save(state)
     return _event(state, "Reviewed Plan handed off to a fresh Delivery Producer; original baseline and budget retained.")
 
 
-def decide(project_root: Path, run_id: str, input_path: str) -> dict:
+def decide(project_root: Path, run_id: str, input_path: str, *, max_reviews: int | None = None,
+           waive_reserve: bool = False) -> dict:
     state = store.load(project_root, run_id)
     phase = state["phase"]
     if phase not in ("awaiting-decision", "finalizing"):
         raise UsageError(f"Run {run_id} is not waiting for decisions (phase {phase})")
+    segment = state.get("segment") if phase == "awaiting-decision" else None
+    if (max_reviews is not None or waive_reserve) and not segment:
+        raise UsageError("--max-reviews and --waive-reserve apply only to a segment-review decision")
+    if max_reviews is not None and max_reviews <= state["settings"]["max_reviews"]:
+        raise UsageError("--max-reviews must explicitly increase the saved review budget")
     try:
         payload = json.loads(Path(input_path).read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -324,9 +356,23 @@ def decide(project_root: Path, run_id: str, input_path: str) -> dict:
             raise UsageError("In finalization, record only the findings left for the user, as needs-user-decision")
     for decision in decisions:
         _check_decision(decision, findings[decision["finding_id"]])
+    if max_reviews is not None:
+        state.setdefault("budget_changes", []).append({"at": store.now(), "max_reviews": max_reviews,
+                                                       "previous": state["settings"]["max_reviews"]})
+        state["settings"]["max_reviews"] = max_reviews
+    if waive_reserve:
+        state["reserve_waived"] = True
+    granted = False
+    if segment and any(decision["disposition"] == "accepted" for decision in decisions) and _segment_cap_reached(state):
+        # Past the segment cap, Orch acceptance buys exactly one more repair and re-review.
+        if not _segment_review_fits(state):
+            raise UsageError("Accepting past the segment review cap would use the final-review reserve; decide the "
+                             "findings otherwise, or rerun decide with the user's --max-reviews or --waive-reserve")
+        granted = True
     for decision in decisions:
         finding = findings[decision["finding_id"]]
-        finding["history"].append({"review": state["reviews_done"], **{k: v for k, v in decision.items() if k != "finding_id"}})
+        finding["history"].append({"review": state["reviews_done"], "by": "orch",
+                                   **{k: v for k, v in decision.items() if k != "finding_id"}})
         finding["disposition"] = decision["disposition"]
         finding["rationale"] = (decision["rationale"] or "").strip() or None
         finding["priority"] = decision["priority"]
@@ -336,6 +382,10 @@ def decide(project_root: Path, run_id: str, input_path: str) -> dict:
         store.save(state)
         return _event(state, "Recorded the findings left for the user.")
     state["pending"] = []
+    if segment:
+        if granted:
+            segment["extra_reviews"] = segment.get("extra_reviews", 0) + 1
+        return _continue_segment(state, "Segment decisions recorded.")
     if _work_list(state):
         state["phase"] = "produce"
         store.save(state)
@@ -360,7 +410,7 @@ def answer(project_root: Path, run_id: str, text: str) -> dict:
     state["answer"] = {"questions": questions, "text": text}
     state["answers"].append(state["answer"])
     state["questions"] = []
-    state["phase"] = "produce"
+    state["phase"] = "segment-repair" if state.get("return_phase") == "segment-repair" else "produce"
     state["final_status"] = None
     state["error"] = None
     store.save(state)
@@ -370,7 +420,7 @@ def answer(project_root: Path, run_id: str, text: str) -> dict:
 def note(project_root: Path, run_id: str, text: str) -> dict:
     """Hand the next Producer call Orchestrator-run evidence or environment guidance for the current tree."""
     state = store.load(project_root, run_id)
-    if state["phase"] != "produce":
+    if state["phase"] not in ("produce", "segment-repair"):
         raise UsageError(f"Run {run_id} has no pending Producer step (phase {state['phase']})")
     text = text.strip()
     if not text:
@@ -382,7 +432,8 @@ def note(project_root: Path, run_id: str, text: str) -> dict:
 
 def status(project_root: Path, run_id: str | None) -> dict:
     if run_id:
-        return _event(store.load(project_root, run_id), "Current status.")
+        state = store.load(project_root, run_id)
+        return _event(state, "Current status.", adjudications=[_provenance(finding) for finding in state["findings"]])
     config = cfg.load_config(project_root)
     effective_roles = {}
     for stage in cfg.STAGES:
@@ -393,7 +444,7 @@ def status(project_root: Path, run_id: str | None) -> dict:
             {key: run.get(key) for key in ("run_id", "stage", "artifact", "phase", "final_status", "updated_at")}
             for run in store.open_runs(project_root)
         ],
-        "settings": {key: config[key] for key in cfg.RUN_SETTINGS},
+        "settings": cfg.run_settings(config),
         "defaults": config["defaults"],
         "stages": config["stages"],
         "experts": config.get("experts", {}),
@@ -456,11 +507,23 @@ def close(project_root: Path, run_id: str, abandon: bool) -> dict:
 
 def _producer_step(state: dict, progress=None) -> dict:
     root = _root(state)
+    repair = state["phase"] == "segment-repair"
     label = f"P{state['reviews_done']}"
-    work = _work_list(state)
+    work = _segment_work(state) if repair else _work_list(state)
     data = _invoke(state, "producer", lambda summary: _producer_prompt(state, summary), schemas.PRODUCER, progress)
     state["orch_note"] = None
-    if data["status"] == "checkpoint":
+    status = data["status"]
+    if (status == "segment-repaired") != repair and status not in ("needs-user-decision", "blocked"):
+        raise StepFailed("Invalid Producer status: segment-repaired answers exactly a segment repair, "
+                         "which may also return needs-user-decision or blocked")
+    reviewed_checkpoint = status == "checkpoint" and _segment_review_active(state)
+    segment_outcomes = [item.strip() for item in data["segment_outcomes"] if item.strip()]
+    remaining_work = [item.strip() for item in data["remaining_work"] if item.strip()]
+    if (bool(segment_outcomes and remaining_work) != reviewed_checkpoint
+            or (not reviewed_checkpoint and (data["segment_outcomes"] or data["remaining_work"]))):
+        raise StepFailed("Invalid segment lists: a checkpoint under segment review needs nonempty segment_outcomes "
+                         "and remaining_work; every other result returns both lists empty")
+    if status == "checkpoint":
         checkpoints = state.setdefault("producer_checkpoints", [])
         if (state["stage"] not in ("feature-delivery", "general") or not data["summary"].strip()
                 or data["questions"] or data["blocker"] is not None or data["outcomes"]
@@ -468,22 +531,47 @@ def _producer_step(state: dict, progress=None) -> dict:
             raise StepFailed("Invalid Producer checkpoint: use a nonempty handoff, no questions/blocker/outcomes, "
                              "and at most eight checkpoints in an execution run")
         tree = gitops.snapshot(root, _index(state))
-        checkpoints.append({"at": store.now(), "summary": data["summary"].strip(), "tree": tree})
-        state["workers"]["producer"]["fresh_reason"] = "plan-checkpoint"
+        checkpoint = {"at": store.now(), "summary": data["summary"].strip(), "tree": tree}
+        if reviewed_checkpoint:
+            checkpoint.update(segment_outcomes=segment_outcomes, remaining_work=remaining_work)
+        checkpoints.append(checkpoint)
+        resume = state["settings"]["checkpoint_session"] == "resume"
+        if not resume:
+            state["workers"]["producer"]["fresh_reason"] = "plan-checkpoint"
+        session = "the same session" if resume else "a new session"
+        if not reviewed_checkpoint:
+            store.save(state)
+            return _event(state, f"Execution segment checkpoint saved; call next for the next segment in {session}.",
+                          checkpoint=checkpoint, changed_files=gitops.changed_files(root, _review_base(state), tree))
+        base = _segment_base(state)
+        changed = gitops.changed_files(root, base, tree)
+        if not _segment_review_fits(state):
+            skip = _skip_segment(state, len(checkpoints), "the remaining review budget is kept for the final review")
+            store.save(state)
+            return _event(state, f"Checkpoint saved; segment review skipped ({skip['reason']}). Call next for the "
+                          f"next segment in {session}.", checkpoint=checkpoint, segment_review_skipped=skip,
+                          changed_files=changed)
+        state["segment"] = {"index": len(checkpoints), "base": base, "tree": tree, "reviewed_tree": None,
+                            "outcomes": segment_outcomes, "remaining_work": remaining_work,
+                            "reviews": 0, "extra_reviews": 0}
+        state["phase"] = "segment-review"
         store.save(state)
-        return _event(state, "Execution segment checkpoint saved; call next for the next segment in a new session.",
-                      checkpoint=checkpoints[-1], changed_files=gitops.changed_files(root, _review_base(state), tree))
+        return _event(state, "Execution segment checkpoint saved; call next to review the segment.",
+                      checkpoint=checkpoint, changed_files=changed)
     state["answer"] = None
     state["producer_recovery"] = None
     if data["summary"].strip():
         state["producer_summaries"].append(f"{label}: {data['summary'].strip()}")
-    if data["status"] == "needs-user-decision":
+    if status in ("needs-user-decision", "blocked"):
+        # answer resumes the Producer phase that stopped.
+        state["return_phase"] = state["phase"]
+    if status == "needs-user-decision":
         questions = [question for question in data["questions"] if question.strip()]
         state["questions"] = questions or [data["summary"].strip() or "The Producer needs a user decision."]
         state["phase"] = "awaiting-answer"
         store.save(state)
         return _event(state, f"{label}: the Producer needs a user decision.")
-    if data["status"] == "blocked":
+    if status == "blocked":
         state["phase"] = "blocked"
         state["final_status"] = "blocked"
         reason = (data["blocker"] or data["summary"] or "The Producer is blocked.").strip()
@@ -495,6 +583,19 @@ def _producer_step(state: dict, progress=None) -> dict:
         outcome = outcomes.get(finding["id"])
         finding["outcome"] = outcome["result"] if outcome else "not-fixed"
         finding["outcome_rationale"] = outcome["rationale"] if outcome else "The Producer reported no outcome."
+    if repair:
+        # Only the Producer's focused checks ran; delivery checks wait for done.
+        segment = state["segment"]
+        changed = gitops.changed_files(root, segment["base"], gitops.snapshot(root, _index(state)))
+        if _segment_review_fits(state):
+            state["phase"] = "segment-review"
+            store.save(state)
+            return _event(state, f"{label}: segment {segment['index']} repaired.", changed_files=changed)
+        skip = _skip_segment(state, segment["index"], "the remaining review budget is kept for the final review")
+        store.save(state)
+        return _event(state, f"{label}: segment {segment['index']} repaired; its re-review was skipped "
+                      f"({skip['reason']}) and the final review checks the open findings.",
+                      segment_review_skipped=skip, changed_files=changed)
     state["producer_steps"] += 1
     tree = gitops.snapshot(root, _index(state))
     if state["stage"] in ("feature-delivery", "general"):
@@ -517,15 +618,90 @@ def _producer_step(state: dict, progress=None) -> dict:
 
 
 def _review_step(state: dict, progress=None) -> dict:
-    root = _root(state)
     number = state["reviews_done"] + 1
+    to_check = _work_list(state)
+    # The final review always reads the whole run; segment reviews never move last_review.
+    label = ("Changes since the run baseline" if state["trees"]["last_review"] is None
+             and state.get("segment_reviews_done", 0) else "Changes since the previous review")
+    attempt = number - state.get("segment_reviews_done", 0)
+    data, before = _run_reviewer(state, number, _review_base(state), to_check, progress,
+                                 attempt=attempt, diff_label=label)
+    state["reviews_done"] = number
+    state["trees"]["last_review"] = before
+    pending = _ingest_review(state, data, number, attempt, "final", to_check)
+    if pending:
+        state["pending"] = pending
+        state["phase"] = "awaiting-decision"
+        store.save(state)
+        return _event(state, f"Review {number} finished.")
+    if _work_list(state):
+        state["phase"] = "produce"
+        store.save(state)
+        return _event(state, f"Review {number} finished; automatically accepted findings go to the Producer.")
+    state["phase"] = "done"
+    state["final_status"] = "needs-user-decision" if any(c["exit_code"] != 0 for c in state["checks"]) else "independently-passed"
+    store.save(state)
+    return _event(state, f"Review {number} left nothing to adjudicate.")
+
+
+def _segment_review_step(state: dict, progress=None) -> dict:
+    segment = state["segment"]
+    number = state["reviews_done"] + 1
+    attempt = segment["reviews"] + 1
+    to_check = _segment_work(state)
+    view = {"segment": segment["index"], "planned_outcomes": segment["outcomes"],
+            "remaining_work": segment["remaining_work"], "segment_review": attempt,
+            "max_segment_reviews": state["settings"]["max_segment_reviews"] + segment.get("extra_reviews", 0)}
+    data, before = _run_reviewer(state, number, segment["base"], to_check, progress, attempt=attempt, segment=view,
+                                 diff_label=f"Changes in segment {segment['index']} since its accepted base")
+    state["reviews_done"] = number
+    state["segment_reviews_done"] = state.get("segment_reviews_done", 0) + 1
+    segment["reviews"] = attempt
+    segment["reviewed_tree"] = before
+    pending = _ingest_review(state, data, number, attempt, f"segment-{segment['index']}", to_check)
+    if pending:
+        state["pending"] = pending
+        state["phase"] = "awaiting-decision"
+        store.save(state)
+        return _event(state, f"Segment review {number} finished.")
+    return _continue_segment(state, f"Segment review {number} finished.")
+
+
+def _continue_segment(state: dict, message: str) -> dict:
+    """After a segment review or its decisions: repair, escalate at the cap, or accept the segment."""
+    segment = state["segment"]
+    work = _segment_work(state)
+    if work and _segment_cap_reached(state):
+        for finding in work:
+            finding["escalation"] = "segment-review-cap"
+        state["pending"] = [finding["id"] for finding in work]
+        state["phase"] = "awaiting-decision"
+        store.save(state)
+        return _event(state, message + " The segment review cap is reached with accepted findings open.")
+    if work:
+        state["phase"] = "segment-repair"
+        store.save(state)
+        return _event(state, message + " Accepted segment findings go to the Producer.")
+    state["trees"]["segment_base"] = segment["reviewed_tree"]
+    state.setdefault("segments", []).append({"index": segment["index"], "base": segment["base"],
+                                             "tree": segment["reviewed_tree"], "reviews": segment["reviews"],
+                                             "result": "passed"})
+    state["segment"] = None
+    state["phase"] = "produce"
+    store.save(state)
+    return _event(state, message + f" Segment {segment['index']} passed; call next for the next segment.")
+
+
+def _run_reviewer(state: dict, number: int, base: str, to_check: list[dict], progress=None, *,
+                  attempt: int, segment: dict | None = None, diff_label: str) -> tuple[dict, str]:
+    """Run one read-only review of the changes from base; return its result and the reviewed tree."""
+    root = _root(state)
     before = gitops.snapshot(root, _index(state))
-    diff = gitops.diff(root, _review_base(state), before)
+    diff = gitops.diff(root, base, before)
     if len(diff.encode("utf-8")) > state["settings"]["max_diff_kb"] * 1024:
         raise StepFailed(f"The changes for review {number} exceed max_diff_kb ({state['settings']['max_diff_kb']} KB)")
-    to_check = _work_list(state)
     # Fixed input for this revision: a retry over the same snapshots rebuilds the same summary.
-    changes = testchanges.summarize(root, _review_base(state), before, number, state["checks"])
+    changes = testchanges.summarize(root, base, before, number, state["checks"])
     record = {key: changes[key] for key in ("review", "base", "tree", "paths", "markers", "unknowns")}
     record["sha256"] = hashlib.sha256(changes["text"].encode("utf-8")).hexdigest()
     state["test_changes"] = [item for item in state.get("test_changes", []) if item["review"] != number] + [record]
@@ -535,8 +711,9 @@ def _review_step(state: dict, progress=None) -> dict:
                   "sha256": record["sha256"], "paths": len(record["paths"]), "markers": len(record["markers"])})
     failure = None
     try:
-        data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(state, number, diff, summary, changes["text"]),
-                       schemas.REVIEW, progress)
+        data = _invoke(state, "reviewer", lambda summary: _reviewer_prompt(
+            state, number, diff, summary, changes["text"], attempt=attempt, segment=segment,
+            to_check=to_check, diff_label=diff_label), schemas.REVIEW, progress)
     except StepFailed as exc:
         failure = exc
     after = gitops.snapshot(root, _index(state))
@@ -545,34 +722,50 @@ def _review_step(state: dict, progress=None) -> dict:
         raise StepFailed(f"The Reviewer changed files, which fails the run: {', '.join(files[:10])}")
     if failure:
         raise failure
-    state["reviews_done"] = number
-    state["trees"]["last_review"] = before
+    return data, before
+
+
+def _ingest_review(state: dict, data: dict, number: int, attempt: int, scope: str, to_check: list[dict]) -> list[str]:
+    """Record a review's results; return the finding IDs left for Orch.
+
+    In auto mode the rules run in order: escalate needs_user_decision, demote, accept
+    blocker/major, note minor; a not-fixed finding the Reviewer keeps open escalates.
+    """
+    auto = state["settings"]["adjudication"] == "auto"
     reported = {item["finding_id"]: item["result"] for item in data["earlier_results"]}
     pending = []
     for finding in to_check:
         if reported.get(finding["id"]) == "resolved":
             finding["resolution"] = "resolved"
+        elif auto and finding["outcome"] != "not-fixed":
+            _auto_decide(finding, number, "accepted", "still-open")
         else:
+            if auto:
+                finding["escalation"] = "not-fixed-still-open"
             pending.append(finding["id"])  # open, or silently skipped by the Reviewer
     notes = [str(note).strip() for note in data["notes"] if str(note).strip()]
     count = 0
     for raw in data["findings"]:
         evidence = [entry.strip() for entry in raw["evidence"] if entry.strip()]
-        if not evidence:
+        escalate = auto and raw["needs_user_decision"]
+        if not escalate and not evidence:
             notes.append(f"Demoted, no evidence: {raw['claim']}")
             continue
-        if number > 1 and raw["severity"] != "blocker" and raw["category"] != "regression":
+        if not escalate and attempt > 1 and raw["severity"] != "blocker" and raw["category"] != "regression":
             notes.append(f"Demoted, only blockers and regressions count after the first review: {raw['claim']}")
             continue
         count += 1
         finding = {
             "id": f"R{number}-{count:03d}",
             "review": number,
+            "scope": scope,
             "category": raw["category"],
             "severity": raw["severity"],
             "claim": raw["claim"],
             "evidence": evidence,
             "recommendation": raw["recommendation"],
+            "needs_user_decision": raw["needs_user_decision"],
+            "escalation": "needs-user-decision" if escalate else None,
             "disposition": None,
             "rationale": None,
             "priority": None,
@@ -582,17 +775,21 @@ def _review_step(state: dict, progress=None) -> dict:
             "history": [],
         }
         state["findings"].append(finding)
-        pending.append(finding["id"])
+        if not auto or escalate:
+            pending.append(finding["id"])
+        elif raw["severity"] in ("blocker", "major"):
+            _auto_decide(finding, number, "accepted", "blocker-or-major")
+        else:
+            _auto_decide(finding, number, "note-only", "minor", priority="low",
+                         rationale="Minor finding kept as a note by automatic adjudication.")
     state["notes"] += [{"review": number, "text": note} for note in notes]
-    if not pending:
-        state["phase"] = "done"
-        state["final_status"] = "needs-user-decision" if any(c["exit_code"] != 0 for c in state["checks"]) else "independently-passed"
-        store.save(state)
-        return _event(state, f"Review {number} left nothing to adjudicate.")
-    state["pending"] = pending
-    state["phase"] = "awaiting-decision"
-    store.save(state)
-    return _event(state, f"Review {number} finished.")
+    return pending
+
+
+def _auto_decide(finding: dict, review: int, disposition: str, rule: str, *, priority=None, rationale=None) -> None:
+    finding["history"].append({"review": review, "by": "auto", "rule": rule, "disposition": disposition,
+                               "rationale": rationale, "priority": priority})
+    finding["disposition"], finding["rationale"], finding["priority"] = disposition, rationale, priority
 
 
 def _finish(state: dict) -> dict:
@@ -657,7 +854,7 @@ def _session_choice(state: dict, role: str) -> tuple[bool, str]:
         return True, worker["fresh_reason"]
     if worker["session_id"] is None:
         return True, "new-run"
-    threshold = state["settings"]["rotate_at_tokens"]
+    threshold = cfg.rotation_threshold(state["settings"], role)
     if threshold and (worker["context_tokens"] or 0) > threshold:
         return True, "context-threshold"
     return False, "resume"
@@ -708,7 +905,7 @@ def _attempt(state: dict, role: str, provider, build_prompt, schema: dict, fresh
         observe({"event": "skill-loaded", "skill": call.loaded_skill, "method": "prompt-injected"})
     observe({"event": "worker-started", "fresh": fresh, "reason": reason, "configured": state["roles"][role],
              "previous_context_tokens": previous_context,
-             "rotate_at_tokens": state["settings"]["rotate_at_tokens"]})
+             "rotate_at_tokens": cfg.rotation_threshold(state["settings"], role)})
     try:
         result = provider.run(call)
     except (OSError, UsageError) as exc:
@@ -793,6 +990,7 @@ def _call(state: dict, role: str, prompt: str, schema: dict, session_id: str | N
 
 
 def _producer_prompt(state: dict, summary: str | None) -> str:
+    repair = state["phase"] == "segment-repair" and bool(state.get("segment"))
     answer_state = state["answer"]
     answer_text = None
     if answer_state:
@@ -805,9 +1003,12 @@ def _producer_prompt(state: dict, summary: str | None) -> str:
         skill=state["skill"],
         request=state["request"],
         initial=state["first"] == "produce" and state["producer_steps"] == 0 and not state.get("producer_checkpoints"),
-        work=[_work_item(finding) for finding in _work_list(state)],
+        work=[_work_item(finding) for finding in (_segment_work(state) if repair else _work_list(state))],
         answer=answer_text,
         summary=summary,
+        checkpoint_session=state["settings"]["checkpoint_session"],
+        segment_review=_segment_review_active(state),
+        repair={key: state["segment"][key] for key in ("index", "outcomes", "remaining_work")} if repair else None,
     )
     checkpoints = state.get("producer_checkpoints") or []
     if checkpoints:
@@ -821,7 +1022,9 @@ def _producer_prompt(state: dict, summary: str | None) -> str:
     return prompt
 
 
-def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None, test_changes: str | None = None) -> str:
+def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None, test_changes: str | None = None, *,
+                     attempt: int | None = None, segment: dict | None = None, to_check: list[dict] | None = None,
+                     diff_label: str = "Changes since the previous review") -> str:
     to_check = [
         {
             "id": finding["id"],
@@ -832,7 +1035,7 @@ def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None, t
             "producer_outcome": finding["outcome"],
             "producer_rationale": finding["outcome_rationale"],
         }
-        for finding in _work_list(state)
+        for finding in (_work_list(state) if to_check is None else to_check)
     ]
     closed = [
         {key: finding[key] for key in ("id", "claim", "disposition", "rationale")}
@@ -853,6 +1056,9 @@ def _reviewer_prompt(state: dict, number: int, diff: str, summary: str | None, t
         checks=state["checks"],
         summary=summary,
         test_changes=test_changes,
+        attempt=attempt,
+        segment=segment,
+        diff_label=diff_label,
     )
 
 
@@ -963,7 +1169,10 @@ def _dry_run(state: dict) -> dict:
     }
 
 
-def _fail(state: dict, message: str, raw: str = "", *, role=None, execution=False, retryable=False) -> dict:
+def _fail(state: dict, message: str, raw: str = "", *, role=None, execution=False, retryable=False,
+          return_phase=None) -> dict:
+    if return_phase not in (None, "failed"):
+        state["return_phase"] = return_phase
     state["phase"] = "failed"
     state["final_status"] = "failed"
     state["error"] = {"message": message, "raw_excerpt": (raw or "")[-EXCERPT_CHARS:],
@@ -996,7 +1205,7 @@ def _backlog_items(state: dict) -> list[dict]:
             "claim": finding["claim"],
             "evidence": finding["evidence"],
             "recommendation": finding["recommendation"],
-            "rationale": finding["rationale"] or "",
+            "rationale": _backlog_rationale(finding),
             "run_id": state["run_id"],
             "finding_id": finding["id"],
             "artifact": state["artifact"],
@@ -1005,6 +1214,12 @@ def _backlog_items(state: dict) -> list[dict]:
         }
         for finding in selected
     ]
+
+
+def _backlog_rationale(finding: dict) -> str:
+    rationale = finding["rationale"] or ""
+    last = finding["history"][-1] if finding["history"] else {}
+    return f"[auto:{last['rule']}] {rationale}".rstrip() if last.get("by") == "auto" else rationale
 
 
 def _report(state: dict) -> dict:
@@ -1037,6 +1252,9 @@ def _report(state: dict) -> dict:
         "producer_checkpoints": state.get("producer_checkpoints", []),
         "producer_auto_retries": state.get("producer_auto_retries", 0),
         "producer_recoveries": state.get("producer_recoveries", []),
+        "adjudication": state["settings"]["adjudication"],
+        "segments": state.get("segments", []),
+        "segment_skips": state.get("segment_skips", []),
     }
 
 
@@ -1072,6 +1290,10 @@ def _event(state: dict, message: str, **extra) -> dict:
             "its rationale is optional guidance for the Producer. note-only, rejected, and needs-user-decision "
             "need a rationale and a priority."
         )
+        if state.get("segment") and _segment_cap_reached(state):
+            event["decision_rules"] += (
+                " The segment review cap is reached: accepted authorizes exactly one more repair and re-review, "
+                "only while the final-review reserve stays available.")
     elif phase == "awaiting-answer":
         event["questions"] = state["questions"]
     elif phase == "finalizing":
@@ -1087,6 +1309,8 @@ def _event(state: dict, message: str, **extra) -> dict:
     if phase in ("failed", "blocked"):
         event["error"] = state["error"]
         event["state_path"] = str(_run_dir(state) / "state.json")
+    if state.get("segment"):
+        event["segment"] = state["segment"]
     if state["checks"]:
         event["checks"] = state["checks"]
     if state.get("test_changes"):
@@ -1097,14 +1321,26 @@ def _event(state: dict, message: str, **extra) -> dict:
 
 def _view(finding: dict) -> dict:
     view = {key: finding[key] for key in ("id", "severity", "category", "claim", "evidence", "recommendation")}
+    view.update({key: finding[key] for key in ("scope", "needs_user_decision", "escalation") if finding.get(key) is not None})
     if finding["history"]:
+        provenance = _provenance(finding)
         view["previous"] = {
             "disposition": finding["disposition"],
+            "by": provenance["by"],
+            "rule": provenance["rule"],
             "rationale": finding["rationale"],
             "producer_outcome": finding["outcome"],
             "producer_rationale": finding["outcome_rationale"],
         }
     return view
+
+
+def _provenance(finding: dict) -> dict:
+    last = finding["history"][-1] if finding["history"] else {}
+    # History saved before provenance came only from Orch decisions.
+    return {"id": finding["id"], "disposition": finding["disposition"],
+            "by": last.get("by", "orch") if last else None, "rule": last.get("rule"),
+            "escalation": finding.get("escalation")}
 
 
 def _root(state: dict) -> Path:
@@ -1125,6 +1361,42 @@ def _review_base(state: dict) -> str:
 
 def _findings(state: dict) -> dict:
     return {finding["id"]: finding for finding in state["findings"]}
+
+
+def _segment_base(state: dict) -> str:
+    return state["trees"].get("segment_base") or state["trees"]["baseline"]
+
+
+def _segment_review_active(state: dict) -> bool:
+    """Segment review applies to Delivery checkpoints before the first final review."""
+    return (state["settings"]["segment_review"] and state["stage"] == "feature-delivery"
+            and not state.get("review_policy", {}).get("skip")
+            and state["reviews_done"] == state.get("segment_reviews_done", 0))
+
+
+def _segment_review_fits(state: dict) -> bool:
+    """True when one more segment review leaves the final-review reserve."""
+    reserve = 0 if state.get("reserve_waived") else state["settings"]["final_review_reserve"]
+    return state["settings"]["max_reviews"] - state["reviews_done"] - 1 >= reserve
+
+
+def _segment_cap_reached(state: dict) -> bool:
+    segment = state["segment"]
+    return segment["reviews"] >= state["settings"]["max_segment_reviews"] + segment.get("extra_reviews", 0)
+
+
+def _skip_segment(state: dict, index: int, reason: str) -> dict:
+    skip = {"at": store.now(), "segment": index, "reason": reason}
+    state.setdefault("segment_skips", []).append(skip)
+    state["segment"] = None
+    state["phase"] = "produce"
+    return skip
+
+
+def _segment_work(state: dict) -> list[dict]:
+    segment = state.get("segment")
+    return [finding for finding in _work_list(state)
+            if segment and finding.get("scope") == f"segment-{segment['index']}"]
 
 
 def _work_list(state: dict) -> list[dict]:

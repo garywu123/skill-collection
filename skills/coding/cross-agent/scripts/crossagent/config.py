@@ -21,9 +21,14 @@ ROLES = ("producer", "reviewer")
 STAGE_KEYS = ("skill", *ROLES)
 
 # Settings copied into each run, so a later config edit never changes an open run.
-RUN_SETTINGS = ("max_reviews", "timeout_minutes", "rotate_at_tokens", "backlog_rejected", "max_diff_kb")
+REQUIRED_SETTINGS = ("max_reviews", "timeout_minutes", "rotate_at_tokens", "backlog_rejected", "max_diff_kb")
+# Optional settings and the legacy behavior they keep when a config or saved run lacks them.
+LEGACY_SETTINGS = {"checkpoint_session": "fresh", "segment_review": False, "max_segment_reviews": None,
+                   "final_review_reserve": None, "adjudication": "orch"}
+RUN_SETTINGS = (*REQUIRED_SETTINGS, *LEGACY_SETTINGS)
 CONFIG_KEYS = (*RUN_SETTINGS, "defaults", "cli", "stages", "experts", "projects")
-REQUIRED_KEYS = (*RUN_SETTINGS, "defaults", "cli", "projects")
+REQUIRED_KEYS = (*REQUIRED_SETTINGS, "defaults", "cli", "projects")
+ADJUDICATION_MODES = ("orch", "auto")
 
 # Read-only Git commands a Producer may run besides the project's allowed_commands.
 PRODUCER_BASE_COMMANDS = ("git status", "git diff", "git log", "git show")
@@ -86,10 +91,34 @@ def _parse_config(text: str, path: Path) -> dict:
     return config
 
 
+def run_settings(config: dict) -> dict:
+    """The settings a run copies, with legacy values for optional keys the config omits."""
+    return {key: copy.deepcopy(config.get(key, LEGACY_SETTINGS.get(key))) for key in RUN_SETTINGS}
+
+
+def normalize_settings(settings: dict) -> dict:
+    """Give a saved run's settings the legacy values of keys added after it started."""
+    for key, value in LEGACY_SETTINGS.items():
+        settings.setdefault(key, value)
+    return settings
+
+
+def rotation_threshold(settings: dict, role: str) -> int:
+    """The role's rotation threshold; a scalar applies to both roles."""
+    value = settings["rotate_at_tokens"]
+    return value[role] if isinstance(value, dict) else value
+
+
+def _toml_value(value) -> str:
+    if isinstance(value, dict):
+        return "{ " + ", ".join(f"{key} = {_toml_value(item)}" for key, item in value.items()) + " }"
+    return json.dumps(value)
+
+
 def _render_config(config: dict) -> str:
     """Serialize this configuration's scalar settings and named tables."""
     lines = ["# Initialized from cross-agent/assets/config.example.toml."]
-    lines += [f"{key} = {json.dumps(config[key])}" for key in RUN_SETTINGS]
+    lines += [f"{key} = {_toml_value(config[key])}" for key in RUN_SETTINGS if key in config]
     for table in ("defaults", "cli"):
         lines += ["", f"[{table}]"]
         lines += [f"{key} = {json.dumps(value)}" for key, value in config[table].items()]
@@ -171,7 +200,7 @@ def initialize(project_root: Path, input_file: str, *, producer=None, reviewer=N
             "project_root": str(project_root),
             "project": effective,
             "defaults": config["defaults"],
-            "settings": {key: config[key] for key in RUN_SETTINGS},
+            "settings": run_settings(config),
             "proposed_differences": {
                 key: value for key, value in proposed.items()
                 if proposed_effective[key] != effective[key]
@@ -202,8 +231,27 @@ def _check(config: dict, path: Path) -> None:
     for key in ("max_reviews", "timeout_minutes", "max_diff_kb"):
         if not _is_int(config[key]) or config[key] < 1:
             raise UsageError(f"'{key}' in {path} must be a positive integer")
-    if not _is_int(config["rotate_at_tokens"]) or config["rotate_at_tokens"] < 0:
-        raise UsageError(f"'rotate_at_tokens' in {path} must be 0 (off) or a positive integer")
+    rotate = config["rotate_at_tokens"]
+    thresholds = list(rotate.values()) if isinstance(rotate, dict) and set(rotate) == set(ROLES) else [rotate]
+    if not all(_is_int(value) and value >= 0 for value in thresholds):
+        raise UsageError(f"'rotate_at_tokens' in {path} must be 0 (off), a positive integer, "
+                         "or a table with only producer and reviewer thresholds")
+    if config.get("checkpoint_session", "fresh") not in ("fresh", "resume"):
+        raise UsageError(f"'checkpoint_session' in {path} must be \"fresh\" or \"resume\"")
+    if config.get("adjudication", "orch") not in ADJUDICATION_MODES:
+        raise UsageError(f"'adjudication' in {path} must be \"orch\" or \"auto\"")
+    if not isinstance(config.get("segment_review", False), bool):
+        raise UsageError(f"'segment_review' in {path} must be true or false")
+    for key in ("max_segment_reviews", "final_review_reserve"):
+        if key in config and (not _is_int(config[key]) or config[key] < 1):
+            raise UsageError(f"'{key}' in {path} must be a positive integer")
+    if config.get("segment_review"):
+        missing = [key for key in ("max_segment_reviews", "final_review_reserve") if key not in config]
+        if missing:
+            raise UsageError(f"segment_review = true in {path} requires {', '.join(missing)}")
+        if config["max_reviews"] < config["max_segment_reviews"] + config["final_review_reserve"]:
+            raise UsageError(f"segment_review = true in {path} requires "
+                             "max_reviews >= max_segment_reviews + final_review_reserve")
     if not isinstance(config["backlog_rejected"], bool):
         raise UsageError(f"'backlog_rejected' in {path} must be true or false")
     for provider, executable in config["cli"].items():

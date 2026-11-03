@@ -19,7 +19,8 @@ from pathlib import Path
 CLI = Path(__file__).resolve().parents[1] / "cross_agent.py"
 
 
-def finding(claim="The requested outcome is missing.", severity="major", category="unmet-outcome", evidence=None):
+def finding(claim="The requested outcome is missing.", severity="major", category="unmet-outcome", evidence=None,
+            needs_user_decision=False):
     return {
         "id": "X-1",
         "category": category,
@@ -27,6 +28,7 @@ def finding(claim="The requested outcome is missing.", severity="major", categor
         "claim": claim,
         "evidence": ["docs/plan.md:1"] if evidence is None else evidence,
         "recommendation": "Fix it.",
+        "needs_user_decision": needs_user_decision,
     }
 
 
@@ -51,6 +53,8 @@ def produce(outcomes=(), status="done", questions=(), write=None, **extra):
             "questions": list(questions),
             "blocker": None,
             "outcomes": [{"finding_id": fid, "result": result, "rationale": "Because."} for fid, result in outcomes],
+            "segment_outcomes": [],
+            "remaining_work": [],
         }
     }
     if write:
@@ -75,6 +79,8 @@ def _remove_tree(path: Path) -> None:
 
 
 def _toml(value) -> str:
+    if isinstance(value, dict):
+        return "{ " + ", ".join(f"{key} = {_toml(item)}" for key, item in value.items()) + " }"
     return ("true" if value else "false") if isinstance(value, bool) else json.dumps(value)
 
 

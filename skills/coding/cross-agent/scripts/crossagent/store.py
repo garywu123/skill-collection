@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .errors import UsageError
-from . import history
+from . import config, history
 
 STATE_VERSION = 1
 STATE_DIR = ".cross-agent"
@@ -43,6 +43,8 @@ def load(project_root: Path, run_id: str) -> dict:
         raise UsageError(f"Cannot read {path}: {exc}") from exc
     if state.get("state_version") != STATE_VERSION:
         raise UsageError(f"{path} has state version {state.get('state_version')}; this CLI reads {STATE_VERSION}")
+    # Runs saved before optional settings existed keep their original behavior.
+    config.normalize_settings(state["settings"])
     return state
 
 
