@@ -41,8 +41,12 @@ Include only what applies:
   mocks;
 - test discovery, skip and disable rules, and environment or isolation needs;
 - resource measurement methods;
-- test cadence: what runs while editing, at a segment boundary, and once on
-  the final tree, and which changed paths or contracts pull in another layer;
+- test cadence: what runs while editing and at a segment boundary, and the
+  class of each suite or command: `fast` (cheap enough to rerun after every
+  delivery revision), `Feature gate` (one Feature's expensive evidence, run
+  once when its implementation is complete), or `stage` (promises only the
+  assembled system can show), with the inputs that invalidate passing
+  evidence and which changed paths or contracts pull in another layer;
 - regression triggers; and
 - conditions under which independent testing or review of a change is
   warranted.
@@ -67,6 +71,18 @@ Architecture Design. This strategy defines how to measure it, such as peak
 versus steady state, workload, hardware, and repetitions. When no owner has set
 a budget, record it as an open decision; an observed value is a measurement,
 not a pass or fail criterion.
+
+Classify a suite by the promise it verifies and its cost, not by test level:
+a browser test can be the cheapest adequate focused test, and an integration
+suite can be expensive. A Feature's own requirement, including a capacity
+budget at its worst supported workload, belongs in that Feature's gate, so it
+cannot be deferred past `verified`. Stage suites cover cross-Feature journeys
+and capacity of the assembled system; name a concrete trigger, such as named
+Features being verified or a release candidate, and run them through a
+standalone validation Plan. Reuse passing gate or stage evidence while its
+declared inputs remain valid: relevant code paths, tests, fixtures, runner
+configuration, dependencies, requirements, profiles and environment. A small
+edit near capacity or UI code therefore does not rerun those suites.
 
 Independent-testing conditions describe concrete verification gaps, such as
 algorithm correctness, realistic-scale resource behavior, migration or

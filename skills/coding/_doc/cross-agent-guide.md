@@ -159,7 +159,7 @@ extra_dirs = []
 | `backlog_rejected` | 关闭 run 时是否把被拒绝的 findings 也写进 backlog。 |
 | `max_diff_kb` | 一次评审允许读取的变更体积上限。 |
 | `allowed_commands` | 当前 Claude Producer 适配器用它生成命令允许规则；不等于所有 provider 的通用沙箱，也不能覆盖平台的拒绝规则。 |
-| `delivery_checks` | CLI 在 `general` / `feature-delivery` Producer 完成后实际执行的检查；空列表不表示测试通过。只填写你信任、适合当前阶段的命令。 |
+| `delivery_checks` | CLI 在 `general` / `feature-delivery` Producer 完成后实际执行的检查；空列表不表示测试通过。每轮修复后都会重跑，所以只放 Testing Strategy 中 `fast` 类的命令；UI 流程、capacity 等 Feature gate 测试由 Producer 在最后一个 segment 跑一次（沙箱跑不了时由 Orch 在外面跑并用 `note` 传入），完整 E2E 等 stage 测试走单独的 validation Plan。 |
 | `extra_dirs` | 额外目录，Producer 可写、Reviewer 可读；不要为了方便授予无关目录。 |
 | `test_reports` | 可选。把某条 `delivery_checks` 命令映射到它写出的 JUnit XML 报告，例如 `test_reports = { "python -m pytest --junitxml=reports/unit.xml" = "reports/unit.xml" }`。只有该命令本次重写、可解析、每个 testsuite 声明的总数与 testcase 一致、每个用例只有一种结果、只含标准 JUnit 元素和状态值且没有重复/重跑条目的报告才给出计数；报告放在已忽略的目录。旧配置不需要此项。 |
 

@@ -400,7 +400,11 @@ prepare a handoff; require the Producer to leave the Plan current instead.
    because snapshots would count those edits as the run's.
 4. Check the project's configured commands against the stage's verification
    needs. `delivery_checks` run after Producer changes for `feature-delivery`
-   and `general`. Before start, explicitly select an existing complete
+   and `general`, after every revision, so they hold only the Testing
+   Strategy's `fast` class. A Feature's gate suites, such as UI flows or
+   capacity, run once in the Producer's final segment; when the Producer's
+   sandbox cannot run them, run them once outside it and pass the results with
+   `note` before review. Stage suites belong to a validation Plan. Before start, explicitly select an existing complete
    task-appropriate configuration with `CROSS_AGENT_CONFIG` when necessary,
    inspect it with `status`, and retain required gates and authorized
    permissions. Record its locator and reason in the existing request/handoff,

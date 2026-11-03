@@ -207,9 +207,16 @@ Give a proposed delegate only its task, owned paths, necessary contracts and
 instructions, checks, and expected brief result with evidence. Delivery
 reassesses these boundaries and owns the actual launches and concurrency limit.
 
-Reserve a final integration segment for the whole Feature's acceptance and
-regression checks; earlier segments list only focused and consumer checks, so
-the broad regression runs once. Multiple worker calls or sessions do not create new Feature
+Reserve a final integration segment for the whole Feature's acceptance checks,
+the Testing Strategy's `fast` regression, and the `Feature gate` suites that
+apply to this Feature, such as its UI flows or capacity profile; name them, or
+state that none applies. Earlier segments list only focused and consumer
+checks, so each runs once. Never schedule a `stage` suite; note when the
+Feature contributes to one. Name each segment's focused checks as a
+runnable command or test filter, such as a test-class or test-file filter,
+rather than "run the tests", so the executor does not fall back to the whole
+suite. A single-segment Plan likewise names its focused checks separately from
+the final regression run. Multiple worker calls or sessions do not create new Feature
 IDs, reset the original baseline, or replenish the run's review budget.
 
 ## Change Plans

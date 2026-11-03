@@ -145,6 +145,8 @@ reviewer = "codex:gpt-6.1-sol:high"
 # with project input when supplied; e.g. allowed_commands = ["dotnet test"].
 [projects."."]
 allowed_commands = []
+# Rerun after every Producer revision: keep only the Testing Strategy's fast
+# class here; Feature gate suites (UI flows, capacity) run once per Feature.
 delivery_checks = []
 extra_dirs = []
 # Optional: map a delivery_checks command to the JUnit XML report it writes, so

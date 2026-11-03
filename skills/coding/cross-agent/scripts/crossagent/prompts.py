@@ -46,7 +46,9 @@ def producer_prompt(
                   "checks for the repaired behavior; whole-stage checks run after done. Do not start the next "
                   "segment.", "Segment under repair:", _json(repair)]
     else:
-        lines += ["", f"Original request: {request or 'none'}", "Current step: continue unfinished authorized work and address the accepted findings below."]
+        lines += ["", f"Original request: {request or 'none'}", "Current step: continue unfinished authorized work and address the accepted findings below. "
+                  "Rerun only the tests that cover each fix; the CLI reruns the configured delivery checks "
+                  "after you return done."]
     if summary:
         lines += ["", "Run summary so far:", summary]
     if work:
@@ -69,8 +71,10 @@ def producer_prompt(
         "do not invent guarantees or repeat answered questions.",
         "- Reuse adequate tests; strengthen or add them for a distinct coverage gap, preserving required checks.",
         "- While editing, compile and run only the focused tests for the changed behavior, and after a fix rerun "
-        "only the failing tests. Run a broad suite once, at whole-stage validation; the CLI also runs the "
-        "configured delivery checks outside your sandbox after you return done.",
+        "only the failing tests. Do not run the configured delivery checks yourself: the CLI runs them outside "
+        "your sandbox after you return done. Before done, run once any Feature gate suite the Plan names, "
+        "such as UI flows or capacity, and never per segment or after a small nearby edit; never run a "
+        "stage suite unless the request asks for it.",
         "- If a build or test command fails before executing any test, such as a sandbox, restore or testhost "
         "startup failure, do not retry variants or diagnose it: note it once in the summary as an environment "
         "limitation and leave execution to the CLI checks. An Orchestrator note below supplies results it ran "
@@ -81,7 +85,8 @@ def producer_prompt(
         "open failures or gates, and tested-evidence locators; do not replay earlier rounds or raw logs.",
         "- Do not commit, and do not start another lifecycle stage.",
         "- For an execution stage, return checkpoint only after a planned segment and its focused checks, "
-        "when more authorized work remains. Summarize acceptance evidence, stable contracts, and the next "
+        "when more authorized work remains. Focused checks are the Plan's checks for that segment plus tests "
+        "of consumers of a contract it changed, not the whole suite. Summarize acceptance evidence, stable contracts, and the next "
         "unfinished segment; use empty questions/outcomes and null blocker. " + (
             "The same session continues after a checkpoint" if checkpoint_session == "resume"
             else "A checkpoint starts a new session") + " without resetting review or revision budgets. "
@@ -138,7 +143,8 @@ def reviewer_prompt(
             "This is a segment review, not the whole-stage review. Judge only whether the diff below meets the "
             "finished segment's planned outcomes, and report regressions or risks it introduces. Do not report "
             "unfinished later work listed as remaining; the whole-stage review judges completeness after the "
-            "Producer finishes. Delivery checks have not run yet; judge the Producer's focused-check evidence.",
+            "Producer finishes. Delivery checks have not run yet; judge the Producer's focused-check evidence. A missing broad or "
+            "whole-suite run is not a finding at a segment.",
             _json(segment),
         ]
     if summary:

@@ -40,7 +40,15 @@
 
 ## Regression And Independent Testing
 
-- **Cadence:** while editing, the focused tests and only failing reruns; at a segment boundary, owner tests plus consumers of a changed public contract; once on the final tree, <broad regression command>. <Which path or contract changes pull in another layer's suite.>
+- **Cadence:** while editing, the focused tests and only failing reruns; at a segment boundary, owner tests plus consumers of a changed public contract. <Which path or contract changes pull in another layer's suite.>
+
+| Class | Command | Runs | Evidence invalidated by |
+|---|---|---|---|
+| fast | <cheap regression command> | on each Feature's final tree and every revision | always rerun |
+| Feature gate | <UI flow or capacity command> | once per Feature, after its implementation and focused checks pass | <paths, fixtures, profile, environment> |
+| stage | <full end-to-end or system capacity command> | <concrete trigger>, via a validation Plan | <inputs> |
+
+<Delete a row that does not apply.>
 - **Regression triggers:** <changes that require broader checks at the final run>
 - **Independent testing warranted when:** <concrete verification gaps>
 

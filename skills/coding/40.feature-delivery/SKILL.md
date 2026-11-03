@@ -222,15 +222,20 @@ decision owner's document.
    configuration, unused flexibility, and unnecessary dependencies. Remove an
    item only when current intended behavior and constraints do not require it;
    do not perform repo-wide cleanup.
-4. Test at three cadences. While editing, compile and run only the focused
+4. Widen test scope only as the work grows. While editing, compile and run only the focused
    tests for the behavior at hand; after a fix, rerun only the failing tests.
    At a segment boundary, run the segment's owner tests plus the tests that
    consume a public type, contract or endpoint the segment changed; run
    another layer's suite, such as frontend tests after a backend change, only
-   when a shared contract or DTO changed. Run the repository's broad
+   when a shared contract or DTO changed. Run the Testing Strategy's `fast`
    regression, build, lint, or type checks once, on the final tree, before
    reporting `done`; that run supersedes earlier broad runs, so do not repeat
-   it per segment. Rerun a broad suite only after a later relevant change or
+   it per segment. Run each applicable `Feature gate` suite, such as UI flows
+   or capacity, once after implementation and focused checks pass and before
+   `done`; an edit near that code does not trigger it earlier. Run a `stage`
+   suite only when a validation Plan requests it. A command that the
+   cross-agent CLI runs as a delivery check is not run again by you. Rerun a
+   broad or gate suite only after a later change to its declared inputs or
    an unresolved failure.
    Classify a failure as product, test, environment, or still unknown before
    choosing a repair; an environment failure is not proof of a product defect.
