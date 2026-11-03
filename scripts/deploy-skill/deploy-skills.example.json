@@ -5,7 +5,7 @@
         "Each name must match the name field in that source folder's SKILL.md.",
         "retiredSkillNames is an explicit one-time or historical cleanup list; never add platform-owned or other-repository skills.",
         "externalSkillConfigPath is optional and repository-relative; it overrides the default external-skills/external-skills.json location.",
-        "preservedEntryNames lists platform-managed target entries that a deployment never clears, such as the Claude desktop app's synced folder."
+        "preservedEntryNames lists third-party and platform-managed target entries that a deployment never clears, such as the Claude desktop app's synced folder."
     ],
     "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
     "preservedEntryNames": [

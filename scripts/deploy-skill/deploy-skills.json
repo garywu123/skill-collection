@@ -1,7 +1,31 @@
 {
     "externalSkillConfigPath": "scripts/external-skills/external-skills.json",
     "preservedEntryNames": [
-        "synced"
+        "synced",
+        "amazon-bedrock",
+        "aws-ai-ml",
+        "aws-auth",
+        "aws-billing-and-cost-management",
+        "aws-blocks",
+        "aws-cdk",
+        "aws-cloudformation",
+        "aws-compute",
+        "aws-containers",
+        "aws-database",
+        "aws-deployment",
+        "aws-iam",
+        "aws-messaging-and-streaming",
+        "aws-networking",
+        "aws-observability",
+        "aws-sdk-js-v3-usage",
+        "aws-sdk-python-usage",
+        "aws-sdk-swift-usage",
+        "aws-security",
+        "aws-serverless",
+        "aws-storage",
+        "aws-well-architected-review",
+        "launch-with-aws",
+        "signing-in-to-aws"
     ],
     "retiredSkillNames": [
         "agent-instructions",

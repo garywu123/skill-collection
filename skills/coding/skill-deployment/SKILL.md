@@ -8,7 +8,7 @@ description: Repository-local guidance for deploying this Skill Collection's exp
 Synchronize the machine-wide Skills explicitly managed by this repository,
 including configured public Git Skills, to Claude Code and Codex / Agents.
 Each target directory is exclusively managed: every deployment clears all of
-its entries before copying the configured Skills, except platform-managed
+its entries before copying the configured Skills, except third-party and platform-managed
 entries listed in `preservedEntryNames` (such as the Claude desktop app's
 `synced` folder). This is a workspace-only Skill:
 `deploy-skills.json` must never map
@@ -61,8 +61,8 @@ say otherwise:
 3. Confirm that each target directory is intended to be exclusively managed by
    this collection. The deployment removes all its entries, including skills
    that are not recorded in `.skill-collection-deployment.json`, except names
-   in `preservedEntryNames`. When the preview lists a platform-managed entry as
-   `will be cleared`, add its name there before deploying.
+   in `preservedEntryNames`. When the preview lists a third-party or
+   platform-managed entry as `will be cleared`, add its name there before deploying.
 4. If an intended local Skill is missing from `skills`, add its explicit
    `source` and frontmatter `name`. Add a public Skill only with an HTTPS
    repository, branch, repository-relative `skillPath`, matching frontmatter

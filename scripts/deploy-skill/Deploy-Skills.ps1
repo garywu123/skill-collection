@@ -11,7 +11,7 @@
     is exclusively managed by this collection: immediately before copying, the
     script removes every existing entry in that target directory. This includes
     skills not previously deployed by this collection. The only exceptions are
-    platform-managed entries listed in `preservedEntryNames`, such as the
+    entries listed in `preservedEntryNames`, such as third-party Skills and the
     Claude desktop app's `synced` folder, which are never removed.
 
     The deployed folder name comes from the SKILL.md frontmatter `name` field,
