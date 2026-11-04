@@ -135,7 +135,9 @@ strategy.
 Read prior decisions before asking; preserve confirmed answers unless new
 evidence conflicts. Identify only the business bounds, such as scale, accuracy,
 input ranges or trust boundary, that could change this Feature's design or
-acceptance, and reuse confirmed answers; with none missing, ambiguous or
+acceptance, and reuse confirmed answers. An existing finite, positive or type
+check is not a realistic range: when this Feature admits a quantity, ask for
+its real range unless a source states one; with none missing, ambiguous or
 contradicted, proceed without an interview. Ask only unresolved questions whose
 answers change design or acceptance, in user terms, with a concrete scenario
 and a recommended answer, explaining the consequence: where and by whom
@@ -187,7 +189,10 @@ becomes mandatory only when the user or project rules select it.
    conflicting or apparently unnecessary contract, other than a decided
    replacement, to its owner before planning
    work that depends on it; citing a requirement alone does not justify
-   machinery beyond it.
+   machinery beyond it. When a requirement itself mandates a capability that
+   no current or scheduled consumer reads, such as provenance, history,
+   migration or an incomplete variant, ask whether to keep it, with a
+   recommendation, before planning it.
 4. Derive risks and questions as described above. Define the smallest
    implementation sequence and concrete tests. Number steps and segments
    `Step 10`, `Step 20`, leaving gaps for inserted steps; never use `S10`,

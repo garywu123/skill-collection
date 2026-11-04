@@ -45,7 +45,9 @@ behavior into intended behavior.
 4. Make the smallest change that satisfies the stated use case. Avoid
    speculative framework or workflow design.
 5. Run the narrowest relevant validation. If it cannot run, report the reason
-   and remaining risk.
+   and remaining risk. After changing a coding Skill's behavior, run its
+   scenarios in the user's local regression eval when one exists, and report
+   the result or that it was not run.
 
 ## Collection Maintenance
 
