@@ -343,3 +343,94 @@ current: `open`, `promoted`, `resolved`, or `dismissed`.
 - Evidence: `docs/plans/decision-ownership-and-collection-trim.md:43 deletes review plans and findings.`, `docs/plans/decision-ownership-and-collection-trim.md:56 requires promoted decisions to retain a source link.`, `skills/coding/30.feature-plan/SKILL.md:248 permits a review finding to be the decision source.`, `skills/coding/40.feature-delivery/SKILL.md:282 repairs links to retired Plans, but A1 provides no equivalent repair for retired findings.`
 - Proposed change: Before deleting review documents, replace their incoming links with a durable source or a revision-qualified locator. Use the existing documentation link check for affected references.
 - Rationale: Minor; fold in cheaply if natural: the promoted rule's source link points to a long-lived source or a revision-qualified locator, never to a temporary Plan or review document.
+
+## RB-0027: The configuration prose repeats parsing, precedence, compatibility and result-field behavior alre...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261104-003852-general-4118`, finding `R1-002`
+- Artifact: `skills/coding/cross-agent/SKILL.md` (general)
+- Base: `8728205` with uncommitted changes
+- Claim: The configuration prose repeats parsing, precedence, compatibility and result-field behavior already implemented by the CLI. This gives the Orchestrator a second specification to remember without assigning it an additional decision.
+- Evidence: `skills/coding/cross-agent/SKILL.md:25-41 describes configuration discovery, pointer restrictions, executable selection and saved-run behavior.`, `skills/coding/cross-agent/SKILL.md:109-121 and :141-172 repeat template overlays, required fields, role/Skill precedence, legacy behavior and validation outcomes.`, `skills/coding/cross-agent/scripts/crossagent/config.py:39-90 implements configuration discovery, pointer validation and required-key errors; :132-222 implements initialization and reports effective/proposed values; :355-388 implements complete role specifications and precedence.`, `skills/coding/cross-agent/scripts/tests/test_init.py:93-135, :157-203 and :242-265 assert pointer behavior, preservation/reporting and refusal before workers start.`, `skills/coding/skill-authoring/SKILL.md:69-72 asks whether automation or an existing owner already supplies the information.`
+- Proposed change: Cut the parser rules, precedence walkthroughs, legacy compatibility commentary and output-field inventories. Keep the command, configuration locator, instruction to inspect status, and decisions the Orchestrator owns: appropriate commands/checks, permissions, selected roles and explicit authorization for configuration changes. Put initialization input syntax in its reference.
+- Rationale: Addressed inside the accepted R1-001 rewrite guidance.
+
+## RB-0028: Detector and telemetry implementation details occupy the normal workflow even though the CLI alre...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261104-003852-general-4118`, finding `R1-004`
+- Artifact: `skills/coding/cross-agent/SKILL.md` (general)
+- Base: `8728205` with uncommitted changes
+- Claim: Detector and telemetry implementation details occupy the normal workflow even though the CLI already supplies interpreted records. They obscure the useful reporting rules and belong outside the core.
+- Evidence: `skills/coding/cross-agent/SKILL.md:457-470 describes detector patterns, JUnit acceptance details, retry determinism and the summary hash.`, `skills/coding/cross-agent/SKILL.md:592-639 inventories live fields, CSV columns, encoding, provider-specific token calculations and legacy recording behavior.`, `skills/coding/cross-agent/scripts/crossagent/testchanges.py:183-215 renders detector limitations and verification unknowns; :228-252 determines report freshness and counts.`, `skills/coding/cross-agent/scripts/crossagent/history.py:13-24 defines fields and paths; :50-79 saves/exports history and reports unknown/partial coverage. progress.py:12-38 computes normalized usage and deltas.`, `skills/coding/cross-agent/scripts/tests/test_testchanges.py:138-164 asserts identical retry summaries and unknown console counts; test_history.py:145-190 asserts token deltas, unknown baselines and Claude normalization.`
+- Proposed change: Cut the detector implementation description and provider token arithmetic. Move history export and usage interpretation to the context/reporting reference, loaded for a history or usage question. Keep short core rules: report meaningful progress, distinguish configured from observed values, preserve unknowns, and treat detector output as evidence signals rather than proof of adequate testing.
+- Rationale: Addressed inside the accepted R1-001 rewrite guidance.
+
+## RB-0029: Several important invariants are repeated across sections without adding a distinct action. Keepi...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261104-003852-general-4118`, finding `R1-005`
+- Artifact: `skills/coding/cross-agent/SKILL.md` (general)
+- Base: `8728205` with uncommitted changes
+- Claim: Several important invariants are repeated across sections without adding a distinct action. Keeping multiple copies increases reading cost and makes later rule changes harder to maintain consistently.
+- Evidence: `CLI-only mechanisms/state ownership appears at skills/coding/cross-agent/SKILL.md:13-18, :542-543, :556 and :860-863.`, `Worker rotation versus Orch continuity appears at :298-306, :350-353, :374-382 and :598-603.`, `A checkpoint or Orchestrator completion not satisfying independent acceptance appears at :307-309, :345-346, :513, :535-536, :830-832 and :872-876.`, `Source provenance and summaries not proving intent appear at :274-279 and :648-654.`, `Stage authorization and continuation appear at :176-199, :296-309, :857-859 and :881-882.`, `skills/coding/skill-authoring/SKILL.md:56-60 explicitly requires checking repeated rules.`
+- Proposed change: Keep one canonical statement for mechanism ownership, authorization/dependencies, evidence provenance, acceptance meaning and context continuity. Remove repeated copies and retain only a local cross-reference where an exceptional procedure needs one. Keep the protections themselves.
+- Rationale: Addressed inside the accepted R1-001 rewrite guidance.
+
+## RB-0030: Some defensive non-claims add no instruction beyond rules already stated nearby. They can be dele...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261104-003852-general-4118`, finding `R1-006`
+- Artifact: `skills/coding/cross-agent/SKILL.md` (general)
+- Base: `8728205` with uncommitted changes
+- Claim: Some defensive non-claims add no instruction beyond rules already stated nearby. They can be deleted without changing the workflow.
+- Evidence: `skills/coding/cross-agent/SKILL.md:350-353 says context management is not scheduled, distinguishes rotation mechanisms, then adds that the Skill introduces no timer, threshold or runtime setting.`, `skills/coding/cross-agent/SKILL.md:635-639 already specifies unknown/partial usage and truthful history, then adds 'This history is telemetry, not a new lifecycle document.'`, `skills/coding/cross-agent/SKILL.md:872-882 already requires reporting acceptance status and actual checks; :883-884 then explains that finishing development means meeting checks and cleanup is not delivery.`, `skills/coding/cross-agent/SKILL.md:228-229 lists titles, codenames and test tokens after already requiring clarification only for material ambiguity.`, `AGENTS.md:83 requires concise executable instructions; skills/coding/skill-authoring/SKILL.md:69-75 requires a current behavioral justification.`
+- Proposed change: Cut these non-claims and example-specific prohibitions. Retain the operative rules they repeat: manage context at useful boundaries, report observed evidence truthfully, require acceptance checks, and ask only consequential questions.
+- Rationale: Addressed inside the accepted R1-001 rewrite guidance.
+
+## RB-0031: Close assigns session-origin bookkeeping to the Orchestrator even though the Skill forbids manual...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261104-003852-general-4118`, finding `R1-007`
+- Artifact: `skills/coding/cross-agent/SKILL.md` (general)
+- Base: `8728205` with uncommitted changes
+- Claim: Close assigns session-origin bookkeeping to the Orchestrator even though the Skill forbids manual run-state access and the CLI already records protection before interactive control.
+- Evidence: `skills/coding/cross-agent/SKILL.md:782-784 instructs the Orchestrator to record session origin and a sticky user-driven marker before interactive control.`, `skills/coding/cross-agent/SKILL.md:13-18 assigns mechanisms to the CLI; :860-863 permits run-state access only through commands.`, `skills/coding/cross-agent/scripts/crossagent/engine.py:161-165 records origin/user_driven at exploration creation; exploration.py:107-112 protects the session before launching the terminal.`, `skills/coding/cross-agent/scripts/crossagent/engine.py:521-525 excludes protected sessions from cleanup.`, `skills/coding/cross-agent/scripts/tests/test_exploration.py:218-239 asserts preservation of the user-driven source session.`
+- Proposed change: Cut the instruction to record markers manually. Keep the requirement to use CLI-managed interactive control and cleanup, with any retention explanation in the exploration reference. No new command or CLI change is needed.
+- Rationale: Addressed inside the accepted R1-001 rewrite guidance.
+
+## RB-0032: The automatic-adjudication section promises per-run opt-in, but the common start example makes th...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261104-003852-general-4118`, finding `R1-008`
+- Artifact: `skills/coding/cross-agent/SKILL.md` (general)
+- Base: `8728205` with uncommitted changes
+- Claim: The automatic-adjudication section promises per-run opt-in, but the common start example makes the flag optional and the CLI can inherit auto from configuration. Following the example therefore does not establish the stated per-run delegation record.
+- Evidence: `skills/coding/cross-agent/SKILL.md:731-735 says Orch is the default and delegated adjudication is recorded per run using start --adjudication auto.`, `skills/coding/cross-agent/SKILL.md:427-432 presents --adjudication as optional.`, `skills/coding/cross-agent/scripts/crossagent/engine.py:93-95 inherits settings unless overridden; :131-132 records either start or config as adjudication_source.`, `skills/coding/cross-agent/scripts/tests/test_segments.py:261-274 explicitly asserts automatic adjudication inherited from config without a start override.`
+- Proposed change: Keep the authorization policy in the core and make the invocation unambiguous: explicitly pass orch unless the user's authorization permits auto, then pass auto. Cut the duplicated rule algorithm and describe configured inheritance accurately. Preserve the CLI's existing behavior.
+- Rationale: Addressed inside the accepted R1-001 rewrite guidance.
+
+## RB-0033: External-change recovery tells the Orchestrator to revert a project-file change while the run rem...
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261104-003852-general-4118`, finding `R1-009`
+- Artifact: `skills/coding/cross-agent/SKILL.md` (general)
+- Base: `8728205` with uncommitted changes
+- Claim: External-change recovery tells the Orchestrator to revert a project-file change while the run remains open, contradicting its blanket prohibition on editing project files outside finalization.
+- Evidence: `skills/coding/cross-agent/SKILL.md:545-551 instructs 'Either revert the change' or adopt it, then retry-review.`, `skills/coding/cross-agent/SKILL.md:775-776 prohibits all project-file edits outside finalization while a run is open.`, `skills/coding/cross-agent/scripts/crossagent/engine.py:273-278 verifies that the tree was restored or adopted; it does not perform the revert.`, `skills/coding/cross-agent/scripts/tests/test_worker_ownership.py:44-54 demonstrates restoration performed externally before retry.`
+- Proposed change: In the recovery reference, identify the existing change owner/user as responsible for restoration under the current write boundary. The Orchestrator can report the files, use adopt-external for an authorized in-scope change, or wait for restoration before retrying. Do not silently introduce another Orchestrator write window.
+- Rationale: Addressed inside the accepted R1-001 rewrite guidance.

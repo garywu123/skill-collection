@@ -6,709 +6,217 @@ disable-model-invocation: false
 
 # Cross-Agent
 
-This session is the PM-style Orchestrator of the user's task. Understand the
-outcome, choose the smallest sequence of stages, delegate the detailed design,
-implementation, and review, and keep the user informed. Each stage is one
-bounded run, optionally beginning with expert exploration; a task may authorize several runs. The
-`cross-agent` CLI owns every mechanism: starting and replacing workers,
-permissions, schemas, the review budget, snapshots, run state, and cleanup.
-This Skill owns judgment: adjudicating findings, talking to the user, and
-finalizing. Keep that split. A mechanism done by hand, such as launching
-`claude` or `codex` yourself or editing run state, silently loses the budget,
-the read-only guard, and recovery.
+This session is the PM-style Orchestrator (Orch) of the user's task. Understand
+the outcome, choose the smallest sequence of stages, delegate design,
+implementation, and review to workers, adjudicate findings, and keep the user
+informed. Each stage is one bounded run; a task may authorize several runs.
 
-The CLI ships inside this Skill. Run it from the project root as
-`python <skill-dir>/scripts/cross_agent.py <command>`, where `<skill-dir>` is
-this Skill's base directory; below, `cross-agent <command>` is short for that.
-Commands print one JSON object; `next --stream` emits progress JSONL followed
-by one `event: result` object. Settings come from
-`<project-root>/.cross-agent/config.toml` when it exists. `CROSS_AGENT_CONFIG`
-explicitly overrides this path. Never search parent directories or implicitly
-load the old `~/.cross-agent/config.toml`; different project roots are independent.
-[the example](assets/config.example.toml) lists every key.
+The bundled `cross-agent` CLI owns every mechanism: workers and sessions,
+permissions, schemas, snapshots, budgets, retries, guards, run state, history,
+and cleanup. This Skill owns judgment: scope, authorization, adjudication, user
+communication, and finalization. Never launch `claude` or `codex` yourself or
+open `.cross-agent/runs/`, and report a refused command instead of working
+around it; manual mechanisms lose the budget, read-only guard, and recovery.
 
-For a multi-project workspace, keep the settings in one shared file. Each
-project's local config may contain only a single `config_file = "<path>"`,
-resolved relative to that local config's directory. A pointer must reference
-an existing settings file; pointers cannot be chained or mixed with settings.
-Use explicit project-root keys in the shared file so commands and permissions
-remain separate. Run state stays in the calling project's `.cross-agent/runs/`.
+Run the CLI from the project root as
+`python <skill-dir>/scripts/cross_agent.py <command>`; below, `cross-agent` is
+short for that. Each command prints one JSON object; `next --stream` prints
+progress JSONL, then one `event: result` object. Settings come from
+`<project-root>/.cross-agent/config.toml` or an explicit `CROSS_AGENT_CONFIG`;
+[the example configuration](assets/config.example.toml) documents every key.
 
-Required `[cli]` entries for selected providers specify absolute executable paths;
-missing entries and unavailable executables fail without
-falling back to another version. `status` and `init` report `cli_executables`;
-version detection uses the selected Codex. CLI paths are read at each worker
-call, including existing runs; saved roles, commands, and budgets are unchanged.
+## Activation
 
-## Mode Selection
+Use this workflow when coordination and independent review justify the worker
+and context cost; prefer the owning Skill directly for a small bounded edit or
+an ordinary one-pass review. Automatic selection never expands the task, and
+the user's explicit workflow choices and gates prevail.
 
-Automatic selection does not expand the user's task or require this workflow
-for every edit. Use it when coordination and independent review justify the
-worker/context cost; prefer the direct owning Skill for a small bounded task
-without that need. Explicit user workflow choices and selected gates prevail.
+An explicit `initiate`, `init`, or request to initialize Cross-agent
+configuration selects [initialization](references/initialization.md). A
+missing configuration alone does not authorize it; report the gap instead.
 
-Resolve the mode before the run procedure. An explicit `initiate`, `init`, or
-request to initialize Cross-agent configuration selects initialization below.
-`initiate` is the conversational mode name; the executable CLI command is `init`.
-Otherwise follow Inputs and the run procedure. A missing configuration alone
-does not authorize initialization. Runtime calls require a complete configuration
-file; missing settings are errors, never Python or provider CLI defaults.
+## Resolve The Task
 
-Initialization alone stops after its report. If the user explicitly requests
-initialization followed by a task, continue only through the authorized stages
-after reporting missing prerequisites that would prevent them.
-
-## Initialization
-
-The Orchestrator identifies project settings; `cross-agent init` validates and
-writes them. Do not delegate initialization to workers, manually copy the
-template, or edit the configuration as a substitute for this command.
-
-1. Work from the project root governed by the applicable `AGENTS.md`, which
-   may be below the Git root. Check Python 3.11+, the existing Git work tree,
-   and inspect existing settings with `cross-agent status` when a config exists.
-   A missing config is expected only during explicitly requested initialization.
-   Report missing prerequisites; do not initialize
-   Git, install tools, or create lifecycle documents as part of this mode.
-2. Read the applicable project instructions and the build/test definitions
-   they reference, such as package scripts, project files, or CI commands.
-   Prefer explicit documented commands backed by repository evidence. Ask
-   only when the choice is ambiguous or changes permissions. Do not invent
-   tests from the detected language alone.
-3. Read [the initialization template](assets/config.example.toml) for configured
-   runtime settings and complete role specs. Resolve the installed absolute CLI
-   paths for its selected providers and pass them in the input's `cli` object;
-   never persist the template's placeholder paths as if they were verified.
-   Select the smallest `allowed_commands` needed for Producer work and exact
-   `delivery_checks` suitable for the intended stage. Both `general` and
-   `feature-delivery` run these checks, including document-only `general`
-   work. Default `extra_dirs` to `[]`; add writable directories only when
-   covered by the user's task. If no reliable checks exist, use `[]` and
-   explicitly report that verification is unconfigured.
-4. Write a JSON object to a temporary file outside the work tree, then run:
-
-   ```text
-   cross-agent init --input <absolute-temporary-json-path>
-                    [--producer <provider:model:effort>]
-                    [--reviewer <provider:model:effort>]
-   ```
-
-   ```json
-   {
-     "allowed_commands": ["python -m unittest"],
-     "delivery_checks": ["python -m unittest discover -s tests -v"],
-     "extra_dirs": [],
-     "cli": {
-       "claude": "C:/Tools/Claude/claude.exe",
-       "codex": "C:/Tools/Codex/codex.exe"
-     }
-   }
-   ```
-
-   These paths and commands are examples; use the project's actual values.
-   Creating a config loads all runtime values from `assets/config.example.toml`,
-   overlays explicit role/CLI inputs and project commands, then validates the
-   complete result before writing. Omitted initialization inputs use template
-   values, never Python defaults. `[projects."."]` keeps local commands portable.
-   Roles must specify `<provider>:<model>:<effort>` in full, including run
-   overrides; `codex`, `claude`, and `codex::high` are errors. The selected CLI and
-   model determine supported effort values; do not invent or substitute them.
-   Existing configuration, comments, and role defaults remain intact. A
-   missing project section is appended; an existing matching section is
-   preserved in full when valid; incomplete existing configurations fail without
-   being backfilled from the template. Report `proposed_differences`,
-   `proposed_role_differences`, and `proposed_cli_differences` rather than claiming
-   they were installed.
-   Changing existing settings requires an explicit configuration-change task.
-   `CROSS_AGENT_CONFIG` remains an explicit override, including for a legacy
-   shared file; it is never automatically selected or migrated.
-5. Run `status` again and report the config path, action (`created`,
-   `project-added`, or `unchanged`), effective project commands, role defaults,
-   and remaining prerequisites. `init` runs `codex --version` and compares it
-   with the npm registry's `@openai/codex` `latest` release, with bounded
-   timeouts. Report `codex_version.installed`, `latest`, `status`, and `reason`:
-   `current` means the versions match; `update-available` means the installed
-   stable version is older; `ahead` means it is newer; `not-installed`,
-   `unknown`, and `skipped` must never be reported as current. Network failures
-   and prerelease builds yield `unknown`. Do not automatically upgrade the CLI.
-   Use `--skip-version-check` only when the user requests skipping it.
-   `providers_on_path` checks discovery, not the selected installation, login,
-   or model access; `cli_executables` reports the explicitly configured paths.
-   Inspect sibling stage Skills only for intended stages. Initialization does
-   not execute project checks, start workers, or create a run. Remove the
-   temporary input and stop unless a following task was authorized.
-
-An optional `[stages.<stage>]` table may set `producer` and `reviewer` in the
-same complete `<provider>:<model>:<effort>` format, so design, delivery, and
-mechanical work can use different models or effort. Each role resolves as the
-`start --producer` / `--reviewer` run override, then the selected expert role,
-then the stage role, then
-`[defaults]`. Overrides do not change the current Orch session. `status` shows
-`effective_roles` per stage with their source; `start`, `--dry-run`, and
-`status --run` show the run's `roles` and `role_sources`. An unknown stage or
-key, an incomplete spec, or a provider without its `[cli]` path fails before any
-run or worker starts. A run keeps the roles, Skill path, commands, and budgets it
-started with; later configuration edits never change them. Runs saved before
-stage roles report `role_sources` as `null` and keep their saved roles.
-After initialization, runtime calls read only the selected project/shared
-configuration, not the template. All five runtime control settings, both complete
-default roles, selected CLI paths, and all three fields in the matching project
-section are required. Empty project lists must be written explicitly as `[]`.
-Stage roles, expert routes, and Skill-path overrides are optional. An optional
-`[experts.<logical-skill>]` table selects `skill`, `producer`, and `reviewer`;
-use existing domain Skills rather than creating new role Skills. `start --skill`
-selects a logical Skill or a `SKILL.md` path for this run. Resolve Skill selection
-as the run override, selected expert route, stage configuration, then sibling
-lifecycle Skill discovery. A `general` run with none of these has no injected
-Skill. Existing configurations need no expert tables and keep their behavior.
-Configured `[stages.<stage>] skill` paths keep working regardless of folder
-name. The lifecycle-owner name guard applies only to explicit `start --skill`
-selection; use `general` to select another domain.
-Keep temporary inputs outside the work tree. Initialization uses Git's local
-exclude to keep `.cross-agent/` configuration and run state out of snapshots
-and commits, without editing the project's tracked `.gitignore`. Normal
-sandbox permissions apply. If the path is unwritable, report the restriction;
-do not silently switch to a user-level file. Configuration syntax validation
-and version freshness do not prove model access, supported effort, or test success.
-
-## Inputs
-
-First resolve the requested outcome, sources, output artifacts, and stopping
-point. Keep a short stage agenda in the conversation: stage, artifact, required
-inputs, acceptance checks, and next gate. Do not create a separate project
-management document. Infer routine paths and sequencing from repository
-conventions; ask only when ambiguity changes scope or the user's gate.
+First resolve the outcome, authoritative sources, output artifacts, and stopping
+point. Keep a short stage agenda in this conversation, not a tracking document:
+stage, artifact, required inputs, acceptance checks, and next gate.
+Infer routine paths and order from repository conventions; ask only when
+ambiguity changes scope, permissions, or the user's gate.
 
 - A refactor may be `general` plan -> review -> `general` execution -> review.
-- Architecture uses `general --skill architecture-design` with a concrete
-  request and, for writing, its deliverable. A roadmap
-  or Feature Map then uses `feature-map` when its lifecycle inputs and
-  ownership apply.
-- Selected Features are processed in dependency order, one run per Feature
-  and stage. Missing prerequisites are reported, not silently added to scope.
+- Architecture uses `general --skill architecture-design`; a roadmap or Feature
+  Map then uses `feature-map` when its lifecycle inputs apply.
+- Selected Features run in dependency order, one run per Feature and stage.
+  Report missing prerequisites; never add them to scope silently.
 - A bounded validation question uses `feature-plan` to write
-  `docs/plans/<topic>.md`, then `feature-delivery` to execute it, without a
-  Feature ID. Report its execution status and conclusion separately.
-- "Plan, then execute once review passes" authorizes both stages. "Make a
-  plan" stops after planning. "Wait for my approval" requires the user's reply.
+  `docs/plans/<topic>.md`, then `feature-delivery`, without a Feature ID. Report
+  its execution status and conclusion separately. Use the same route, not a
+  permanent Tester role, for a concrete independent-testing gap.
+- "Plan, then execute once review passes" authorizes both stages. "Make a plan"
+  stops after planning. "Wait for my approval" requires the user's reply.
 
-Keep detailed problem-solving with the workers. Give each stage a concrete
-request naming inputs, owned outputs, checks, and exclusions. Use the matching
-lifecycle Skill where applicable; `general` must not bypass its requirements.
-For a standalone task with no lifecycle owner, `general` is sufficient and
-does not require synthetic Feature IDs, a Product Brief, or a Feature Map.
-
-Resolve these CLI inputs for each stage:
+For each run resolve:
 
 - **Stage**: `feature-map`, `feature-plan`, `feature-delivery`, or `general`.
-  Infer it only when the request leaves no doubt. A Feature Plan path alone can
-  mean `feature-plan` or `feature-delivery`, so ask.
-- **Item**, optional: a stable Feature ID, function name, or topic for history.
-  Pass the same `--item` at each stage of that work; it defaults to the artifact
-  path. An item is only a reporting label, not new product scope.
-- **Artifact**: optional during exploration; required before production or
-  review. This is the file the run centers on. The Producer may also change what
-  its stage Skill owns, such as consistency fixes in related documents.
-- **Start mode**: `explore` for discussion, `review` for an existing artifact, or `produce` with a
-  concrete request. A Producer without a concrete request reruns its whole
-  Skill and rewrites without purpose. For `general`, always pass a request:
-  with no lifecycle Skill, it is the only statement of the intended outcome.
-- **Roles**, optional: translate the user's words into
-  `<provider>:<model>:<effort>` specs. Resolve unspecified model/effort from the
-  existing complete role configuration before applying a user-requested override;
-  never invent a model name or rely on CLI defaults. Omitted overrides use the
-  configured expert role, then stage role, else the default. Missing configuration stops the run.
+  Infer it only when no doubt remains; a Feature Plan path alone can mean
+  planning or delivery, so ask.
+- **Artifact**: the file the run centers on, optional only during exploration.
+  The Producer may also change what its stage Skill owns.
+- **Request**: the concrete inputs, owned outputs, checks, and exclusions.
+  Always pass one for `general`, where it is the only statement of the outcome;
+  a Producer without one reruns its whole Skill.
+- **Item**, optional: a stable Feature ID or topic used as the history label at
+  every stage of that work; it never adds scope.
+- **Skill**: the matching lifecycle or domain Skill. `general` must not bypass a
+  lifecycle owner's requirements, and a standalone task needs no synthetic
+  Feature IDs, Product Brief, or Feature Map.
+- **Roles**, optional: complete `<provider>:<model>:<effort>` specs derived from
+  the user's words and the existing configuration; never invent a model or
+  effort.
 
-## Expert Exploration And Production
+When a Producer reports a wrong upstream source, or the user authorizes a change
+mid-delivery, reconcile owners upstream first within the authorized objective:
+the changed requirement or design owner, affected contracts such as the
+Architecture Design or Testing Strategy (`general` naming its Skill),
+Storyboards, `feature-map`, `feature-plan`, then Delivery. Downstream acceptance
+waits for each affected owner; a replacement the Plan's Sources already record
+as decided needs no upstream pass. Ask the user only about choices that
+materially affect product behavior, accepted constraints, permissions, cost, or
+the user's gate. Never invent scope or let a worker rewrite an authoritative
+input to make a check pass.
 
-An expert is a Producer using the selected domain Skill, not another permanent
-role. Either a Claude or Codex host chat may be Orch. "Discuss a product/map"
-selects exploration; "generate it from the confirmed inputs" selects production;
-"decide the decomposition and write it" delegates routine in-scope decisions.
-Clarify only a material ambiguity. Do not require a title, codename, test token,
-or a repeated task description merely to start a discussion.
+## Preflight And Start
 
-```text
-cross-agent start --stage <stage> --first explore --skill <logical-name-or-path>
-                  --request "<goal, background, scope and current questions>"
-                  [--artifact <intended-path>]
-cross-agent expert --run <id>
-cross-agent promote --run <id> --artifact <path>
-                    --request "<explicit write authorization and relevant evidence>"
-                    [--reconcile "<user direction reconciling intervening changes>"]
-                    [--skip-review --reason "<explicit user opt-out>"]
-cross-agent next --run <id> --stream
-```
-
-`expert` runs a foreground interactive Claude session with the selected Skill
-and relevant project guidance. Orch launches that command in a user-visible
-terminal using the host's supported terminal mechanism; the CLI itself does not
-open a separate window. Exploration uses read-only tools. Give the user
-a concrete launch request and let the expert ask only consequential missing
-questions. Direct interactive Codex is not supported by this entry point; use
-the existing managed question relay and evidence handoff for that provider.
-Do not claim host-chat messages automatically reach the terminal.
-If startup returns before creating a provider transcript, retry `expert` with
-the same saved session ID; resume is selected only when its transcript exists.
-
-Only one actor drives the expert session at a time. Exiting it returns control;
-it is not submission, write authorization, completion, or review approval.
-The user explicitly asks to produce/submit, either in the recorded discussion
-or the Orch chat. Orch checks that authorization and uses `promote`; a request
-received only by Orch remains Orch-attested when the worker cannot inspect its
-original source. Do not invent transcript locators.
-If an interrupted terminal leaves a saved active marker, first verify its
-process has stopped, then use `expert --run <id> --release`. This clears only
-the stale control marker; it does not submit or authorize production.
-
-The explore-entry worktree snapshot includes pre-existing edits. Promotion
-compares the current tree against it and holds unexplained changes; reconcile
-them only with explicit user direction, preserving the comparison for review.
-Never silently reset the baseline. Promotion acquires the artifact ownership
-lock, imports inspectable discussion evidence, and resumes a compatible expert
-session as the managed Producer with production permissions. Session failure or
-a changed provider uses a fresh worker plus cited evidence, not a claim of
-continuous memory. Within one stage prefer the same session; stages and
-independent work items retain the fresh-session boundary.
-
-Keep original-language user excerpts, available session/message locators,
-corrections, confirmed decisions, and unaccepted suggestions distinguishable.
-A provider transcript proves what that session received; Orch translations or
-host-chat excerpts do not independently prove host wording. Exclude unrelated
-private material. Give workers a concise handoff with source locators and let
-them open material originals; the author's summary alone is never intent proof.
-
-Production normally proceeds to independent review. A user may explicitly opt
-out for this run with `--skip-review --reason`; never infer opt-out from silence
-or expert readiness. Retain the reason and report completion as not independently
-reviewed. Required self-checks still run. An existing mandatory project gate
-needs an explicit user adjustment; do not silently discard it. Delivery requests
-select the independent gate only when review is enabled; a skipped run cannot
-satisfy an already selected independent gate or claim `verified` on that basis.
-Do not create a permanent Tester role: use the existing standalone validation
-Plan and a fresh Delivery session for a concrete independent-testing gap.
-If the user opts out after production, before the first review and with no
-findings, use `waive-review --run <id> --reason "<explicit user opt-out>"`.
-It cannot erase an existing review or findings. Successful skipped-review
-production ends `completed-without-review`; failed checks require a user
-decision rather than being relabeled completion.
-
-One CLI run handles one stage, while this conversation owns the agenda. After
-closing a completed run, continue to the next already-authorized stage without
-asking again. Start fresh Producer and Reviewer sessions at each stage or
-independent work item; within a stage, use the CLI's resume/rotation mechanism.
-Pass the reviewed artifact and a short handoff of scope, current decisions and
-their sources, completed/next work, unresolved findings, gates, and tested
-evidence locators, not the prior transcript. Start with CLI status and this
-handoff; open cited source sections or diff hunks when needed for judgment.
-Replace obsolete active instructions with a short supersession reason while
-keeping unique evidence recoverable in existing history or references. Do not
-create another tracker. Worker rotation does not rotate this Orch session.
-An unresolved decision, failed check, or unaccepted
-upstream result stops dependent stages. `completed-by-orchestrator` is not an
-independent review pass: if the user's gate requires that pass, stop there.
-
-A Producer may report that one Feature holds several independent outcomes, that
-an upstream source is wrong, or the user may authorize a change mid-delivery.
-Within the authorized objective, coordinate the owners upstream first: the
-changed requirement or design owner, then every affected intermediate contract
-such as the Architecture Design or Testing Strategy (`general` naming its
-Skill), then affected Storyboards and `feature-map`, then `feature-plan`, then
-Delivery in a new run or through `resume-delivery`. Downstream acceptance waits
-until each affected owner is reconciled. A replacement the Plan's Sources record
-as already decided needs no upstream pass; Delivery promotes it. An open Delivery run holds its
-artifact: park a failed one as described below; closing a blocked one still
-needs the user's consent. Ask the user only for an unresolved choice that
-materially affects product behavior, accepted constraints, permissions, cost
-commitments, or the user's explicit gate. Never invent product scope or let a
-worker rewrite an authoritative input to make a check pass.
-
-Each review-enabled `feature-delivery` request names the run's independent review as a
-selected gate, so the Producer records its results, leaves the Plan's gate row
-`not run`, and reports readiness. For a Feature Plan, the Plan and Map row stay
-`in_progress`. For a standalone validation Plan, the Producer records execution
-status and conclusion as usual; no Map row, Feature status, or `verified`
-exists, and the conclusion is not independently reviewed until the gate passes.
-
-Before `close`, record content hashes of the acceptance-relevant files: the
-Plan, the Map when a Feature has one, and every file in the run's reviewed
-diff. `close` may append nonblocking items to `docs/review-backlog.md`; that CLI
-bookkeeping is not acceptance-relevant, so do not hash or read it. After the
-run ends `independently-passed` and is closed, and those hashes still match,
-make one finalization edit. When every other planned result already passed
-and the reviewed diff carries the Producer's decision promotion, set the
-Feature's Map row `verified` and retire the Plan as `feature-delivery`
-describes: delete it and point its links at the reviewed revision. Otherwise,
-and for a standalone validation Plan, record only the gate row's result and the
-Plan's current position. A mismatch means the reviewed revision changed;
-report it instead of finalizing. This edit is not a repair; anything more needs
-a new run. After `completed-by-orchestrator`, leave the gate `not
-run`, keep a Feature `in_progress`, and report the missing independent pass.
-
-## Orchestrator Context Handoff
-
-Manage the Orch context at stage boundaries, not on an elapsed-time schedule.
-Worker `rotate_at_tokens`, provider compaction, and Orch chat compaction are
-different mechanisms; worker rotation never rotates this session. This Skill
-adds no compaction timer, token threshold, or runtime setting.
-
-- At each delivery checkpoint, ensure the owning Plan records the completed
-  and next segment, actual checks, blockers, and any authorized commit. A
-  checkpoint alone does not require Orch compaction.
-- After a Plan independently passes and before Delivery starts, and after a
-  Feature finishes and before the next starts, assess whether old transcripts,
-  repeated review rounds, or superseded instructions crowd the active context.
-  Prepare a short handoff when compaction or a fresh Orch chat would help.
-- Prepare that handoff while no worker is running, after consuming its result
-  and recording any decisions. Preserve pending questions, unresolved findings,
-  failures, and required gates; compaction never resolves or drops them.
-- Keep task and authorization scope, artifact locators, stage/item/run ID,
-  branch and current revision, selected roles/config locator, current position,
-  remaining checks, evidence locators, and next action. Link the Plan and CLI
-  status instead of copying their contents or the old transcript. Keep private
-  paths and credentials out of tracked artifacts and worker requests.
-- Use the host's supported compaction mechanism only when available. Otherwise
-  retain the handoff for automatic compaction or an authorized chat transition.
-  A prepared summary is not proof that compaction happened; report only an
-  observed event. Never estimate context utilization from cumulative usage.
-- After compaction or a new Orch session, re-read applicable instructions,
-  inspect CLI status and the current revision/diff, then read the Plan's current
-  position and cited evidence needed for the next action. Continue the existing
-  run and its saved budgets and gates; do not restart work or invent acceptance.
-
-Keep durable Feature position and results in the existing Plan/Map and run
-mechanics in the CLI. Add no separate memory file or project tracker. Outside
-the existing write-ownership windows, the Orch does not edit project files to
-prepare a handoff; require the Producer to leave the Plan current instead.
-
-## Preconditions
-
-1. Work from the project root: the directory whose `AGENTS.md` governs the
-   artifact, which may sit below the Git repository root. Run
-   `cross-agent status`; it needs Python 3.11 or later. If it cannot run,
-   report why and stop. Its output lists open runs and the effective settings,
-   such as `max_reviews`, whether rejected findings reach the backlog
-   (`backlog_rejected`), `checkpoint_session`, `segment_review` and
-   `adjudication`. A config without the newer keys keeps the earlier behavior:
-   fresh sessions after checkpoints, no segment review, Orch adjudication, and a
-   scalar `rotate_at_tokens` for both roles. A saved run keeps its settings.
-2. If `status` lists an open run for the same stage and artifact, continue it
-   with `next`. If it lists an open run on this artifact for a different stage
-   or request, report it and ask whether to continue or close it. The CLI
-   refuses a second open run on one artifact.
-3. A dirty work tree is fine; snapshots isolate the run's own changes. Tell the
-   user that nobody else should edit the work tree while the run is open,
-   because snapshots would count those edits as the run's.
-4. Check the project's configured commands against the stage's verification
-   needs. `delivery_checks` run after Producer changes for `feature-delivery`
-   and `general`, after every revision, so they hold only the Testing
-   Strategy's `fast` class. A Feature's gate suites, such as UI flows or
-   capacity, run once in the Producer's final segment; when the Producer's
-   sandbox cannot run them, run them once outside it and pass the results with
-   `note` before review. Stage suites belong to a validation Plan. Before start, explicitly select an existing complete
-   task-appropriate configuration with `CROSS_AGENT_CONFIG` when necessary,
-   inspect it with `status`, and retain required gates and authorized
-   permissions. Record its locator and reason in the existing request/handoff,
-   keeping private paths out of tracked documents. Keep it available for later
-   calls. Selection does not authorize configuration edits; report a missing
-   suitable configuration. Do not switch it or drop saved checks to evade a
-   failure. Document work must not inherit unrelated application checks.
-   Missing commands must be reported, not silently counted as successful tests.
-   An optional `test_reports` table in the project section maps a configured
-   check command to the JUnit XML report it writes; only an explicit
-   configuration-change task adds it. An optional `check_paths` table maps a
-   configured check to repository-relative path globs: after each Producer
-   round that check reruns only when a changed path matches or its last result
-   failed, and a skipped check is reported as skipped, never as a new pass.
-
-## Run Loop
+1. Work from the project root whose `AGENTS.md` governs the artifact; it may sit
+   below the Git root. Run `cross-agent status`. If it cannot run, report why
+   and stop.
+2. If an open run exists for the same stage and artifact, continue it with
+   `next`. If one exists on the artifact for another stage or request, report
+   it and ask whether to continue or close it.
+3. Check `allowed_commands` and `delivery_checks` against the stage's
+   verification needs and authorized permissions. `delivery_checks` rerun after
+   every Producer revision, so they hold only the Testing Strategy's `fast`
+   class; document work must not inherit unrelated application checks. Report
+   missing checks as unconfigured, never as passing. Without a suitable
+   configuration, report it or select an existing one with `CROSS_AGENT_CONFIG`,
+   recording its locator and reason in the request. Edit configuration only in
+   an explicit configuration-change task; never switch it or drop checks to
+   evade a failure.
+4. Tell the user nobody else should edit the work tree while the run is open;
+   snapshots attribute such edits to the run.
+5. Report the agenda, then start the run:
 
 ```text
 cross-agent start --stage <stage> --artifact <path> --first <produce|review>
-                  [--item "<Feature ID or topic>"] [--request "<text>"]
-                  [--skill <logical-name-or-path>]
+                  --request "<concrete request>" --adjudication <orch|auto>
+                  [--item "<Feature ID or topic>"] [--skill <logical-name-or-path>]
                   [--producer <spec>] [--reviewer <spec>]
-                  [--skip-review --reason "<explicit user opt-out>"]
-                  [--adjudication <orch|auto>] [--dry-run]
-cross-agent next  --run <id> --stream
+                  [--skip-review --reason "<user's explicit opt-out>"] [--dry-run]
+cross-agent next --run <id> --stream
 ```
 
-`start` prints the run ID. With `--dry-run` it prints the prompts and commands
-without creating a run; use it when the user wants a preview. Then call `next`,
-and call it again after every `decide` or `answer`, until the run is done. Each
-`next --stream` prints sanitized observations while the worker runs, then its
-final result; do not launch a second `next` while it is running. `status --run`
-can inspect the latest saved observations. Each worker's process tree dies with
-its `next`. If an earlier `next` was killed and its recorded worker still runs,
-`next` refuses and `status --run` reports `orphan_worker`; report it and stop
-that process tree before calling `next` again. Act on the final result's phase:
+Pass `--adjudication orch` unless the user delegated adjudication for this run,
+then `auto`; without the flag the run inherits the configuration's
+`adjudication`, which may be `auto`. `--dry-run` previews prompts and commands.
+For discussion before production, start with `--first explore` and
+follow [expert exploration](references/expert-exploration.md).
 
-| Phase | Action |
-|---|---|
-| `explore` | Use `expert` for supported direct discussion; wait for explicit write authorization before `promote`. |
-| `produce`, `review`, `segment-review` or `segment-repair` | Call `next` again; a worker step is due. |
-| `awaiting-decision` | Adjudicate every open finding, then run `cross-agent decide --run <id> --input <file>`. |
-| `awaiting-answer` | Relay the Producer's questions, then pass the user's reply with `cross-agent answer --run <id> --text "<answer>"`. |
-| `finalizing` | Follow Finalization. |
-| `done` | Follow Close. |
-| `failed` | If `automatic_recovery_available`, call `next` once; otherwise report the reason and state path and stop. |
-| `blocked` | Report the blocker and stop until the user resolves it. |
+Independent review is the default. Pass `--skip-review` only for the user's
+explicit opt-out for this run, quoted in `--reason`, never inferred from silence
+or readiness; after production but before the first review, use
+`cross-agent waive-review --run <id> --reason "<opt-out>"`. A skipped run cannot
+satisfy a selected independent gate, and a mandatory project gate needs the
+user's explicit adjustment.
 
-Before each review, the CLI builds a deterministic test-change summary for the
-same snapshot range as the review diff and adds it to the Reviewer prompt as
-fixed input; a retried review rebuilds the identical text. It lists added,
-modified, and deleted test, fixture/mock, and runner/configuration paths with
-raw hunks; supported skip/disable/only and filter markers with `path:line`;
-assertion-like line counts in test paths; and each check's exit code. Counts
-come only from a configured JUnit XML report rewritten by that check command,
-scoped to that command, whose suites declare totals matching their test cases
-with one plain outcome each and only standard JUnit elements, placements and status values; stale, absent, unreadable, inconsistent,
-unsupported, or duplicate/rerun reports and console output stay unknown. Detection follows naming conventions and fixed
-patterns, so an empty section never means tests are unchanged, discovered, or
-adequate. `next --stream` emits a `test-changes` event and events carry the
-latest `test_changes` record with its `sha256`. Use these as review signals,
-not as a verdict; the Producer's incremental TDD tests are not frozen.
+## Drive The Run
 
-Relay an answer only when the user gave it explicitly, now or earlier in this
-chat, and quote it. Never supply your own answer: the question exists because
-the Producer's Skill requires a user decision.
+Call `next --stream`, consume its final result, and follow its `next_action`
+within the user's authorization and gates; call `next` again after `decide`,
+`answer`, or `note`. Never run two `next` calls at once.
+`cross-agent status --run <id>` shows the saved state and latest observations.
 
-Talk to the user in the user's language. Workers and the backlog use English,
-so write decisions, rationales, and relayed answers in English, and translate
-the Producer's questions when you relay them.
+- `awaiting-decision`: adjudicate, then run
+  `cross-agent decide --run <id> --input <file>`.
+- `awaiting-answer`: relay the Producer's questions, translated into the user's
+  language. Pass only an answer the user explicitly gave, now or earlier in this
+  chat, quoted, with `cross-agent answer --run <id> --text "<answer>"`. Never
+  supply your own; the question exists because the Producer's Skill requires a
+  user decision.
+- A checkpoint: report the segment and continue the authorized Plan; it is
+  never verified completion. When commits are authorized, follow
+  [section commits](references/section-commits.md) before calling `next`.
+- Checks handed to you, including a Feature gate suite such as UI flows or
+  capacity that the Producer's sandbox cannot run: run them once outside it and
+  pass the real results with `cross-agent note --run <id> --text "<results>"`.
+- `finalizing` or `done`: follow Finalize And Close.
+- `failed` or `blocked`: report the error and stop. When
+  `automatic_recovery_available` is true, call `next` once. Explicit retries,
+  external-change adoption, blocker continuation, parking, and budget increases
+  each need the user's authorization; follow
+  [recovery and delivery controls](references/recovery-and-delivery-controls.md).
 
-Producer timeout and explicit transient connection/rate-limit errors receive at
-most one automatic recovery per run. `next` resumes a compatible failed run or
-the active call retries once; both share that counter. Prefer the previous
-Producer session. Replace it only for the Producer's saved context threshold, a
-fresh-session checkpoint, or a recognized missing/unloadable session; retain old sessions for
-history and later cleanup. A replacement receives the run summary and latest
-checkpoint and must inspect existing edits. Each worker call still has the
-configured hard timeout (default 30 minutes); output never extends it. Do not
-keep calling `next` to obtain unlimited retries.
+Talk to the user in their language; write decisions, rationales, and relayed
+answers in English.
 
-After the external cause of a failed Producer execution is fixed and recovery
-is authorized, use `cross-agent retry-producer --run <id>`, then `next --stream`.
-This explicit retry does not append another automatic retry; it returns to the
-Producer phase that failed (`produce` or `segment-repair`). It preserves the
-baseline, sessions, edits, findings, answer, and review budget. Schema/output
-validation and write guards are not execution failures and cannot be retried.
-Configuration/discovery failures require fixing their cause before proceeding.
+Report worker start, handoff, findings, revisions, and stage completion
+promptly; otherwise update about every 30 to 60 seconds. A
+heartbeat means the process is running, not that work or a test succeeded.
+Report only observed values: a configured model is not an observed one, and
+`null` means unknown. Explain current work from the request, tool activity, and
+Producer summary without exposing hidden reasoning, tool arguments, or
+transcripts.
 
-When a Producer cannot execute a check in its sandbox and hands commands to
-you, run them once outside it, then pass the real results and any working
-command guidance with `cross-agent note --run <id> --text "<results>"` before
-the next `next`. The note reaches only the next Producer call, bound to the
-current tree; it is the only channel while the run waits in `produce`, since a
-commit message or chat text never reaches a continuation Producer.
+Drive the reviewed Plan's segments; keep your analysis to scope, dependencies,
+gates, and adjudication. Producer delegation follows the stage Skill, or for
+`general` only substantial independent work with disjoint ownership. Reviewers
+do not delegate.
 
-An execution Producer may return `checkpoint` after a planned segment. The CLI
-saves its acceptance/handoff summary and snapshot. With `checkpoint_session =
-"resume"` the next call continues the same Producer session, which rotates only
-at the Producer's `rotate_at_tokens` threshold or when the session is missing;
-with `"fresh"` it starts a new session. Report the checkpoint and continue the
-already-authorized Plan. There are at most eight checkpoints per run; they do
-not reset a revision/review budget. The original baseline remains the final
-review boundary. Only `done` runs whole-stage checks and hands off for the final
-review. Never treat a checkpoint as verified completion. When commits are
-authorized, commit the checkpoint as described in Section Commits before
-calling `next`.
+## Adjudicate
 
-With `segment_review = true`, a `feature-delivery` checkpoint before the first
-final review must also list the segment's planned `segment_outcomes` and the
-`remaining_work`, and the run enters `segment-review`. The run's single Reviewer
-session judges only those outcomes against the diff since the last accepted
-segment, not the remaining work. Adjudicate its findings as usual. Accepted
-findings go to `segment-repair`: the Producer returns `segment-repaired` with an
-outcome per finding after focused checks only, and the segment is reviewed
-again. A clean segment review advances the segment base and returns to
-`produce`. Segment reviews count toward `max_reviews` and keep global `R<n>`
-IDs; the rule that only blockers and regressions count after a first review
-restarts for each segment and for the final review. A segment gets
-`max_segment_reviews` reviews; reaching that cap with accepted findings open
-returns to `awaiting-decision`, where `accepted` buys exactly one more repair
-and re-review. `decide` refuses that acceptance when it would leave fewer than
-`final_review_reserve` reviews; only on the user's explicit approval pass
-`decide --max-reviews <larger>` or `--waive-reserve`. A segment review that
-would use the reserve is skipped: report the event's `segment_review_skipped`;
-its open findings reach the final review. The final review always diffs from the
-original baseline, then follows the normal cycle. A passed segment review is not
-a whole-stage pass.
+The Reviewer proposes findings; you decide, because you hold the user's intent,
+the agreed scope, and earlier corrections. You are not a second Reviewer; put
+defects you notice yourself in the completion report.
 
-When the user explicitly authorizes recovery after a Reviewer execution failure,
-fix the external cause first, then use `cross-agent retry-review --run <id>`
-and `next --stream`. This retains the run, Producer session, findings, and review
-budget, while starting a fresh Reviewer in the review phase that failed. It refuses validation failures such as
-Reviewer writes, and does not bypass the review limit. Do not edit run state or
-launch workers manually to recover.
+Judge evidence, not severity labels. Read the cited evidence and relevant
+sections, expanding only to resolve the finding. Producer
+summaries are navigation, not proof, and the test-change summary is a review
+signal, not proof that tests are adequate. A provider transcript proves what
+that session received; your translations and host-chat excerpts are
+Orch-attested, and missing material provenance stays unverified.
 
-A work tree that changes while a write-denied Reviewer runs, such as an editor
-rewriting `.vscode/settings.json`, fails as `error.kind = "work-tree-changed"`
-with `changed_files`; that review is discarded and spends no budget. Report the
-files. Either revert the change, or, when it belongs to the run, keep it with
-`cross-agent adopt-external --run <id> --reason "<why it is kept>"`, which
-records the reason and includes it in the reviewed diff. Then use
-`retry-review`; it refuses while the tree differs from both the reviewed and
-the adopted snapshot. A Reviewer that could write still fails closed. When the user explicitly resolves a
-Producer-reported blocker and asks to continue, pass that decision with
-`cross-agent answer --run <id> --text "<user decision>"`, then `next --stream`.
-This preserves both worker sessions, findings, snapshots, and the review budget;
-it cannot resume a failed validation guard. Other failed or blocked runs stop; never edit state or launch workers manually.
+A valid finding cites a rule, `path:line`, or failing command and names an
+unmet requested outcome, a conflict with an authoritative input, a real
+validation failure, an internal contradiction, a regression from the latest
+change, a concrete security, permission, data-loss, or irreversible-action
+risk, or `excess`: something the change adds without a supported trigger,
+consumer, or reader. Trust-boundary protections and required gates are never
+excess. An added test needs a distinct failure existing coverage misses.
 
-When the user redirects a failed Delivery to replanning, use `park --run <id>
---reason "<user-requested replan>"`. This releases its artifact lock without
-closing the run, deleting sessions or resetting its baseline/review budget.
-`status --run` still reads parked history; `next` cannot run it. Update/review
-the same Plan in a separate `feature-plan` run. After that run independently
-passes, use `resume-delivery --run <delivery-id> --plan-run <plan-id> --request
-"<reviewed segment handoff>"`, then close the completed Plan run and call
-Delivery `next --stream`. This starts a fresh Producer while retaining Delivery
-history and its original review boundary/budget. It refuses exhausted budgets,
-other active artifact owners, and schema/read-only/snapshot validation failures.
-For a prior diff-size guard only, an explicit `--max-diff-kb <larger-capacity>`
-may increase that saved input ceiling; it does not omit changes from review.
-Never use parking to bypass a worker or review gate.
+Give every open finding exactly one disposition:
 
-## Live Reporting
-
-Report the agenda before starting. Consume `next --stream` incrementally with
-short tool yields so this conversation remains responsive. Report worker
-start, handoff, review findings, revision, and stage completion promptly;
-otherwise give one concise update about every 30-60 seconds. Group repetitive
-tool events. A heartbeat means the process is still waiting/running, not that
-useful work or a test has succeeded.
-
-Report `skill-loaded` as complete Skill content injected into the worker prompt,
-including the path, hash, and method; it proves supplied content, not native
-Skill-tool invocation or compliance. `skill-started` follows worker readiness:
-Producer executes that stage, Reviewer judges it read-only. Report subagent
-requests, starts, completion and active counts only when observed; otherwise
-say unknown. Do not equate a launch request with a running agent.
-
-Feature Plan owns execution sizing, segment acceptance/handoffs, and proposed
-delegation. Keep Orch's analysis to scope, dependencies, gates, and adjudication;
-drive the reviewed Plan rather than designing an alternative execution map.
-
-Include stage/item, role/provider, configured model and effort, observed model
-and effort when available, session generation, latest parent context tokens,
-rotation threshold, and observed subagent requests/starts/active count. Explain
-the current work using the request, tool activity, and Producer summary; do not
-invent details, expose hidden reasoning, or paste tool arguments/transcripts.
-
-`null` means unknown, never zero. Model aliases/configuration are not observed
-runtime values. Usage is a latest measurement, not a live context meter or
-cumulative spend; never infer a percentage without an observed context limit.
-Child context must not overwrite parent context. Provider compaction events
-and CLI fresh-session rotation are different; report only observed events.
-Rotation is evaluated between worker calls, not during a running call.
-
-### Retained History
-
-The CLI automatically maintains `.cross-agent/history/<run-id>.csv`, one row
-per worker call, including revisions, checkpoint segments, and failed/retried
-calls. A session can have multiple rows. Calls record item, stage, artifact,
-role/provider, round (`P0`, `R1`, `P1`, ...), segment, configured and observed
-model/effort, session ID/generation/reason, UTC start/end, elapsed seconds,
-worker response status, current/final run status, and observed token counts.
-Elapsed time covers the worker invocation, not user waiting or project checks.
-`call_status` is a worker result, not proof that the stage passed its guards.
-
-Run `cross-agent history` to refresh `.cross-agent/history.csv` from all retained
-runs, then review/filter it in Excel by item, role, round, or session. CSVs use
-UTF-8 with BOM. Scripts own these files; never ask an agent to handwrite rows.
-`status --run` and `close` report the per-run history path. `close` preserves
-history, available verified discussion evidence, and the handoff under
-`.cross-agent/history/<run-id>/` (`discussion.json` and `handoff.json`) while deleting ephemeral run state.
-User-driven sessions survive close; see Close for cleanup ownership. `.cross-agent/` remains
-locally excluded from Git; history stays in this checkout unless copied out.
-
-Token columns count the parent worker call only (`usage_scope=parent-call`);
-they exclude this Orch session and do not guarantee coverage of subagents or
-provider-internal work. Input tokens include cache reads/writes, which are also
-listed separately; reasoning tokens are an output subset. Sum `total_tokens`
-alone to avoid double counting. Codex session counters become per-call deltas
-against a saved or observed baseline; missing/reset baselines stay unknown.
-Claude uses final result usage for the current call; timeout fallback counts
-unique parent message input/cache tokens and leaves output unknown. Never sum
-Claude session-level `modelUsage`/cost totals across resumed calls.
-
-`usage_status` is `reported`, `partial`, or `unknown`; blank counts mean unknown,
-not zero. Partial totals are not complete spend or billing amounts. A killed
-Orch process may leave a `running` row without an end time; do not invent it.
-Existing runs start recording only their subsequent calls; no past timestamps
-or usage are fabricated. This history is telemetry, not a new lifecycle document.
-
-Producer delegation must follow the stage Skill, or for `general` be limited
-to substantial independent work with disjoint ownership. Reviewers do not
-delegate. Missing provider telemetry is explicitly unknown; it does not block
-useful work. Report a new session and its reason at every stage transition.
-
-## Adjudication
-
-The independent Reviewer uses the domain Skill as criteria and inspects original
-sources, upstream contracts, the relevant code/business paths, test changes,
-and actual check evidence. Producer summaries are navigation, not proof.
-Use review notes for material areas checked, source locators, conclusions, and
-limitations; mark host intent supported only by Orch relay as Orch-attested.
-Missing material provenance remains unverified and can require a finding or
-question. Do not manufacture a universal per-claim checklist. The Reviewer
-stays read-only: it proposes evidenced test additions/removals and the distinct
-failure existing coverage misses; the Producer implements accepted changes.
-Reading tests is distinct from executing an independent validation experiment.
-
-The Reviewer proposes findings; it does not decide that more work must happen.
-You decide, because you hold the chat context the workers lack: the user's
-intent, the agreed scope, and earlier corrections. Give every open finding
-exactly one disposition:
-
-- `accepted`: a current `blocker` or `major` defect within the requested scope.
-  Only accepted findings reach the Producer, and each non-passing review allows
-  one revision. Add a rationale when the Producer needs guidance, such as the
-  fix the user chose.
-- `note-only`: valid but nonessential, such as polish, an optional refactor, or
-  a `minor` defect. Severity is the Reviewer's call, so a `minor` defect never
-  earns a revision; it goes to the backlog instead.
-- `rejected`: not a current defect. It falls outside the review boundary, lacks
-  real evidence, is contradicted by an authoritative source or an explicit user
-  decision, or is already resolved. A new idea that would change direction is
-  not a current defect either.
+- `accepted`: a current `blocker` or `major` defect within scope. Only accepted
+  findings reach the Producer; add guidance such as the fix the user chose.
+- `note-only`: valid but nonessential, including every `minor` defect. It goes
+  to the backlog.
+- `rejected`: not a current defect. It is outside the review boundary,
+  unevidenced, contradicted by an authoritative source or explicit user
+  decision, already resolved, or a new idea that would change direction.
 - `needs-user-decision`: a current defect whose fix would change product
   behavior, UI behavior, technical direction, or an authoritative document, and
-  that the user chose to leave open. It goes to the backlog.
+  that the user chose to leave open.
 
-When such a defect blocks the run, ask the user before calling `decide`, then
-record the answer as `accepted` with guidance, `rejected`, or
-`needs-user-decision`. If the user needs time, stop; the run waits at
-`awaiting-decision`.
+When such a defect blocks the run, or a missing authoritative decision prevents
+judging a requested outcome, resolve it from a cited user decision or ask the
+user before `decide`, and carry the answer and its source into the guidance. If
+the user needs time, stop; the run waits. Never invent a requirement or severity
+to turn an optional question into a blocker, or dismiss a genuine gap to obtain
+a pass. A Producer `not-fixed` outcome returns with its rationale: accept the
+finding again only when that rationale is wrong; otherwise reject it or ask.
 
-A valid finding names an unmet requested outcome, a conflict with an
-authoritative input, a real validation failure, an internal contradiction, a
-regression from the latest change, a concrete security, permission,
-data-loss, or irreversible-action risk, or `excess`: code, a guard, an option,
-a test, or document text that the reviewed change adds without a supported
-trigger, consumer, or reader, such as a run report, tool limitation or
-task-scope disclaimer written into a document. Accepting a major `excess` finding sends its
-deletion to the Producer; trust-boundary protections and required gates are
-never excess. It cites a rule, a `path:line`, or a failing command. Require a supported trigger, unmet promise or concrete risk,
-user consequence, and smallest adequate correction in the existing finding
-fields. Judge that evidence rather than automatically accepting a severity
-label; the eligibility rules above still apply. For an added test, identify
-the distinct failure existing coverage misses. Read cited evidence and the
-relevant artifact/source sections, expanding only to resolve the finding.
-
-If a missing authoritative decision prevents judging a requested outcome,
-use the Reviewer's evidenced acceptance gap and question in existing finding
-prose. Resolve it from a cited user decision or ask before `decide`; leave it
-pending while waiting, and carry the answer and source into adjudication
-guidance. Do not invent a requirement or severity to turn an optional question
-into a blocker, or dismiss a genuine unresolved gap to obtain a pass. If the
-existing route cannot honestly represent the gap, report the limitation.
-Questions do not create extra reviews or revisions.
-
-Give every non-accepted finding a rationale a person can act on later and a
-priority (`high`, `medium`, `low`, or `none`), because it may reach the review
-backlog. Write the decisions to a JSON file outside the work tree, such as the
-system temporary folder, so the file never appears in a snapshot:
+Give every non-accepted finding an actionable rationale and a priority (`high`,
+`medium`, `low`, or `none`). Write the decisions to a JSON file outside the work
+tree:
 
 ```json
 {
@@ -719,166 +227,93 @@ system temporary folder, so the file never appears in a snapshot:
 }
 ```
 
-A Producer `not-fixed` outcome returns at the next adjudication with its
-rationale. Accept it again only when that rationale is wrong; otherwise reject
-it or ask the user. It never earns an extra revision.
+With `auto` adjudication the CLI decides routine findings and escalates the
+rest; decide escalations the same way and report automatic decisions that look
+wrong. Never pass `decide --max-reviews` or `--waive-reserve` without the
+user's explicit approval, or start another run on the artifact for more
+reviews.
 
-Put defects you notice yourself in the completion report. You adjudicate the
-review; you are not a second Reviewer.
+## Finalize And Close
 
-### Automatic Adjudication
+At `finalizing` the CLI gives you write ownership for one bounded batch:
 
-`adjudication = "orch"`, the default, leaves every finding to you. `"auto"`
-delegates routine adjudication to fixed CLI rules inside the run's request,
-artifact ownership and recorded decisions. Use it only when the user delegated
-adjudication, and record that per run with `start --adjudication auto`; the run
-shows `adjudication_source`. For each new finding the CLI applies, in order:
+1. Read the listed diff, the remaining accepted findings, and what they cite.
+2. Fix the local, in-scope findings in one batch, without a worker loop or
+   unrelated improvements.
+3. Record each finding whose fix is not local or would change behavior,
+   technical direction, or an authoritative boundary as `needs-user-decision`
+   with `decide`.
+4. Call `next`.
 
-1. A Reviewer `needs_user_decision = true` finding escalates to you, before
-   demotion. The Reviewer sets it when the fix changes product behavior,
-   requested scope, technical direction or an authoritative document, or the
-   authority to decide is missing.
-2. The usual demotion: no evidence, or not a blocker/regression after the
-   scope's first review.
-3. Any other `blocker` or `major` finding is `accepted`.
-4. A `minor` finding is `note-only` with priority `low`.
-5. A finding the Producer reported `not-fixed` and the Reviewer keeps open
-   escalates; one reported `fixed` and kept open is accepted again.
+Outside that batch and the acceptance edit below, edit no project file while a
+run is open; the Reviewer's independence depends on the Producer being the only
+writer.
 
-Independence boundary: the Producer never adjudicates, and its status, summary
-or outcome rationale cannot accept, close or escalate a finding. Escalation
-depends only on the Reviewer's `needs_user_decision` flag and the segment review
-budget, plus rule 5's Reviewer judgment on a `not-fixed` outcome. Any escalation
-pauses the whole round at `awaiting-decision`; nothing reaches the Producer until
-you decide the escalated findings with `decide`, so the run cannot end
-`independently-passed` before your decision. Handle escalations exactly as in
-the rules above. Pending findings show their `escalation` reason, `status --run`
-lists each finding's adjudicator (`auto` or `orch`) and rule, and the backlog
-prefixes automatic rationales with `[auto:<rule>]`. Report automatic decisions
-that look wrong in the completion report.
+A review-enabled `feature-delivery` request names the run's independent review
+as a selected gate: the Producer leaves the Plan's gate row `not run`, and a
+Feature's Plan and Map row stay `in_progress`. Before `close`, record content
+hashes of the acceptance-relevant files: the Plan, the Map when the Feature has
+one, and every file in the reviewed diff, but not `docs/review-backlog.md`,
+which `close` may append to. After the run ends `independently-passed`, is
+closed, and those hashes still match, make one finalization edit:
 
-## Finalization
+- When every other planned result already passed and the reviewed diff carries
+  the Producer's decision promotion, set the Feature's Map row `verified` and
+  retire the Plan as `feature-delivery` describes.
+- Otherwise, and for a standalone validation Plan, record only the gate row's
+  result and the Plan's current position.
 
-After the last permitted revision, the CLI hands write ownership to this
-session for one bounded batch. The `finalizing` event lists the final diff and
-the remaining accepted findings.
+On a hash mismatch, report the changed revision instead; further changes need a
+new run. After `completed-by-orchestrator`, or `completed-without-review` while
+a selected independent gate remains, leave the gate `not run`, keep a Feature
+`in_progress`, and report the missing independent pass. Otherwise
+`feature-delivery`'s normal completion rules apply.
 
-1. Read that diff, the remaining findings, and what they cite.
-2. Fix, in one batch, the accepted problems that are local and do not change
-   scope. Do not start another worker loop or make unrelated improvements.
-3. For each accepted finding you leave unfixed, because its fix is not local or
-   would change product behavior, UI behavior, technical direction, or an
-   authoritative boundary, record `needs-user-decision` with `decide`.
-4. Call `next`. The CLI snapshots the batch, reruns the applicable checks once,
-   and records the final status.
+When the run is `done`, report every unfixed accepted finding as open, then run
+`cross-agent close --run <id>`. Close an unfinished run with `--abandon` only
+when the user abandons it. Run `cross-agent forget-history --run <id>` only on
+the user's explicit request. Never delete session or history files by hand.
 
-Outside finalization, edit no project file while a run is open. The Reviewer's
-independence depends on the Producer being the only writer.
+After closing, continue to the next already authorized stage with fresh workers
+and a short handoff of the reviewed artifact, scope, current decisions and
+their sources, completed and next work, unresolved findings, gates, and
+evidence locators, not the prior transcript. An unresolved decision, a failed
+check, an unaccepted upstream result, or a missing required independent pass
+stops dependent stages.
 
-## Close
+## Completion Report
 
-When the run is done, run `cross-agent close --run <id>`. It appends the run's
-backlog items to `docs/review-backlog.md`, preserves the history CSV and retained
-evidence/handoff, and deletes ephemeral run state. Record session origin and a
-sticky user-driven marker before interactive control. User-supplied or ever
-user-driven sessions survive cleanup, including ones later used for production.
-Only CLI-owned sessions never driven by a user are eligible for provider cleanup;
-retain them if required evidence import or verification fails. A current blocker never reaches
-the backlog silently: report
-every unfixed accepted finding to the user as open before closing.
-
-For an unpromoted exploration, a failed evidence import does not block explicit
-abandonment: `handoff.json` records `evidence_gap`, the close report includes
-`discussion_evidence_gap`, and the provider session stays protected. A promoted
-run still requires verification of its imported evidence before close.
-
-A `failed` or `blocked` run stays open, and blocks new runs on its artifact,
-until the user decides. Close it only when the user says to abandon it; a run
-stopped in any other unfinished phase also needs `--abandon`.
-
-On an explicit request to remove retained local history, use
-`cross-agent forget-history --run <id>`. It removes only that run's retained
-local history/evidence, never provider sessions or product artifacts. Do not
-delete user session files by hand.
-
-## Section Commits
-
-Commit only when the user's explicit request or a project rule authorizes
-commits for the current task. Neither this Skill nor a stage Skill grants that
-authority; without it, report each section's outcome and leave changes
-uncommitted. With it, this session commits every finished bounded section
-before starting dependent work; workers never commit, and the Reviewer stays
-read-only. A section is one bounded design, planning, review or delivery run,
-or a reviewed Plan's execution segment ending in a checkpoint, not every
-heading or file.
-
-1. Commit only while no worker runs: after a checkpoint event, or after a run
-   stops as `done`, `failed`, `blocked` or parked. For a completed stage,
-   commit after `close` and any status-only finalization edit.
-2. Inspect `git status` and the section's diff. Stage only the exact
-   authorized source and result paths, then commit them by pathspec
-   (`git commit -m <message> -- <paths>`), so the user's other staged entries,
-   unrelated or untracked files, private configuration and the backlog that
-   `close` appends stay out. Never use `git add -A`. If a section file also
-   holds unrelated edits, report it instead of committing.
-3. Base the message on actual evidence: name the task or item, the section,
-   and its real outcome, such as `checkpoint, not independently reviewed`,
-   `independently-passed`, `completed-by-orchestrator`, `failed` or
-   `incomplete`, with the checks that actually ran. A checkpoint carries the
-   Producer's targeted segment checks; whole-stage `delivery_checks` run only
-   after a Producer returns `done` or finalization, and the selected independent gate only
-   when the stage's review finishes. Neither a
-   commit nor Orchestrator completion makes a section verified or passed, and
-   no extra review is required per segment beyond the selected gates.
-4. Do not amend, push, reset, check out, rebase or create empty commits unless
-   the user asks. Without a relevant diff, record the outcome in an existing
-   artifact that already owns it, such as the status-only edit, or in the next
-   section commit's message; never create a document to force a commit.
-5. A failed or incomplete section may be kept in a local recovery commit with
-   that truthful outcome. It stops dependent work, not the run's own
-   recovery: when `automatic_recovery_available`, still call `next` once as
-   the Run Loop directs. The commit neither spends nor restores a recovery,
-   revision or review allowance. `retry-producer`, `retry-review`, `park` and
-   `close --abandon` keep their existing authorization rules; never roll back.
-6. Committing changes neither the work tree nor run state. An open run's
-   original baseline, findings, checkpoints and spent budgets stay
-   authoritative, so the final review still covers earlier committed segments.
-7. Report each commit's revision (`git rev-parse --short HEAD`). A checkpoint
-   is saved before its commit, and a continuation Producer receives only the
-   original request and that checkpoint, so an execution stage's
-   `start --request` must tell every continuation Producer to read the current
-   revision with `git log -1 --format=%h` (Producers may always run read-only
-   `git log`) before more work. A new run's `start --request` names the
-   actual revision with its scope, decisions and checks. The CLI neither
-   records commits in history or run state nor edits saved checkpoints.
+Report the final status and its meaning: `independently-passed` (an independent
+review left nothing accepted), `completed-by-orchestrator` (you accepted the
+final state during finalization), or `completed-without-review` (the user's
+explicit opt-out). Then report reviews and revisions used, findings by
+disposition, finalization edits, checks actually run and their results, backlog
+items, commits or why none, open user decisions, defects you noticed, a failed
+run's state path, the history path, and unknown or partial usage. Update the
+agenda, then continue an authorized next stage or stop at the endpoint.
 
 ## Boundaries
 
-- Each worker runs only its assigned stage. The Orchestrator advances only
-  through stages covered by the user's task, respecting dependencies and gates.
-- Do not run the lifecycle Skill in this session; the Producer does.
-- Read and change run state only through `cross-agent` commands, never by
-  opening `.cross-agent/runs/`. `.cross-agent/config.toml` is configuration;
-  explicit configuration-change tasks may inspect and edit it, but workers
-  must not change it as part of a stage.
-- Do not read or search `docs/review-backlog.md` unless the user asks for a
-  backlog review or names an item ID.
-- Do not start another run on the same artifact to obtain more reviews; the
-  budget is the point.
-- Commit only as described in Section Commits; workers never commit.
+- Each worker runs only its assigned stage; do not run the lifecycle Skill in
+  this session.
+- Do not read `docs/review-backlog.md` unless the user asks for a backlog review
+  or names an item ID.
+- Commit only when the user's explicit request or a project rule authorizes
+  commits for the current task; workers never commit. Otherwise leave changes
+  uncommitted and report each section's outcome.
 
-## Completion
+## References
 
-Report the final status and what it means: `independently-passed` means an
-independent review left nothing accepted, while `completed-by-orchestrator`
-means this session accepted the final state during finalization.
-`completed-without-review` records the user's explicit opt-out and is not an
-independent pass. Also report
-reviews and Producer revisions used, findings by disposition, finalization
-edits, checks and their results, backlog items written, section commits made
-or why none was made, open user decisions,
-defects you noticed yourself, and a failed run's state path. Report the retained
-history path and any unknown or partial token coverage. Update the chat agenda
-and continue an authorized next stage; stop at the requested endpoint.
-"Finish development" means meet its checks, while CLI `close` performs the
-retention-aware cleanup described above. Never substitute cleanup for delivery.
+Read a reference only when its trigger applies:
+
+- [Initialization](references/initialization.md): an explicit initialization
+  request.
+- [Expert exploration](references/expert-exploration.md): direct expert
+  discussion before production, or a run in `explore`.
+- [Recovery and delivery controls](references/recovery-and-delivery-controls.md):
+  a `failed` or `blocked` run, a segment review or budget decision, a work tree
+  changed during review, or Delivery paused for replanning.
+- [Reporting and history](references/reporting-and-history.md): telemetry,
+  usage, or history questions, or a stage boundary that needs a context
+  handoff.
+- [Section commits](references/section-commits.md): authorized commits.
