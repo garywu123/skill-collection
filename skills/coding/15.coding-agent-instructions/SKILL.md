@@ -26,8 +26,8 @@ Infer the intent from the request once the Skill has been invoked.
 - `write`: create or continuously calibrate `AGENTS.md`. This is the default.
 - `audit`: report stale routes, unverified commands, duplicated rules, missing
   boundaries, and candidate changes without modifying a file.
-- `assess`: after a named change to architecture, testing strategy, commands,
-  project structure, or instruction routes, decide its impact on each
+- `assess`: after a named change that may alter a routed path, a verified
+  command, or a boundary that `AGENTS.md` states, decide its impact on each
   applicable instruction file, as described below.
 
 ## Instruction-Impact Assessment

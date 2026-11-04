@@ -330,3 +330,16 @@ current: `open`, `promoted`, `resolved`, or `dismissed`.
 - Evidence: `docs/diagram-conversion/product-brief.md:40`, `docs/diagram-conversion/architecture.md:41 (`%%` ID inside the block), :42 (sidecar next to source file; silent fallback), :75 (invalid data → fall back only)`
 - Proposed change: Keep the non-blocking fallback, but show a one-line notice when a diagram has a `%%` ID and no matching geometry (or when an entry for that ID exists but no longer fits), and don't prune unmatched entries on save. No extra machinery is needed.
 - Rationale: Missing/mismatched layout feedback is useful for the future UI plan; preserve the note without adding recovery infrastructure to the confirmed-rules revision.
+
+## RB-0026: A1 deletes findings that A2 can leave referenced by permanent owner documents.
+
+- Type: `note-only`
+- Status: `open`
+- Priority: `low`
+- Source: run `20261103-214836-general-5fb9`, finding `R1-004`
+- Artifact: `docs/plans/decision-ownership-and-collection-trim.md` (general)
+- Base: `09f428d` with uncommitted changes
+- Claim: A1 deletes findings that A2 can leave referenced by permanent owner documents.
+- Evidence: `docs/plans/decision-ownership-and-collection-trim.md:43 deletes review plans and findings.`, `docs/plans/decision-ownership-and-collection-trim.md:56 requires promoted decisions to retain a source link.`, `skills/coding/30.feature-plan/SKILL.md:248 permits a review finding to be the decision source.`, `skills/coding/40.feature-delivery/SKILL.md:282 repairs links to retired Plans, but A1 provides no equivalent repair for retired findings.`
+- Proposed change: Before deleting review documents, replace their incoming links with a durable source or a revision-qualified locator. Use the existing documentation link check for affected references.
+- Rationale: Minor; fold in cheaply if natural: the promoted rule's source link points to a long-lived source or a revision-qualified locator, never to a temporary Plan or review document.

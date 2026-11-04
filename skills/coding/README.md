@@ -74,79 +74,19 @@ validation 写 `docs/plans/<topic>.md`，不需要 Brief、Map 或虚构的 Feat
 （`supported`/`not supported`/`inconclusive`）分开：否定结论也算完成实验，证据缺失则是
 `incomplete`；实验不验证任何 Feature。
 
-`cross-agent`（Orch）让当前会话像 PM 一样理解任务、安排阶段并汇报实时进度，适用于
-设计、带总体设计的 Roadmap、重构计划与执行，以及指定 Features。Skill 自带的 CLI
-（Python 3.11+）每个 run 仍只处理一个阶段和一个 artifact，启动 Claude Code 或 Codex
-Producer 与只读 Reviewer。用户一次授权多个阶段时，Orch 在前一阶段通过后自动继续，
-不同阶段使用新 session；同阶段专家可从探讨继续产出。用户要求人工批准时等待回复，只请求规划不会自动授权执行。
-`next --stream` 显示阶段 Skill 正文注入成功（路径/hash/加载方式）、worker 就绪后的阶段
-开始、活动、可获得的模型/context/sub-agent 信息和心跳；未知数据明确标注。CLI 对
-Producer 的 timeout/明确瞬态连接错误每 run 自动恢复一次，优先 resume 原 session；
-失效 session 或超过该角色的 context 阈值才替换，并保留历史。默认单次调用仍为 30 分钟硬上限。
-失败的执行可在修复原因后用 `retry-producer` 明确重试；`retry-review` 保留 Producer 与
-审阅预算，blocker 通过 `answer` 传递用户决定，schema 和只读校验失败不可绕过。
-执行阶段的 `checkpoint` 保存真实验收证据与未完成工作，`checkpoint_session = "resume"`
-时下一次 `next` 继续同一个 Producer session，`"fresh"`（旧配置的行为）时新开；仍为同一个
-run，原始 baseline、findings 和 review 预算保留。每 run 最多八个 checkpoint；全部完成后才
-整体检查并交给 Reviewer 从 baseline 做最终评审。可选的 `segment_review` 让 Delivery 的每个
-checkpoint 先按该 segment 的计划结果评审、修复、复审，次数计入总预算并为最终评审保留余量；
-可选的 `adjudication = "auto"` 按固定规则裁决，只在 Reviewer 标记 `needs_user_decision`、
-segment 评审次数用完或 `not-fixed` 仍未解决时交给 Orch，Producer 从不裁决。
-只有用户请求或项目规则明确授权 commit 时，Orch 才在每个完成的有界 section（一次设计、
-规划、审阅或交付 run，或 Plan segment 的 checkpoint）结束、worker 停止后提交本地 commit：
-只按路径提交该 section 的变更，不碰用户其他暂存、未跟踪文件和私有配置；message 写真实
-结果（checkpoint 未独立审阅、`independently-passed`、`completed-by-orchestrator`、失败
-等），commit 不代表验证通过；默认不 amend、push、reset 或空 commit。失败 section 可保留
-恢复 commit，但停止依赖工作、不回滚也不关闭 run；可用的一次自动恢复照常进行，commit
-既不消耗也不补充任何预算。commit 不改变 run 的原始 baseline、findings 和预算，最终评审
-仍覆盖已提交的 segment。checkpoint 先于 commit 保存，所以执行阶段的 `start --request`
-要求每个后续 Producer 先用 `git log -1 --format=%h` 读取当前 revision；新 run 的请求直接
-写明 revision。worker 永不 commit；直接调用的
-Feature Delivery 只有获得明确授权时才按 segment commit。Skill 本身不构成 commit 授权。
-每次评审都附带该 revision 固定的确定性测试变更摘要：测试、fixture/mock、runner/配置路径
-与原始 hunk，支持框架的 skip/过滤标记，以及检查退出码；计数只来自 `test_reports`
-配置的新鲜 JUnit XML，其余为未知。未检测到变化不代表测试充分。
-CLI 自动保存 `.cross-agent/history/<run-id>.csv`：每次 Producer/Reviewer 调用一行，
-包括 Feature/主题、round、segment/session、模型/effort、UTC 起止时间、耗时、状态和
-可获得的 token 用量；`start --item` 可让同一功能跨阶段使用相同分组。
-`history` 命令汇总到 `.cross-agent/history.csv`，`close` 后仍保留。未知用量留空，
-部分用量明确标注；统计范围是父 worker 调用，不包含当前 Orch，不能保证覆盖子 agent。
-用户把失败的 Delivery 转回规划时，`park` 暂存旧 run 并保留历史；同一 Plan 独立审阅
-通过后，`resume-delivery` 新开 Producer，保留原 Delivery baseline 和剩余预算。
-在对话中显式请求 `cross-agent initiate` 时，Orch 根据项目说明和已有构建、测试定义选择命令，
-通过 CLI 的 `init` 创建当前项目根目录的 `.cross-agent/config.toml`，保存 Producer/Reviewer
-的模型和 effort，并检测已安装 Codex CLI 与 npm 最新发布版本；已有设置保留并报告差异。
-新配置从 `cross-agent/assets/config.example.toml` 初始化；Python 不提供运行默认值。
-后续调用只读取项目配置，运行控制参数、完整的 `provider:model:effort`、所选 CLI 的绝对路径
-和当前项目的三个字段必须齐全，缺项报错；空命令或目录列表必须明确写成 `[]`。
-可选的 `[stages.<阶段>]` 可用同样完整格式为该阶段设置 `producer` / `reviewer`；每个角色
-依次取 run 覆盖、所选专家角色、阶段角色、默认角色，`status` 与 run 事件显示最终选择和来源，无效选择
-在启动 worker 前失败。run 保存启动时的角色和 Skill 路径，之后改配置不影响已打开的 run。
-`start --skill` 可按 run 选择逻辑 Skill 或路径；可选 `[experts.<logical-skill>]` 配置
-`skill`、`producer` 和 `reviewer`，复用现有项目配置，不新增强制配置文件。旧 Map、Plan、
-配置和非探索调用不需要迁移。`general` 没有 run、专家或阶段 Skill 选择时不注入 Skill。
-默认不读取用户目录或父目录配置。可用单层 `config_file` 入口共享 workspace 配置，各项目命令保持分区；启动、恢复和版本检测使用配置中的同一 CLI 选择，路径缺失或失效时不回退 PATH。初始化不自动升级 CLI、不执行项目测试或启动 worker；
-无法检测版本时明确报告未知，缺少配置本身不触发初始化。
-
-专家可从 `start --first explore --skill <name>` 参与，由 `expert --run` 打开只读 Claude
-终端。Claude 或 Codex 当前会话都可担任 Orch；直接 Codex 专家讨论沿用 relay/evidence
-路径，本版本不承诺原生交互入口。退出终端只交回控制权，明确授权写入后由 `promote`
-检查探索以来的变更、保留原始讨论证据，并优先恢复同一专家生产。Reviewer 是独立的
-只读 session，核对原文、上游、代码和真实检查，不只读作者总结。正式产出默认 review；
-用户明确选择本轮不审阅时，记录原因并报告未独立审阅，必要自检仍执行，不能冒充已选
-关卡通过。无需永久 Tester role，具体独立测试缺口用已有 validation 路径。
-`close` 保留 `.cross-agent/history/<run-id>/` 中讨论证据和交接，用户参与过的 session
-不自动删除；明确要求时 `forget-history --run` 只删除本地保留历史，不删除 provider session。
-
-Unpromoted exploration can be explicitly abandoned after a launch or evidence-import
-failure: `handoff.json` records `evidence_gap`, and the provider session stays protected.
+`cross-agent`（Orch）让当前会话像 PM 一样安排阶段、启动 Claude Code 或 Codex 的
+Producer 和只读 Reviewer，并汇报进度；每个 run 只处理一个阶段和一个 artifact，审阅次数有限，
+只有明确授权时 Orch 才逐 section 提交本地 commit，worker 永不 commit。CLI 命令、恢复、
+checkpoint、配置和历史记录见 [`cross-agent/SKILL.md`](cross-agent/SKILL.md) 和
+[使用教程](_doc/cross-agent-guide.md)。
 
 变更只向下传播：Brief -> Spec -> Architecture/Testing Strategy -> Roadmap -> Map ->
 Plan -> 代码。交付发现上游文档有误或中途收到已授权的变更时，Delivery 停下受影响的
 工作并报告；由用户，或在已授权目标内由 `cross-agent` Orch 协调，先改上游 owner，再改
 所有受影响的中间契约（如 Architecture Design、Testing Strategy），再改 Storyboard 和
 Map 行，再改 Plan（记录一行原因和影响），只把失效的结果重置为 `not run`；这些 owner
-都对齐之后才能做下游验收。架构、测试策略、命令、项目结构或文档路由变化后，需要由
+都对齐之后才能做下游验收。Plan 的 Sources 已记录用户或 owner 做出的替换决定（如评审中已定的条目）
+不算冲突：先规划、实现，交付时再由 Delivery 写进 owner 文档。变化可能影响 AGENTS 里的文档路由、已验证命令或边界时，需要由
 `coding-agent-instructions` 的 `assess` 给每个相关指令文件一个结果：`updated`（附已验证
 证据的机械更新）、`unchanged`（附原因）或 `unresolved`（附原因和需要的决定）；新的语义
 规则只上报不写入。这是评估，不是每个 Feature 都改 `AGENTS.md`。Orch 只为实质影响产品行为、已接受约束、权限、成本或用户明确关卡的未决
@@ -177,9 +117,9 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`feature-map`](20.feature-map/SKILL.md) | 探讨或写入合适规模的 MVP 交付结构：小项目一张 Map，大项目拆为 Roadmap 和子 Map；只管结果、依赖和状态，链接 Architecture Design | `docs/feature-map.md`，或 `docs/feature-maps/` |
 | [`feature-storyboard`](25.feature-storyboard/SKILL.md) | 按需把一个 UI Feature，或拆 Feature 前一个早期产品问题，做成可点击的线框 app 故事（一个文件一个用户故事），套用项目共享的 app shell，展示关键状态和交互，并可切到全状态 overview 检查死路和漏掉的分支 | `docs/storyboards/<feature-id>-<slug>.html`；多个故事时为 `<feature-id>-<n>-<story-slug>.html` 加索引 `<feature-id>-<slug>.html`；早期为 `docs/storyboards/<topic-slug>.html` |
 | [`feature-plan`](30.feature-plan/SKILL.md) | 创建、修订或重开单个 Feature 的实现与验证计划（分段、当前执行位置、风险与测试设计）；一个已定规则或精简横跨多个已交付 Feature 时写一份 Change Plan（变更点表、规则只在入口校验一次、owner 测试只测一次）；或为有界技术问题写 standalone validation 计划；Plan 是工作文档，verified 后由 delivery 删除，内容留在 git 历史 | `docs/features/<feature-id>-<slug>.md`；Change Plan 和 validation 为 `docs/plans/<topic>.md` |
-| [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，增量 TDD：编辑时只跑 focused 测试和失败重跑，segment 边界跑 owner 和改动契约的 consumer，最终 tree 只跑一次全量；结果一行绑定 commit（`passed n/n @ sha`），不写 hash、manifest、log 路径或已解决的失败历史；测试在执行前就因环境失败时不重试、不诊断，报告一次后交给能执行的一方；全部场景通过后把 Plan 中的持久决定上移到所属 design 小节（当前规则、一两句、无历史），verified 时删除 Plan 并把链接指向验证 revision；选定独立关卡时只报告 readiness；或执行 validation 计划并分别记录执行状态与结论；在 Orch 下不 commit，直接调用且明确授权时按 segment commit | 更新代码、Feature Plan 和 Feature Map 状态；validation 只更新其计划 |
+| [`feature-delivery`](40.feature-delivery/SKILL.md) | 自动实现、精简或指导用户实现一个已规划 Feature，增量 TDD：编辑时只跑 focused 测试和失败重跑，segment 边界跑 owner 和改动契约的 consumer，最终 tree 只跑一次全量；结果一行绑定 commit（`passed n/n @ sha`），不写 hash、manifest、log 路径或已解决的失败历史；测试在执行前就因环境失败时不重试、不诊断，报告一次后交给能执行的一方；全部场景通过后把 Plan 中的持久决定上移到 AGENTS.md 路由的所属长期文档（默认 Architecture Design；当前规则、一两句、无历史），找不到 owner 时保留 Plan 并报告，verified 时删除 Plan 并把链接指向验证 revision；选定独立关卡时只报告 readiness；或执行 validation 计划并分别记录执行状态与结论；在 Orch 下不 commit，直接调用且明确授权时按 segment commit | 更新代码、Feature Plan 和 Feature Map 状态；validation 只更新其计划 |
 | [`cross-agent`](cross-agent/SKILL.md) | `initiate` 初始化 repo 独立配置、模型/effort（可按专家和阶段设置）和 Codex CLI 版本检测；PM 式 Orch 编排已授权的设计、规划、执行或多 Feature 阶段，实时汇报 worker 状态；专家从只读讨论连续进入生产，正式产出默认独立 review（用户可明确跳过），限定审阅次数并裁决 findings，每次评审附确定性测试变更摘要，按功能/主题保留调用历史；明确授权时由 Orch 逐 section 提交本地 commit | 项目根目录 `.cross-agent/config.toml`；各阶段 artifact 与对话进度；`.cross-agent/history/` 的时间与用量 CSV，`history` 可汇总；非阻塞遗留项追加到 `docs/review-backlog.md` |
-| [`simplification-review`](simplification-review/SKILL.md) | 对已有仓库做业务驱动的精简评审：先粗读仓库并按行业知识逐轮追问业务规模、精度、信任边界等约束（不限题数，每题附场景和推荐答案），确认后写入 Spec 或 Brief；再写评审计划（模块与跨模块调用链），之后每次只评审一个批次（先跨模块、后模块），批次开始先问专项问题，产出 findings；不改代码，选中的条目交给 `feature-plan` 或 `feature-delivery` | `docs/reviews/00.review-plan.md` 与每批 `docs/reviews/<NN>.<slug>.md`；字数预算由 `scripts/Measure-ReviewDoc.ps1` 检查 |
+| [`simplification-review`](simplification-review/SKILL.md) | 对已有仓库做业务驱动的精简评审：先粗读仓库并按行业知识逐轮追问业务规模、精度、信任边界等约束（不限题数，每题附场景和推荐答案），确认后写入 Spec 或 Brief；再写评审计划（模块与跨模块调用链），之后每次只评审一个批次（先跨模块、后模块），批次开始先问专项问题，产出 findings；不改代码，选中的条目交给 `feature-plan` 或 `feature-delivery`；全部条目完成或否决、Change Plan 都交付后收尾，确认决定已进 owner 文档，内容已在 commit 中时删除评审文档 | `docs/reviews/00.review-plan.md` 与每批 `docs/reviews/<NN>.<slug>.md`（收尾时删除）；字数预算由 `scripts/Measure-ReviewDoc.ps1` 检查 |
 | [`document-simplification`](document-simplification/SKILL.md) | 显式调用，精简一两份已有文档：先以目标读者身份通读、找出读不通的地方；结构要变时先给用户看大纲，只改表达时直接重写；保留读者需要的事实，已定规则写进其 owner 文档，非阻塞的后续改进按项目已有 backlog 的规则处理，阻塞当前内容的问题写进 owner 的未决问题并问用户；HTML 另查渲染后的可读性和导航；references 给出常见形状和反例（数据分析、文件夹 README、通用反模式），不是模板；新反例只向用户提议，不自动写入 | 按需重写指定的 `.md` 或 `.html` 文件；报告每份的读者、结构、前后字数和移走内容的去向 |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
@@ -200,7 +140,7 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | Feature Storyboard | 一个 UI Feature 或早期产品问题的可见状态和转换，未确认行为标为 `candidate` | 已确认需求、虚构 Feature ID、实现设计、测试、状态 |
 | Feature Plan | 该 Feature 的当前执行位置、执行阶段、依赖、验收、交接、委派选择、测试设计、选定的独立关卡、关键决定与变更原因，以及真实结果 | 上游内容的复制、transcript 和例行活动日志 |
 | Validation Plan | 一个有界问题的假设、输入、oracle、步骤、指标、预算与停止条件、证据、判定标准、执行状态和结论 | Feature ID、Map 状态、所支持决定的正文 |
-| Simplification Review | 评审计划（批次、范围、当前位置）和每批的问答、findings 清单与条目（场景、建议、必须保持的行为、状态）；计划 ≤ 1,000 词，每批 ≤ 2,000 词，每条 ≤ 150 词 | 命令、测试计数、评审轮次、历史，产品约束本身（归 Spec 或 Brief） |
+| Simplification Review | 评审计划（批次、范围、当前位置）和每批的问答、findings 清单与条目（场景、建议、必须保持的行为、状态）；计划 ≤ 1,000 词，每批 ≤ 2,000 词，每条 ≤ 150 词；评审收尾时删除 | 命令、测试计数、评审轮次、历史，产品约束本身（归 Spec 或 Brief） |
 | Review Backlog | `cross-agent` 裁决后未进入本次修订的非阻塞遗留项及其理由 | 未告知用户的当前 blocker、prompt、transcript、token 日志、快照、需求或计划内容 |
 
 `cross-agent` 在 checkpoint 保持 Plan 的当前位置，并在 Plan -> Delivery、Feature
@@ -215,7 +155,7 @@ branch/本地 commit 约定写入 AGENTS；这不启动 Feature，也不授权 p
 项目名和命名差异在项目中确定，模型/effort 留在 cross-agent 配置，具体步骤和结果留在 Plan。
 
 下游文档链接上游文档，不复制上游内容。用户指定的既有 domain knowledge 只是可选
-输入，不由任何 Skill 创建或维护。
+输入，不由任何 Skill 创建；`feature-delivery` 只把 AGENTS.md 路由到它的已定规则写进去。
 
 ## Feature 状态
 

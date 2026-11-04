@@ -56,7 +56,7 @@ acceptance results stay in the Plan.
 
 A Plan is a working document, not a record. It exists while its work is
 `planned`, `in_progress` or `blocked`. When the work is `verified`,
-`feature-delivery` promotes its durable decisions into the Architecture Design
+`feature-delivery` promotes its durable decisions into their owning documents
 and deletes the Plan; git history keeps it. Write it for its executor and
 reviewer, and keep segment results current by replacing the previous result in
 the same row or line instead of adding one per run.
@@ -114,7 +114,10 @@ by its owner, then every affected intermediate contract such as the
 Architecture Design or Testing Strategy by its owner, then affected
 Storyboards and Map rows, then this Plan. When a linked source still
 contradicts the change, report it for its owner instead of planning against
-either version. Add
+either version. A replacement that the Plan's Sources record as already decided
+by the user or the owning document's owner, such as a decided review item, is
+not a source conflict: plan against it before the owner text changes;
+`feature-delivery` writes it into the owner. Add
 one `## Decisions` line with the reason and impact, link an external
 change-request record when the organization requires one, and reset only the
 results and segments the change invalidates. Never rewrite an authoritative
@@ -130,8 +133,12 @@ project evidence first. Plan tests for the risks that matter; do not restate the
 strategy.
 
 Read prior decisions before asking; preserve confirmed answers unless new
-evidence conflicts. Ask only unresolved questions whose answers change design
-or acceptance, in user terms, explaining the consequence: where and by whom
+evidence conflicts. Identify only the business bounds, such as scale, accuracy,
+input ranges or trust boundary, that could change this Feature's design or
+acceptance, and reuse confirmed answers; with none missing, ambiguous or
+contradicted, proceed without an interview. Ask only unresolved questions whose
+answers change design or acceptance, in user terms, with a concrete scenario
+and a recommended answer, explaining the consequence: where and by whom
 the app is used, whether edits overlap, what data must survive a failure, or
 whether retrying manually is acceptable. Select only material questions, not
 a fixed interview. In existing scenario rows or decision prose, connect a
@@ -144,6 +151,12 @@ A missed case under an existing requirement belongs in this Plan. A new
 business rule or resource budget needs a decision by its owning source: record
 it as a blocker or open question instead of inventing a threshold. Report a
 reusable testing rule for `testing-strategy`.
+
+Enforce each admission rule in its canonical owner where input enters and route
+every relevant entry through it; downstream code trusts admitted values.
+Additional validation requires a named distinct trust boundary or invariant.
+Preserve required protections; report a contract change to its owner rather
+than deleting the protection.
 
 Record each independent review or testing gate that the user's request or
 project rules make mandatory as a Validation row, or an Evidence row in a
@@ -168,6 +181,13 @@ becomes mandatory only when the user or project rules select it.
    code; an existing repository facility; the standard library, framework, or
    native platform; an installed dependency; then the minimum new code. Stop at
    the first option that satisfies the intended outcome and current constraints.
+   For each material limit, safeguard or fallback, compare the simplest
+   alternative under the supported scenario, and clarify whether a stated
+   capacity is a minimum to support or a maximum to admit. Report a
+   conflicting or apparently unnecessary contract, other than a decided
+   replacement, to its owner before planning
+   work that depends on it; citing a requirement alone does not justify
+   machinery beyond it.
 4. Derive risks and questions as described above. Define the smallest
    implementation sequence and concrete tests. Number steps and segments
    `Step 10`, `Step 20`, leaving gaps for inserted steps; never use `S10`,
@@ -198,14 +218,9 @@ inventories. A segment boundary is also a recovery point that an executor
 authorized to commit can commit on its own; the Plan itself authorizes no
 commit.
 
-Propose subagents only for substantial independent tasks with stable contracts,
-disjoint ownership and resources, and focused verification, when execution
-savings exceed briefing, rereading, review, and integration costs. Keep shared
-types, schemas, routes, and integration with the parent. State "serial" when
-delegation is not worthwhile; do not launch implementation subagents here.
-Give a proposed delegate only its task, owned paths, necessary contracts and
-instructions, checks, and expected brief result with evidence. Delivery
-reassesses these boundaries and owns the actual launches and concurrency limit.
+Propose subagents only when `feature-delivery`'s delegation conditions clearly
+hold, naming each delegate's task, owned paths and checks; otherwise state
+`serial`. Delivery reassesses and owns launches.
 
 Reserve a final integration segment for the whole Feature's acceptance checks,
 the Testing Strategy's `fast` regression, and the `Feature gate` suites that
@@ -216,7 +231,9 @@ Feature contributes to one. Name each segment's focused checks as a
 runnable command or test filter, such as a test-class or test-file filter,
 rather than "run the tests", so the executor does not fall back to the whole
 suite. A single-segment Plan likewise names its focused checks separately from
-the final regression run. Multiple worker calls or sessions do not create new Feature
+the final regression run. Reconcile Plan commands, Testing Strategy triggers and
+any orchestrator-configured checks, and name who runs each; an undefined
+`fast` suite does not imply the full suite. Multiple worker calls or sessions do not create new Feature
 IDs, reset the original baseline, or replenish the run's review budget.
 
 ## Change Plans
@@ -230,9 +247,8 @@ with these differences:
 - Sources name the decision's owner, such as a specification or design
   section or a review finding, and every affected Map row.
 - `## Implementation` holds one table of the change points: entry point or
-  symbol, owning Map row, the change, and its owner tests. Enforce a rule once
-  where input enters; downstream code trusts admitted values, so do not add a
-  second check at a later layer without a named trust boundary.
+  symbol, owning Map row, the change, and its owner tests. Enforce the rule
+  once, as Risks And Questions describes.
 - Happy and failure paths test the rule once in its owner tests, at the limit
   and just beyond it; other entries need one row each proving they route to
   that rule, not a copy of its boundary cases.
@@ -277,10 +293,7 @@ decision's owner, such as `architecture-design`.
 
 ## Consistency Check
 
-Before finishing, re-read the brief, this Feature's map row and cited
-requirements, the linked Architecture Design and Testing Strategy sections, and
-any linked Storyboard; for `validation`, re-read the request and named sources.
-Keep only Plan-specific execution, tests, and results here; link instead of
+Before finishing, re-read the Workflow step 1 sources this Plan cites. Keep only Plan-specific execution, tests, and results here; link instead of
 repeating product, requirement, architecture, testing-rule, or visual-flow
 content. Confirm the current position matches the Plan's statuses, results, and
 blockers. Report a requirement the row cites but this Plan cannot deliver; do

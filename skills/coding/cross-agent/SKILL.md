@@ -315,7 +315,8 @@ changed requirement or design owner, then every affected intermediate contract
 such as the Architecture Design or Testing Strategy (`general` naming its
 Skill), then affected Storyboards and `feature-map`, then `feature-plan`, then
 Delivery in a new run or through `resume-delivery`. Downstream acceptance waits
-until each affected owner is reconciled. An open Delivery run holds its
+until each affected owner is reconciled. A replacement the Plan's Sources record
+as already decided needs no upstream pass; Delivery promotes it. An open Delivery run holds its
 artifact: park a failed one as described below; closing a blocked one still
 needs the user's consent. Ask the user only for an unresolved choice that
 materially affects product behavior, accepted constraints, permissions, cost

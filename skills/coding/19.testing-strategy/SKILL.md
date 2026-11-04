@@ -134,7 +134,7 @@ and the Feature Plans that link it. Fix stale names, paths, and commands here.
 Keep testing rules only here: link requirements and architecture instead of
 copying them, and report a conflict with them to their owner. Report Plans
 whose tests no longer satisfy a changed rule for `feature-plan` to revise, and,
-after a changed rule, command, or strategy path, that an instruction-impact
+after a changed command or strategy path, that an instruction-impact
 assessment by `coding-agent-instructions` is needed.
 
 ## Completion

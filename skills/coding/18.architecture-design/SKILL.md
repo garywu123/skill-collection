@@ -51,8 +51,8 @@ Write the current state only. A decision states the rule and, when it is not
 obvious, its reason in one sentence and its requirement or source link; dates,
 run IDs, review rounds, and how the decision was reached stay in git history.
 
-`feature-delivery` promotes each durable decision of a finished Plan into the
-owning section here. Accept it as a current rule, merge it with what the
+`feature-delivery` promotes each durable decision of a finished Plan that this
+design owns into its owning section here. Accept it as a current rule, merge it with what the
 section already says rather than appending, and apply the budget above.
 
 Cover only what applies:
@@ -136,8 +136,9 @@ project has the checker, and simplify or split as in Output. Fix stale names, pa
 the design and in migrated Map sections. Keep architecture only here. Report,
 without editing, each Map row and Plan whose recorded evidence a semantic
 change invalidates, for `feature-map` and `feature-plan` to reconcile; report
-a measurement need for `testing-strategy`, and, after a semantic change or a
-created, moved, renamed, split, or migrated design path, that an
+a measurement need for `testing-strategy`, and, after a change to a boundary that
+`AGENTS.md` states or a created, moved, renamed, split, or migrated design
+path, that an
 instruction-impact assessment by `coding-agent-instructions` is needed; do not
 edit instruction files here.
 

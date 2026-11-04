@@ -19,7 +19,10 @@ intended behavior.
 | Evidence, decisions, or source materials | `<path-if-maintained>` |
 | Code style for every language in this repository | `docs/code-style.md` |
 
-Read only the route the current task needs. Rename placeholders to match
+Read only the route the current task needs. The same routes decide where a
+settled rule is recorded: write it into the long-lived document whose row
+covers that kind of content; a route to task material or evidence does not
+qualify. Rename placeholders to match
 project terminology, delete rows the project does not maintain, and delete this
 section when no document route exists.
 
@@ -62,6 +65,9 @@ section. Never include unselected policy or unresolved placeholders.
 4. Validate changed outputs with applicable verified checks.
 5. Report only results actually produced or observed.
 6. Report unknowns, conflicts, assumptions, and remaining risk.
+7. When a Skill reports a follow-up that another Skill owns and that needs no
+   new decision, such as an instruction-impact assessment, do it in the same
+   task; ask the user only for decisions.
 
 ## Reporting
 

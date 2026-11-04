@@ -32,17 +32,16 @@ For behavior-preserving simplification, these sources define intended behavior;
 existing code is evidence, not authority.
 
 Stop and report the missing item when the feature has no plan, its sources
-conflict, or an unresolved decision changes observable behavior. Delivery never
-edits the Functional Specification, Architecture Design, Testing Strategy, or
-Roadmap, except the decision promotion in Delivery Loop step 6, and never rewrites an authoritative input or expected result to make a
-failing test pass. When implementation shows one of them is wrong, or an
-authorized change arrives mid-delivery, stop work on the affected behavior and
-report the conflict or change. The user, or an Orchestrator authorized for the
-objective, routes the update to the owner first, then every affected
-intermediate contract such as the Architecture Design or Testing Strategy,
-then the Map row, then the Plan. Continue only after linked sources agree with
-the change, from the revised Plan, rerunning only the invalidated
-results and the relevant regressions. Do not start an adjacent workflow merely
+conflict, or an unresolved decision changes observable behavior. A replacement
+that the Plan's Sources record as already decided is not a conflict; implement
+it and promote it in Delivery Loop step 6. Delivery never edits the Functional
+Specification, Architecture Design, Testing Strategy, Roadmap or other owner
+documents, except that promotion, and never rewrites an authoritative input or
+expected result to make a failing test pass. When implementation shows one of
+them is wrong, or an authorized change arrives mid-delivery, stop work on the
+affected behavior and report it. Continue from the revised Plan once linked
+sources agree, rerunning only the invalidated results and the relevant
+regressions. Do not start an adjacent workflow merely
 because an input is missing. Use multiple Skills only when the user's original
 request covers their outcomes.
 
@@ -119,16 +118,9 @@ only then report `done` and update status according to real acceptance results.
 
 ## Delegation
 
-Work in the current context by default. Subagents are not free: each one repays
-its cost only when it replaces work that the parent would otherwise do serially,
-and a brief plus re-reading the feature's sources is itself real cost. Do not
-launch a subagent to isolate context, to look parallel, or to split a single
-plan step. Serial execution is the norm. Meeting the conditions below permits
-delegation; it does not make delegation preferable. Delegate only when the
-expected execution saving clearly exceeds briefing, rereading, review, and
-integration cost. Never reshape a Plan merely to create parallel work.
-
-Delegate only when every condition holds:
+Work serially in the current context by default. Delegate only when the
+expected saving clearly exceeds briefing, rereading, review, and integration
+cost, and every condition holds:
 
 - Two or more remaining Plan steps are genuinely independent and touch
   disjoint files and symbols.
@@ -140,20 +132,12 @@ Delegate only when every condition holds:
 - Each step is substantial enough that the delegation brief is a small part of
   its work, not a one-file edit or a single test row.
 
-Otherwise implement serially. Run at most three subagents at once, and use fewer
-when their boundaries are close to overlapping. Do not concurrently run work
-that can modify the same files or generated outputs, or compete for a database,
-port, service, or other shared resource. When isolation is uncertain, serialize
-the affected edits or commands. The execution environment may use an isolated
-workspace when it provides one; this Skill does not require or manage a
-particular isolation mechanism.
-
-Give only necessary task context, contracts, and applicable instructions; do
-not copy the full parent transcript or require a whole-repository reread.
-Each brief states the Plan step boundary, the files the subagent owns and must
-not leave, the smallest-change and avoid-speculative-abstraction constraints,
-and the focused verification it must perform. When two subagents turn out to
-need the same file, stop that split and finish it in the parent.
+Run at most three subagents at once, never two that can modify the same files
+or compete for a database, port, or other shared resource; when unsure,
+serialize. Each brief states the Plan step boundary, the files the subagent
+owns, the smallest-change constraint, necessary contracts, and its focused
+verification; no full transcript. When two subagents turn out to need the same
+file, finish that work in the parent.
 
 The parent always keeps integration, the broader validation run, the consistency
 check, and every Feature Plan and Feature Map status update. Report a delegated
@@ -217,7 +201,12 @@ decision owner's document.
    assertions check the expected result.
 2. Work through each relevant failure path in the same way. Do not add generic
    edge cases unrelated to the feature.
-3. Inspect only the current diff for delegation-only wrappers,
+3. Throughout steps 1 and 2, before adding a limit, safeguard, fallback or
+   broader check that the Plan does not name, identify its supported scenario
+   and simplest adequate alternative. Add focused checks within existing
+   requirements; pause the affected work only when resolution needs a new
+   business rule, a contract change, a material scope or cost decision, or a
+   change to a selected gate. Then inspect only the current diff for delegation-only wrappers,
    one-implementation interfaces, one-product factories, constant
    configuration, unused flexibility, and unnecessary dependencies. Remove an
    item only when current intended behavior and constraints do not require it;
@@ -265,31 +254,42 @@ decision owner's document.
    them. A durable decision is a rule a later change must respect, such as a
    contract, default, limit, compatibility rule, or ownership choice; step
    order, test layout, and evidence are not. Write each into its owning
-   Architecture Design section as the current rule, merged with what that
-   section already says, in one or two sentences with its requirement or
-   source link and no date or history, following `architecture-design`'s
-   budget. A decision that changes an existing contract rather than adding to
-   it is not a promotion: stop and report it for `architecture-design`. Move
+   long-lived document as the current rule, merged with what that document
+   already says, in one or two sentences with a long-lived source link and no
+   date or history, following that document's budget, format and edit rules.
+   The owner is the document the project's `AGENTS.md` routes that kind of
+   rule to, such as a domain page, report definition or research README;
+   without a route, technical contracts go to the Architecture Design. When a
+   durable decision has no identified owner or its route is ambiguous, keep
+   the Plan and report the unresolved promotion. Replacing an existing rule is
+   promotion when the Plan's Sources record it as already decided by the user
+   or that document's owner, such as a decided review item; otherwise stop and
+   report it to that document's owner. Move
    an open gate, such as a deferred measurement, to the Map row or Testing
    Strategy that owns it.
    Set the Map row `verified` only when every planned scenario passes, no
-   blocker remains, and no selected independent gate is still pending. Then
-   retire the Plan: delete it and its detail folder, point the Map row and any
+   blocker remains, and no selected independent gate is still pending. Then,
+   once every durable decision is placed, retire the Plan: delete it and its detail folder, point the Map row and any
    link that named the Plan at the verifying revision, and leave the Plan's
    content to git history. Within a selected gate, this retirement is the
    Orchestrator's finalization edit after the gate passes. For a Change Plan,
-   its own row in the plan index or review document takes that link.
+   its own row in the plan index or review document takes that link. When the
+   Plan's Sources name review items, check them off in the review checklist
+   as `done in <revision>`. When that leaves every item of that review
+   checked and no Plan it requested open, close the review: confirm its
+   decisions live in their owners, then delete the review documents if their
+   final contents are in a known commit, otherwise report them as
+   uncommitted.
 7. Run the consistency check. Behavior-preserving implementation changes remain
    `in_progress` until affected validation is rerun and supports `verified`.
 
 ## Consistency Check
 
-Before finishing, re-read this feature's map row, plan, cited requirements,
-linked Architecture Design and Testing Strategy sections, and any linked
-Storyboard; for validation, the Plan and the sources it names. Confirm the
+Before finishing, re-read the Required Input sources this work touched, and
+every document that received a promotion. Confirm the
 current position matches the recorded statuses, results, and blockers. Confirm
-each promoted decision reads as a current rule in its design section and that
-no promotion restates a value another section owns. Record each result once,
+each promoted decision reads as a current rule in its owning document and that
+no promotion restates a value another document owns. Record each result once,
 in the plan while it exists, and keep the map row to status and its link; a cited requirement is delivered
 only when at least one Map row cites it and every citing Map row is `verified`,
 so do not mark requirements anywhere else. Keep visual flow in the Storyboard

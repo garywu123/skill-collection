@@ -28,6 +28,7 @@ authorizes more. On resume, read the plan's current position and continue.
 | 1. Review plan | Batches added to `docs/reviews/00.review-plan.md` | After the user approves batches and order |
 | 2. Cross-module batch | `docs/reviews/<NN>.<slug>.md` | After `decide` items are explained and answers recorded |
 | 3. Module batch, one per invocation | `docs/reviews/<NN>.<slug>.md` | Same |
+| 4. Close | Review documents deleted | After the report |
 
 The review folder is `docs/reviews/` unless the project already has a review
 location. Name a batch file after its ID: batch R20 writes `20.<slug>.md`. Start from [the plan template](assets/review-plan.md) and
@@ -35,8 +36,9 @@ location. Name a batch file after its ID: batch R20 writes `20.<slug>.md`. Start
 
 ## Interview rules
 
-The questions show the user how you are thinking; ask them every time, at the
-start of Stage 0 and of every batch.
+Interview at the start of Stage 0 and of every batch, but ask only what is not
+yet recorded or what this batch's scope changes. Reuse recorded answers without
+reconfirming them; with nothing open, say so and proceed.
 
 - Ask in rounds of up to five related questions. Follow up on answers.
 - For each question give, briefly: what it means in plain words; one concrete
@@ -45,9 +47,8 @@ start of Stage 0 and of every batch.
 - Ask first what decides the most items: consumers, accuracy, input ranges,
   trust boundary and scale. A question that matters to one module waits for
   that module's batch.
-- When a project document already records an answer, show it as "Recorded:
-  ... Still true?" and group such confirmations into one round. A new answer
-  that contradicts a recorded one is a decision for the user.
+- New evidence or a new answer that contradicts a recorded one is a decision
+  for the user.
 - There is no question limit: ask everything that changes a judgment, and
   nothing that does not. Stop when every quantity or policy the next stage
   judges has an answer or is explicitly left open.
@@ -127,7 +128,21 @@ start of Stage 0 and of every batch.
    the scenario that needs it), and `defect` (found in passing).
 6. Explain each `decide` item in chat: scenario, what each option changes, your
    recommendation. Record the decisions, update the plan's current position,
-   write the notes for the next batch, and stop.
+   write the notes for the next batch, and stop. After the last batch, when no
+   item is left for execution, continue with Stage 4.
+
+## Stage 4: close
+
+Close the review when every checklist item in every batch is checked and every
+Change Plan it requested is retired. `feature-delivery` closes it the same way
+when it retires the Plan for the last open item. Confirm that each decision a later change
+must respect already lives in its owner: product constraints from Stage 0,
+rules promoted by `feature-delivery`. Write a `retain` or rejected item into an
+owner document only when that document routes such rules and a later review
+would otherwise raise it again. Then, only when their final contents are in a
+known commit, delete the review plan and findings documents, and the review
+folder when empty, and report that revision. Otherwise leave them and report
+that they are uncommitted; closing never authorizes a commit.
 
 ## Document rules
 
