@@ -123,7 +123,6 @@ Plan，才成为实现范围。Git 保存历史；文档只保存当前事实。
 | [`document-simplification`](document-simplification/SKILL.md) | 显式调用，精简一两份已有文档：先以目标读者身份通读、找出读不通的地方；结构要变时先给用户看大纲，只改表达时直接重写；保留读者需要的事实，已定规则写进其 owner 文档，非阻塞的后续改进按项目已有 backlog 的规则处理，阻塞当前内容的问题写进 owner 的未决问题并问用户；HTML 另查渲染后的可读性和导航；references 给出常见形状和反例（数据分析、文件夹 README、通用反模式），不是模板；新反例只向用户提议，不自动写入 | 按需重写指定的 `.md` 或 `.html` 文件；报告每份的读者、结构、前后字数和移走内容的去向 |
 | [`skill-authoring`](skill-authoring/SKILL.md) | 创建或精简本仓库中的 Skill | 目标 Skill 及本能力表 |
 | [`skill-deployment`](skill-deployment/SKILL.md) | 将本仓库明确配置的 Skill 同步到 Copilot、Claude Code 和 Codex | 目标目录更新及受管清单 |
-| [`markdown-reflow`](markdown-reflow/SKILL.md) | 用确定性脚本合并被硬换行拆散的 Markdown 段落,保留空行分段、标题、列表、引用、表格和代码块 | 按需修改指定的 `.md` 文件 |
 
 ## 文档边界
 

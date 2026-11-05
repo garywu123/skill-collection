@@ -1,6 +1,6 @@
 ---
 name: document-simplification
-description: Review and rewrite one or a few existing Markdown or HTML documents so their intended reader can understand them and act after one read - read as that reader first, propose a new structure when the current one gets in the way, then rewrite whole sections in plain, concrete language. Invoke explicitly, by name, when documents are too long, too abstract, defensive, or written as an analysis record instead of a working reference. Do not use for whitespace-only reflow (markdown-reflow), repository-wide code and mechanism proportionality reviews (simplification-review), or changing what a document decides or requires.
+description: Review and rewrite one or a few existing Markdown or HTML documents so their intended reader can understand them and act after one read - read as that reader first, propose a new structure when the current one gets in the way, then rewrite whole sections in plain, concrete language. Invoke explicitly, by name, when documents are too long, too abstract, defensive, or written as an analysis record instead of a working reference. Do not use for whitespace-only reflow, repository-wide code and mechanism proportionality reviews (simplification-review), or changing what a document decides or requires.
 disable-model-invocation: true
 ---
 
